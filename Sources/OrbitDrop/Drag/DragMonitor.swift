@@ -152,15 +152,20 @@ final class DragMonitor {
     ) -> Unmanaged<CGEvent>? {
         if let userInfo {
             let context = Unmanaged<EventTapContext>.fromOpaque(userInfo).takeUnretainedValue()
+            // Copy only primitive fields across actor isolation. The borrowed
+            // CGEvent stays inside this synchronous C callback and is returned
+            // untouched to Quartz.
+            let flags = event.flags.rawValue
+            let keyCode = type == .keyDown ? event.getIntegerValueField(.keyboardEventKeycode) : -1
             MainActor.assumeIsolated {
-                context.monitor?.handle(type, event: event)
+                context.monitor?.handle(type, flags: CGEventFlags(rawValue: flags), keyCode: keyCode)
             }
         }
         // A listen-only tap always leaves the original event untouched.
         return Unmanaged.passUnretained(event)
     }
 
-    private func handle(_ type: CGEventType, event: CGEvent) {
+    private func handle(_ type: CGEventType, flags: CGEventFlags, keyCode: Int64) {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             finishDrag()
             if let registration, !paused {
@@ -174,7 +179,7 @@ final class DragMonitor {
         switch type {
         case .leftMouseDown:
             finishDrag()
-            modifiers = Self.modifierFlags(from: event.flags)
+            modifiers = Self.modifierFlags(from: flags)
             // The previous drag's payload can remain indefinitely on .drag.
             // Only a pasteboard written after this mouse-down is eligible.
             session = Session(initialPasteboardCount: dragPasteboard.changeCount)
@@ -182,10 +187,10 @@ final class DragMonitor {
             guard var session, session.mouseIsDown else { return }
             session.receivedDragEvent = true
             self.session = session
-            modifiers = Self.modifierFlags(from: event.flags)
+            modifiers = Self.modifierFlags(from: flags)
             evaluateActivation()
         case .flagsChanged:
-            modifiers = Self.modifierFlags(from: event.flags)
+            modifiers = Self.modifierFlags(from: flags)
             // A flags change after mouse-up must not close the destination
             // before AppKit has delivered its authoritative drop callback.
             if session?.mouseIsDown == true {
@@ -196,7 +201,7 @@ final class DragMonitor {
         case .keyDown:
             // Read one hardware key code only. Never inspect characters, text,
             // application contents, or any other keyboard input.
-            if event.getIntegerValueField(.keyboardEventKeycode) == 53 {
+            if keyCode == 53 {
                 finishDrag()
             }
         default:
