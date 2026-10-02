@@ -1,0 +1,64 @@
+name: Build and test OrbitDrop
+on:
+  push:
+    branches: [main, codex/orbitdrop]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 35
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare build tools
+        run: command -v cmake || brew install cmake
+      - name: Test and build a real universal macOS application
+        id: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          bash Scripts/build.sh 2>&1 | tee build/build.log
+      - name: Upload application and test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OrbitDrop-macOS-${{ github.sha }}
+          path: |
+            dist/OrbitDrop.app.zip
+            dist/OrbitDrop.app.zip.sha256
+            build/build.log
+            build/DerivedData/Logs/Test/*.xcresult
+      - name: Preserve build result for Git-only retrieval
+        if: always()
+        env:
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          SOURCE_COMMIT: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_dir="$(mktemp -d)"
+          cp build/build.log "$report_dir/build.log" || true
+          if [[ -f dist/OrbitDrop.app.zip ]]; then
+            cp dist/OrbitDrop.app.zip dist/OrbitDrop.app.zip.sha256 "$report_dir/"
+          fi
+          python3 - "$report_dir" <<'PY'
+          import json, os, pathlib, sys
+          pathlib.Path(sys.argv[1], 'build-status.json').write_text(json.dumps({
+            'outcome': os.environ['BUILD_OUTCOME'], 'source_commit': os.environ['SOURCE_COMMIT'],
+            'runner': 'macos-15', 'run_id': os.environ['GITHUB_RUN_ID'],
+            'native_drag_acceptance': 'requires interactive Mac validation'
+          }, indent=2) + '\n')
+          PY
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git checkout --orphan "codex/builds/run-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          git rm -rf --ignore-unmatch .
+          cp "$report_dir/"* .
+          git add --force build.log build-status.json
+          if [[ -f OrbitDrop.app.zip ]]; then git add --force OrbitDrop.app.zip OrbitDrop.app.zip.sha256; fi
+          git commit -m "Build results for ${SOURCE_COMMIT}"
+          git push origin HEAD
