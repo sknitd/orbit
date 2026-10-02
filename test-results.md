@@ -45,7 +45,7 @@ PY
 
 Syntax parsing does not resolve Apple framework imports, type-check native APIs, link an app, or execute native transformations.
 
-macOS CI run `36987150381`, attempt 1, tested commit `b4b0389`: **32 native integration tests executed; 24 passed and 8 failed**. The app and native test target compiled and linked successfully. The native test results are separate from the 37 portable tests above.
+macOS CI run `36987892464`, attempt 1, tested commit `f2c9247`: **33 native integration tests executed; 32 passed and 1 failed**. The app and native test target compiled and linked successfully. The native test results are separate from the 37 portable tests above.
 
 The native command used Xcode 16.4 and the macOS 15.5 SDK:
 
@@ -59,15 +59,15 @@ xcodebuild -project OrbitDrop.xcodeproj -scheme OrbitDrop \
 | --- | ---: | ---: | ---: |
 | ImageEngineTests | 8 | 8 | 0 |
 | PDFEngineTests | 5 | 5 | 0 |
-| MediaEngineTests | 5 | 4 | 1 |
-| FileEngineTests | 5 | 3 | 2 |
-| ArchiveEngineTests | 5 | 2 | 3 |
-| OutputNamingTests | 4 | 2 | 2 |
+| MediaEngineTests | 5 | 5 | 0 |
+| FileEngineTests | 5 | 5 | 0 |
+| ArchiveEngineTests | 6 | 5 | 1 |
+| OutputNamingTests | 4 | 4 | 0 |
 
-All eight failures compared different URL spellings for the same temporary files: expected `/var/...`, enumerated `/private/var/...`. The corrected assertions compare exact directory entry names and counts within the fixture directory. Existing cleanup, source-byte, collision, concurrency, and symlink assertions remain enabled and were strengthened where appropriate.
+All rollback directory assertions now pass, using exact entry names and counts within the fixture directory rather than `/var` versus `/private/var` URL spellings. Source-byte, collision, concurrency, and symlink checks remain enabled.
 
-The earlier single-file ZIP basename defect is fixed and passed its native round-trip test in this run. The archive implementation archives a private source snapshot with the original basename. The folder round-trip test also passed.
+The single failing test revealed a real archive traversal defect for a folder reached through a symlink in its parent path. Canonical child URLs did not match the lexical root prefix. The corrected traversal rejects a direct root symlink, then enumerates the resolved root; descendant links and special files remain rejected. The fix awaits the next macOS CI run.
 
-The native tests use real generated image/PDF/audio/video/archive fixtures and verify actual decoded results. Successful cases include JPEG-to-PNG, WebP, five-image resizing, metadata/GPS removal, PDF merge/split/rendering, H.264 transcode, audio extraction and conversion, SHA-256, JSON formatting, and concurrent output naming. A new symbolic-parent alias archive regression test brings the enabled suite to 33 tests. The corrected assertions, additional test, and Release launch smoke await a fresh macOS CI run; no passing result is claimed for them yet.
+The native tests use real generated image/PDF/audio/video/archive fixtures and verify actual decoded results. Successful cases include JPEG-to-PNG, WebP, five-image resizing, metadata/GPS removal, PDF merge/split/rendering, H.264 transcode, audio extraction and conversion, ZIP file/folder round trips, SHA-256, JSON formatting, and concurrent output naming. All 33 tests remain enabled. Release packaging and its startup smoke check have not run because the native test failure stops the build script.
 
 Finder drag gestures, Escape cancellation, Spaces, physical multiple-display behavior, accessibility, idle resource usage, and launch of the final Release app still require native runtime verification. No UI or performance acceptance result is claimed here.

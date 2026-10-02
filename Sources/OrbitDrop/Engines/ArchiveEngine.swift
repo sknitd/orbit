@@ -110,13 +110,16 @@ private enum ArchiveSafety {
             guard bytes <= ZIPInspector.maximumExpandedBytes else { throw OrbitError.invalidInput("The archive exceeds the 2 GB safety limit.") }
             return bytes
         }
+        // Reject a symbolic-link source above, then resolve only its parent
+        // aliases before enumeration. FileManager may canonicalize child URLs,
+        // so lexical paths through an alias are not a containment boundary.
+        let canonicalRoot = root.standardizedFileURL.resolvingSymlinksInPath()
         var enumerationError: Error?
-        guard let enumerator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: Array(keys), options: [],
+        guard let enumerator = FileManager.default.enumerator(at: canonicalRoot, includingPropertiesForKeys: Array(keys), options: [],
                                                               errorHandler: { _, error in enumerationError = error; return false }) else {
             throw OrbitError.failed("Couldn’t read the folder contents.")
         }
-        let lexicalPrefix = root.standardizedFileURL.path + "/"
-        let resolvedPrefix = root.standardizedFileURL.resolvingSymlinksInPath().path + "/"
+        let canonicalPrefix = canonicalRoot.path + "/"
         var count = 0
         var bytes: Int64 = 0
         for case let url as URL in enumerator {
@@ -124,13 +127,13 @@ private enum ArchiveSafety {
             count += 1
             guard count <= ZIPInspector.maximumEntries * 4 else { throw OrbitError.invalidInput("The folder contains too many entries.") }
             let values = try url.resourceValues(forKeys: keys)
+            let canonicalChild = url.standardizedFileURL.resolvingSymlinksInPath()
             guard values.isSymbolicLink != true, values.isRegularFile == true || values.isDirectory == true,
-                  url.standardizedFileURL.path.hasPrefix(lexicalPrefix),
-                  url.resolvingSymlinksInPath().path.hasPrefix(resolvedPrefix) else {
+                  canonicalChild.path.hasPrefix(canonicalPrefix) else {
                 throw OrbitError.invalidInput("The folder contains a link, special file, or unsafe path.")
             }
             if enforceArchiveNames {
-                _ = try ZIPInspector.safePath(String(url.standardizedFileURL.path.dropFirst(lexicalPrefix.count)))
+                _ = try ZIPInspector.safePath(String(canonicalChild.path.dropFirst(canonicalPrefix.count)))
             }
             bytes += Int64(values.fileSize ?? 0) * (values.isRegularFile == true ? 1 : 0)
             guard bytes <= ZIPInspector.maximumExpandedBytes else { throw OrbitError.invalidInput("The archive exceeds the 2 GB safety limit.") }
