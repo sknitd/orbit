@@ -6,7 +6,7 @@ command -v cmake >/dev/null || { echo 'CMake is required to build the bundled We
 webp_commit=a4d7a715337ded4451fec90ff8ce79728e04126c
 mkdir -p Vendor
 if [[ ! -d Vendor/libwebp/.git ]]; then
-  git clone --no-checkout https://github.com/webmproject/libwebp.git Vendor/libwebp
+  git clone --branch v1.5.0 --single-branch https://github.com/webmproject/libwebp.git Vendor/libwebp
 fi
 if [[ -n "$(git -C Vendor/libwebp status --porcelain)" ]]; then
   echo 'Vendor/libwebp contains local changes; preserve them before refreshing the dependency.' >&2
