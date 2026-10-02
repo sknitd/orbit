@@ -1,0 +1,9 @@
+{
+  "product": "NotchOrbit",
+  "source_directory": "NotchOrbit",
+  "outcome": "failure",
+  "source_commit": "0c585e344b16ce53fac860dffe076b8fe571837d",
+  "runner": "macos-15",
+  "run_id": "37037285405",
+  "native_notch_drag_acceptance": "requires interactive Mac validation"
+}
