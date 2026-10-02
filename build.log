@@ -1,0 +1,239 @@
+Xcode 16.4
+Build version 16F6
+Cloning into 'Vendor/libwebp'...
+warning: refs/tags/v1.5.0 f7710292e894c8413edaca4610d11dde843c04fd is not a commit!
+From https://github.com/webmproject/libwebp
+ * branch              a4d7a715337ded4451fec90ff8ce79728e04126c -> FETCH_HEAD
+HEAD is now at a4d7a715 update ChangeLog
+-- The C compiler identification is AppleClang 17.0.0.17000013
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Performing Test HAVE_BUILTIN_BSWAP16
+-- Performing Test HAVE_BUILTIN_BSWAP16 - Success
+-- Performing Test HAVE_BUILTIN_BSWAP32
+-- Performing Test HAVE_BUILTIN_BSWAP32 - Success
+-- Performing Test HAVE_BUILTIN_BSWAP64
+-- Performing Test HAVE_BUILTIN_BSWAP64 - Success
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Found OpenGL: /Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/OpenGL.framework
+-- Performing Test HAVE_MATH_LIBRARY
+-- Performing Test HAVE_MATH_LIBRARY - Success
+-- Looking for include file GLUT/glut.h
+-- Looking for include file GLUT/glut.h - found
+-- Looking for include file GL/glut.h
+-- Looking for include file GL/glut.h - not found
+-- Looking for include file OpenGL/glut.h
+-- Looking for include file OpenGL/glut.h - not found
+-- Looking for include file shlwapi.h
+-- Looking for include file shlwapi.h - not found
+-- Looking for include file unistd.h
+-- Looking for include file unistd.h - found
+-- Looking for include file wincodec.h
+-- Looking for include file wincodec.h - not found
+-- Looking for include file windows.h
+-- Looking for include file windows.h - not found
+-- Performing Test WEBP_HAVE_FLAG_SSE41
+-- Performing Test WEBP_HAVE_FLAG_SSE41 - Failed
+-- Performing Test WEBP_HAVE_FLAG_SSE41
+-- Performing Test WEBP_HAVE_FLAG_SSE41 - Failed
+-- Performing Test HAS_COMPILE_FLAG
+-- Performing Test HAS_COMPILE_FLAG - Success
+-- Performing Test FLAG_-mno-sse4.1
+-- Performing Test FLAG_-mno-sse4.1 - Success
+-- Performing Test WEBP_HAVE_FLAG_SSE2
+-- Performing Test WEBP_HAVE_FLAG_SSE2 - Failed
+-- Performing Test WEBP_HAVE_FLAG_SSE2
+-- Performing Test WEBP_HAVE_FLAG_SSE2 - Failed
+-- Performing Test HAS_COMPILE_FLAG
+-- Performing Test HAS_COMPILE_FLAG - Success
+-- Performing Test FLAG_-mno-sse2
+-- Performing Test FLAG_-mno-sse2 - Success
+-- Performing Test WEBP_HAVE_FLAG_MIPS32
+-- Performing Test WEBP_HAVE_FLAG_MIPS32 - Failed
+-- Performing Test WEBP_HAVE_FLAG_MIPS32
+-- Performing Test WEBP_HAVE_FLAG_MIPS32 - Failed
+-- Performing Test WEBP_HAVE_FLAG_MIPS_DSP_R2
+-- Performing Test WEBP_HAVE_FLAG_MIPS_DSP_R2 - Failed
+-- Performing Test WEBP_HAVE_FLAG_MIPS_DSP_R2
+-- Performing Test WEBP_HAVE_FLAG_MIPS_DSP_R2 - Failed
+-- Performing Test HAS_COMPILE_FLAG
+-- Performing Test HAS_COMPILE_FLAG - Failed
+-- Performing Test WEBP_HAVE_FLAG_NEON
+-- Performing Test WEBP_HAVE_FLAG_NEON - Failed
+-- Performing Test WEBP_HAVE_FLAG_NEON
+-- Performing Test WEBP_HAVE_FLAG_NEON - Failed
+-- Performing Test WEBP_HAVE_FLAG_MSA
+-- Performing Test WEBP_HAVE_FLAG_MSA - Failed
+-- Performing Test WEBP_HAVE_FLAG_MSA
+-- Performing Test WEBP_HAVE_FLAG_MSA - Failed
+-- Performing Test HAS_COMPILE_FLAG
+-- Performing Test HAS_COMPILE_FLAG - Failed
+-- Configuring done (6.5s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/runner/work/orbit/orbit/build/WebP-build
+[  1%] Building C object CMakeFiles/webpdecode.dir/src/dec/alpha_dec.c.o
+[  2%] Building C object CMakeFiles/sharpyuv.dir/sharpyuv/sharpyuv_sse2.c.o
+[  3%] Building C object CMakeFiles/webpdspdecode.dir/src/dsp/alpha_processing.c.o
+[  4%] Building C object CMakeFiles/webputilsdecode.dir/src/utils/bit_reader_utils.c.o
+[  4%] Building C object CMakeFiles/sharpyuv.dir/sharpyuv/sharpyuv_neon.c.o
+[  4%] Building C object CMakeFiles/webpdecode.dir/src/dec/buffer_dec.c.o
+[  4%] Building C object CMakeFiles/webputilsdecode.dir/src/utils/color_cache_utils.c.o
+[  5%] Building C object CMakeFiles/sharpyuv.dir/sharpyuv/sharpyuv_cpu.c.o
+[  5%] Building C object CMakeFiles/webpdspdecode.dir/src/dsp/cpu.c.o
+[  6%] Building C object CMakeFiles/webputilsdecode.dir/src/utils/filters_utils.c.o
+[  7%] Building C object CMakeFiles/webpdecode.dir/src/dec/frame_dec.c.o
+[  7%] Building C object CMakeFiles/sharpyuv.dir/sharpyuv/sharpyuv_csp.c.o
+[  8%] Building C object CMakeFiles/webpdspdecode.dir/src/dsp/dec.c.o
+In file included from /Users/runner/work/orbit/orbit/Vendor/libwebp/sharpyuv/sharpyuv_csp.c:15:
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:619:27: error: _Float16 is not supported on this target
+  619 | extern _Float16 __fabsf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                           ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:619:8: error: _Float16 is not supported on this target
+  619 | extern _Float16 __fabsf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |        ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:620:28: error: _Float16 is not supported on this target
+  620 | extern _Float16 __hypotf16(_Float16, _Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                            ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:620:38: error: _Float16 is not supported on this target
+  620 | extern _Float16 __hypotf16(_Float16, _Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                                      ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:620:8: error: _Float16 is not supported on this target
+  620 | extern _Float16 __hypotf16(_Float16, _Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |        ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:621:27: error: _Float16 is not supported on this target
+  621 | extern _Float16 __sqrtf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                           ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:621:8: error: _Float16 is not supported on this target
+  621 | extern _Float16 __sqrtf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |        ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:622:27: error: _Float16 is not supported on this target
+  622 | extern _Float16 __ceilf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                           ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:622:8: error: _Float16 is not supported on this target
+  622 | extern _Float16 __ceilf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |        ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:623:28: error: _Float16 is not supported on this target
+  623 | extern _Float16 __floorf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                            ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:623:8: error: _Float16 is not supported on this target
+  623 | extern _Float16 __floorf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |        ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:624:27: error: _Float16 is not supported on this target
+  624 | extern _Float16 __rintf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                           ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:624:8: error: _Float16 is not supported on this target
+  624 | extern _Float16 __rintf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |        ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:625:28: error: _Float16 is not supported on this target
+  625 | extern _Float16 __roundf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                            ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:625:8: error: _Float16 is not supported on this target
+  625 | extern _Float16 __roundf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |        ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:626:28: error: _Float16 is not supported on this target
+  626 | extern _Float16 __truncf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                            ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:626:8: error: _Float16 is not supported on this target
+  626 | extern _Float16 __truncf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |        ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:627:31: error: _Float16 is not supported on this target
+  627 | extern _Float16 __copysignf16(_Float16, _Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                               ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:627:41: error: _Float16 is not supported on this target
+  627 | extern _Float16 __copysignf16(_Float16, _Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                                         ^
+fatal error: too many errors emitted, stopping now [-ferror-limit=]
+20 errors generated.
+make[2]: *** [CMakeFiles/sharpyuv.dir/sharpyuv/sharpyuv_csp.c.o] Error 1
+make[1]: *** [CMakeFiles/sharpyuv.dir/all] Error 2
+make[1]: *** Waiting for unfinished jobs....
+[  8%] Building C object CMakeFiles/webputilsdecode.dir/src/utils/huffman_utils.c.o
+[  9%] Building C object CMakeFiles/webputilsdecode.dir/src/utils/palette.c.o
+[  9%] Building C object CMakeFiles/webputilsdecode.dir/src/utils/quant_levels_dec_utils.c.o
+[  9%] Building C object CMakeFiles/webpdecode.dir/src/dec/idec_dec.c.o
+[ 10%] Building C object CMakeFiles/webpdecode.dir/src/dec/io_dec.c.o
+[ 11%] Building C object CMakeFiles/webputilsdecode.dir/src/utils/rescaler_utils.c.o
+[ 11%] Building C object CMakeFiles/webputilsdecode.dir/src/utils/random_utils.c.o
+[ 12%] Building C object CMakeFiles/webpdspdecode.dir/src/dsp/dec_clip_tables.c.o
+[ 13%] Building C object CMakeFiles/webpdecode.dir/src/dec/quant_dec.c.o
+[ 14%] Building C object CMakeFiles/webputilsdecode.dir/src/utils/thread_utils.c.o
+[ 14%] Building C object CMakeFiles/webpdspdecode.dir/src/dsp/filters.c.o
+[ 14%] Building C object CMakeFiles/webpdecode.dir/src/dec/tree_dec.c.o
+[ 15%] Building C object CMakeFiles/webpdecode.dir/src/dec/vp8_dec.c.o
+[ 16%] Building C object CMakeFiles/webputilsdecode.dir/src/utils/utils.c.o
+[ 17%] Building C object CMakeFiles/webpdspdecode.dir/src/dsp/lossless.c.o
+[ 17%] Built target webputilsdecode
+[ 17%] Building C object CMakeFiles/webpdecode.dir/src/dec/vp8l_dec.c.o
+[ 18%] Building C object CMakeFiles/webpdecode.dir/src/dec/webp_dec.c.o
+[ 18%] Building C object CMakeFiles/webpdspdecode.dir/src/dsp/rescaler.c.o
+In file included from /Users/runner/work/orbit/orbit/Vendor/libwebp/src/dsp/lossless.c:19:
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:619:27: error: _Float16 is not supported on this target
+  619 | extern _Float16 __fabsf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                           ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:619:8: error: _Float16 is not supported on this target
+  619 | extern _Float16 __fabsf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |        ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:620:28: error: _Float16 is not supported on this target
+  620 | extern _Float16 __hypotf16(_Float16, _Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                            ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:620:38: error: _Float16 is not supported on this target
+  620 | extern _Float16 __hypotf16(_Float16, _Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                                      ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:620:8: error: _Float16 is not supported on this target
+  620 | extern _Float16 __hypotf16(_Float16, _Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |        ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:621:27: error: _Float16 is not supported on this target
+  621 | extern _Float16 __sqrtf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                           ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:621:8: error: _Float16 is not supported on this target
+  621 | extern _Float16 __sqrtf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |        ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:622:27: error: _Float16 is not supported on this target
+  622 | extern _Float16 __ceilf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                           ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:622:8: error: _Float16 is not supported on this target
+  622 | extern _Float16 __ceilf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |        ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:623:28: error: _Float16 is not supported on this target
+  623 | extern _Float16 __floorf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                            ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:623:8: error: _Float16 is not supported on this target
+  623 | extern _Float16 __floorf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |        ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:624:27: error: _Float16 is not supported on this target
+  624 | extern _Float16 __rintf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                           ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:624:8: error: _Float16 is not supported on this target
+  624 | extern _Float16 __rintf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |        ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:625:28: error: _Float16 is not supported on this target
+  625 | extern _Float16 __roundf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                            ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:625:8: error: _Float16 is not supported on this target
+  625 | extern _Float16 __roundf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |        ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:626:28: error: _Float16 is not supported on this target
+  626 | extern _Float16 __truncf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                            ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:626:8: error: _Float16 is not supported on this target
+  626 | extern _Float16 __truncf16(_Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |        ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:627:31: error: _Float16 is not supported on this target
+  627 | extern _Float16 __copysignf16(_Float16, _Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                               ^
+/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/math.h:627:41: error: _Float16 is not supported on this target
+  627 | extern _Float16 __copysignf16(_Float16, _Float16) __API_AVAILABLE(macos(15.0), ios(18.0), watchos(11.0), tvos(18.0));
+      |                                         ^
+fatal error: too many errors emitted, stopping now [-ferror-limit=]
+20 errors generated.
+make[2]: *** [CMakeFiles/webpdspdecode.dir/src/dsp/lossless.c.o] Error 1
+make[2]: *** Waiting for unfinished jobs....
+[ 19%] Building C object CMakeFiles/webpdspdecode.dir/src/dsp/upsampling.c.o
+[ 19%] Built target webpdecode
+make[1]: *** [CMakeFiles/webpdspdecode.dir/all] Error 2
+make: *** [all] Error 2
