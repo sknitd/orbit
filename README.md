@@ -4,7 +4,7 @@ Two native macOS file utilities share local transformation engines:
 
 | App | How to open file actions | Download and setup |
 | --- | --- | --- |
-| **NotchOrbit** | Drag files toward the MacBook notch or display's top center. No modifier key; actions appear in a native semicircle. | [NotchOrbit](NotchOrbit/README.md) |
+| **NotchOrbit** | Drag files toward the MacBook notch or display's top center. No modifier key; actions appear in a native semicircle. | [Download NotchOrbit.app.zip](https://github.com/sknitd/orbit/raw/22d4fddbf7dda0beb49e88219c3087a5f6a63f83/NotchOrbit.app.zip) · [Setup and preview](NotchOrbit/README.md) |
 | **OrbitDrop** | Drag files and hold Shift to open a radial wheel near the pointer. | [OrbitDrop download and installation](#download-and-install) |
 
 NotchOrbit has its own project, app bundle, and preferences in the [NotchOrbit/](NotchOrbit/) subdirectory. Both apps target macOS 14 or later on Apple Silicon and Intel.

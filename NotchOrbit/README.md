@@ -8,7 +8,15 @@ This app lives in its own `NotchOrbit/` subdirectory, with its own Xcode project
 
 The app targets **macOS 14 or later**, on Apple Silicon and Intel. Building from source requires Xcode 16 or later, CMake, Python 3, and Git. The packaged app does not require developer tools.
 
-The download link and verified build results will be added here after the macOS Release build completes.
+[**Download NotchOrbit.app.zip**](https://github.com/sknitd/orbit/raw/22d4fddbf7dda0beb49e88219c3087a5f6a63f83/NotchOrbit.app.zip) · [SHA-256 checksum](https://github.com/sknitd/orbit/blob/22d4fddbf7dda0beb49e88219c3087a5f6a63f83/NotchOrbit.app.zip.sha256)
+
+This is version **0.1.0**, built from source commit `18bc8fac7c55bacd87e3e987fe0280530558925d` by [macOS CI run 37037710220](https://github.com/sknitd/orbit/actions/runs/37037710220). All **71 tests passed**: 37 shared core, 27 notch geometry/activation, and 7 hosted native tests. The universal Release build, signature verification, and three-second startup check also passed. If the repository is private, sign in to GitHub with an account that has access before downloading.
+
+The ZIP is approximately 3 MB. Its SHA-256 is:
+
+```text
+14c83678ab46a2254258726c858bd7a0b4f142c48976db461bb938e27ad9ebc8
+```
 
 1. Extract `NotchOrbit.app.zip`, move the entire **NotchOrbit.app** bundle into **Applications**, and open it.
 2. The app runs in the menu bar. Use **Enable Input Monitoring**, then enable **NotchOrbit** under **System Settings → Privacy & Security → Input Monitoring**. Quit and reopen it if macOS requires a relaunch.
@@ -21,6 +29,14 @@ Moving away without dropping cancels the presentation. The empty center, gaps, a
 **Choose Files…** provides a fallback if global observation is unavailable: choose the files, then perform a real Finder drag of those same files into the presented semicircle. Choosing files alone never processes them.
 
 The build uses an ad hoc signature and is **not notarized**. If macOS blocks launch, try opening it, then use **System Settings → Privacy & Security → Open Anyway** if offered. Each Mac needs its own Input Monitoring grant. Processing stays local and needs no account or application credentials.
+
+To use it on another supported Mac, copy the ZIP and extract it there, or copy the entire `.app` bundle, then grant Input Monitoring on that Mac.
+
+## Native UI preview
+
+![NotchOrbit's native semicircle with Convert selected](docs/NotchOrbit-Convert.png)
+
+The actual native panel rendered in macOS CI uses AppKit material, system fonts, and SF Symbols. The inner semicircle holds categories; the outer band shows their actions. This preview verifies the view's rendering. Physical MacBook notch placement and live Finder dragging still need interactive validation; see [EVALUATION.md](EVALUATION.md).
 
 ## Build
 
