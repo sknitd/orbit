@@ -4,6 +4,28 @@ OrbitDrop is a native macOS menu bar application for transforming local files th
 
 Requires macOS 14 or later. The build uses Swift 6, AppKit, SwiftUI, and Apple media/document frameworks. The application icon adapts the Orbit logo supplied by the user.
 
+## Download and install
+
+[**Download OrbitDrop.app.zip**](https://github.com/sknitd/orbit/raw/ab7f06c2c843c0b5935a27fe9af26734ebec3a1e/OrbitDrop.app.zip) · [SHA-256 checksum](https://github.com/sknitd/orbit/blob/ab7f06c2c843c0b5935a27fe9af26734ebec3a1e/OrbitDrop.app.zip.sha256)
+
+The prebuilt app supports **Apple Silicon and Intel Macs running macOS 14 or later**. Xcode, Swift, and CMake are only needed to build from source; they are not required to use the downloaded app. If the repository is private, sign in to GitHub with an account that has access before downloading.
+
+1. Download the ZIP on your Mac and double-click it to extract **OrbitDrop.app**.
+2. Move the entire app bundle into **Applications** and open it. OrbitDrop runs in the menu bar.
+3. This development build is ad hoc signed and **not notarized**. If macOS blocks it, attempt to open it, then use **System Settings → Privacy & Security → Open Anyway** if offered.
+4. In OrbitDrop's welcome window, click **Enable Input Monitoring**. Enable OrbitDrop under **System Settings → Privacy & Security → Input Monitoring**, then quit and reopen it if required. Each Mac needs its own permission grant.
+5. Start dragging a JPEG from Finder, hold **Shift**, hover **Convert**, move to **WebP**, and release over that option. The converted file is saved beside the original by default; click **Reveal** in the results window to find it.
+
+To copy OrbitDrop to another supported Mac, transfer the ZIP and extract it there, or copy the entire `.app` bundle. Grant Input Monitoring on that Mac as well.
+
+This download is version **0.1.0**, built from source commit `63ba651111477c9c2403e05e1bfa185ad5a9b300` by [macOS CI run 36988372694](https://github.com/sknitd/orbit/actions/runs/36988372694). All **37 core and 33 native tests passed**, along with the universal Release build, signature verification, and a three-second startup check. Interactive Finder, Spaces, accessibility, and performance acceptance remain pending; see [test-results.md](test-results.md) and [MANUAL-ACCEPTANCE.md](MANUAL-ACCEPTANCE.md).
+
+The ZIP's SHA-256 is:
+
+```text
+9459845bcbd6216425eadd5d58b067901784c509f20550818d56251168eeeba6
+```
+
 ## Build and open
 
 On a Mac with Xcode 16 or later, CMake, Python 3, and Git:
