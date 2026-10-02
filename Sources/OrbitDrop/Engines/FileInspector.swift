@@ -6,8 +6,10 @@ import OrbitCore
 /// Reads resource information and a small signature before presenting file-specific actions.
 enum FileInspector {
     static func inspect(_ urls: [URL]) throws -> [FileItem] {
+        try Task.checkCancellation()
         var seen = Set<URL>()
         return try urls.compactMap { original in
+            try Task.checkCancellation()
             guard original.isFileURL else { throw OrbitError.invalidInput("Drop local files or folders into Orbit.") }
             let url = original.standardizedFileURL
             guard seen.insert(url).inserted else { return nil }
@@ -24,8 +26,38 @@ enum FileInspector {
             let size = Int64(values.fileSize ?? 0)
             let type = values.contentType ?? UTType(filenameExtension: url.pathExtension)
             let detection = detect(url: url, header: header, suggested: type)
-            return FileItem(url: url, kind: detection.0, byteCount: size, typeIdentifier: detection.1)
+            let summary = detection.0 == .image ? inspectPrivacy(url: url, typeIdentifier: detection.1) : nil
+            try Task.checkCancellation()
+            return FileItem(url: url, kind: detection.0, byteCount: size, typeIdentifier: detection.1, privacySummary: summary)
         }
+    }
+
+    /// Checks standard structured tags only. Values, coordinates, and private text never leave this scope.
+    private static func inspectPrivacy(url: URL, typeIdentifier: String) -> String {
+        guard typeIdentifier != "org.webmproject.webp" else { return "WebP metadata uninspected" }
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary) else {
+            return "Metadata inspection unavailable"
+        }
+        guard CGImageSourceGetCount(source) == 1 else { return "Multi-frame metadata uninspected" }
+        guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] else { return "Metadata inspection unavailable" }
+        var categories = [String]()
+        if let gps = properties[kCGImagePropertyGPSDictionary as String] as? [String: Any], !gps.isEmpty {
+            categories.append("GPS tags")
+        }
+        let exifKeys = [kCGImagePropertyExifDateTimeOriginal, kCGImagePropertyExifDateTimeDigitized,
+                        kCGImagePropertyExifUserComment, kCGImagePropertyExifMakerNote]
+        if let exif = properties[kCGImagePropertyExifDictionary as String] as? [String: Any],
+           exifKeys.contains(where: { exif[$0 as String] != nil }) {
+            categories.append("EXIF details")
+        }
+        let tiffKeys = [kCGImagePropertyTIFFArtist, kCGImagePropertyTIFFCopyright, kCGImagePropertyTIFFMake,
+                        kCGImagePropertyTIFFModel, kCGImagePropertyTIFFSoftware, kCGImagePropertyTIFFDateTime,
+                        kCGImagePropertyTIFFImageDescription]
+        if let tiff = properties[kCGImagePropertyTIFFDictionary as String] as? [String: Any],
+           tiffKeys.contains(where: { tiff[$0 as String] != nil }) {
+            categories.append("TIFF details")
+        }
+        return categories.isEmpty ? "No GPS tag found" : categories.joined(separator: " · ")
     }
 
     private static func detect(url: URL, header: Data, suggested: UTType?) -> (FileKind, String) {

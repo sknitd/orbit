@@ -13,11 +13,13 @@ final class Preferences {
     var paused = false
     private let defaults = UserDefaults.standard
     init() {
-        triggerOption = defaults.bool(forKey: "triggerOption")
-        quality = defaults.object(forKey: "quality") as? Double ?? 0.82
-        outputDownloads = defaults.bool(forKey: "outputDownloads")
-        retainHistory = defaults.bool(forKey: "retainHistory")
-        sound = defaults.bool(forKey: "sound")
+        let settings = UserDefaults.standard
+        triggerOption = settings.bool(forKey: "triggerOption")
+        let savedQuality = settings.object(forKey: "quality") as? Double ?? 0.82
+        quality = savedQuality.isFinite ? min(1, max(0.4, savedQuality)) : 0.82
+        outputDownloads = settings.bool(forKey: "outputDownloads")
+        retainHistory = settings.bool(forKey: "retainHistory")
+        sound = settings.bool(forKey: "sound")
     }
 }
 
@@ -35,12 +37,44 @@ final class AppModel {
     var progressLabel = ""
     var busy = false
     var errorMessage: String?
-    var recent: [RecentResult] = []
+    private var recentStorage: [RecentResult] = []
+    var recent: [RecentResult] {
+        get {
+            if preferences.retainHistory {
+                let now = Date()
+                return recentStorage.filter { now.timeIntervalSince($0.date) < 86_400 }
+            }
+            return Array(recentStorage.prefix(1))
+        }
+        set { recentStorage = newValue }
+    }
     var monitoringStatus = "Input Monitoring has not been checked."
-    var onResults: (() -> Void)?
+    var onResults: (@MainActor () -> Void)?
     private var currentTask: Task<Void, Never>?
     private var activeID: UUID?
-    private var undoMetadata: [URL: (size: Int, modified: Date)] = [:]
+    private struct UndoMetadata {
+        let size: Int
+        let modified: Date
+        let identifier: NSObject
+    }
+    private var undoMetadata: [URL: UndoMetadata] = [:]
+    private var undoEntryID: UUID?
+    private var undoUnavailableReason: String?
+
+    var canUndo: Bool {
+        guard !busy, let entry = recent.first, entry.id == undoEntryID,
+              !entry.result.outputs.isEmpty else { return false }
+        return entry.result.outputs.allSatisfy { undoMetadata[$0] != nil }
+    }
+
+    var undoHelp: String {
+        if busy { return "Wait for the current operation to finish before using Undo." }
+        if let reason = undoUnavailableReason { return reason }
+        if recent.isEmpty { return "There is no generated result to undo." }
+        // These checks detect ordinary edits and file replacement. They are not
+        // a content hash and cannot detect edits that preserve all three values.
+        return "Undo moves generated files to Trash after checking their identity, size, and modification date. Edits that preserve those values cannot be detected."
+    }
 
     func run(_ action: ActionDescriptor, urls: [URL]) {
         guard !busy else {
@@ -55,15 +89,21 @@ final class AppModel {
             guard let self else { return }
             defer { self.busy = false; self.currentTask = nil; self.activeID = nil }
             do {
-                let items = try await Task.detached { try FileInspector.inspect(urls) }.value
+                let inspection = Task.detached(priority: .userInitiated) { try FileInspector.inspect(urls) }
+                let items = try await withTaskCancellationHandler {
+                    try await inspection.value
+                } onCancel: {
+                    inspection.cancel()
+                }
+                try Task.checkCancellation()
                 guard ActionResolver.actions(for: items).contains(where: { $0.id == action.id }) else {
                     throw OrbitError.invalidInput("These files no longer support the selected action.")
                 }
                 try Task.checkCancellation()
                 let context = ActionContext(outputDirectory: destination, quality: quality) { [weak self] value, label in
                     Task { @MainActor in
-                        guard self?.activeID == identifier else { return }
-                        self?.progress = value; self?.progressLabel = label
+                        guard self?.activeID == identifier, value.isFinite else { return }
+                        self?.progress = min(1, max(0, value)); self?.progressLabel = label
                     }
                 }
                 let engine: any ActionEngine
@@ -80,12 +120,10 @@ final class AppModel {
                 self.progressLabel = action.title
                 let result = try await engine.perform(action.id, items: items, context: context)
                 guard !result.outputs.isEmpty else { throw OrbitError.failed("No output was produced.") }
-                self.undoMetadata = [:]
-                for output in result.outputs {
-                    let values = try output.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
-                    if let date = values.contentModificationDate { self.undoMetadata[output] = (values.fileSize ?? 0, date) }
-                }
+                // The engine owns cancellation and cleanup until it returns.
+                // Preserve completed outputs even if Undo metadata is unavailable.
                 let entry = RecentResult(title: action.title, result: result)
+                self.rememberUndo(for: entry)
                 if self.preferences.retainHistory {
                     self.recent = ([entry] + self.recent).filter { Date().timeIntervalSince($0.date) < 86_400 }.prefix(20).map { $0 }
                 } else { self.recent = [entry] }
@@ -103,19 +141,67 @@ final class AppModel {
 
     func cancel() { currentTask?.cancel() }
 
+    private func rememberUndo(for entry: RecentResult) {
+        undoMetadata = [:]; undoEntryID = entry.id; undoUnavailableReason = nil
+        for output in entry.result.outputs {
+            guard let values = try? output.resourceValues(forKeys: [
+                .isRegularFileKey, .isDirectoryKey, .isSymbolicLinkKey,
+                .fileSizeKey, .contentModificationDateKey, .fileResourceIdentifierKey
+            ]) else {
+                undoUnavailableReason = "Undo cannot verify this result. Reveal it to manage it safely."
+                continue
+            }
+            if values.isDirectory == true {
+                undoUnavailableReason = "Undo is unavailable for extracted folders because files inside may have changed. Reveal the folder to move it to Trash yourself."
+                continue
+            }
+            guard values.isRegularFile == true, values.isSymbolicLink != true,
+                  let size = values.fileSize, let date = values.contentModificationDate,
+                  let identifier = values.fileResourceIdentifier as? NSObject else {
+                undoUnavailableReason = "Undo cannot verify this result. Reveal it to manage it safely."
+                continue
+            }
+            undoMetadata[output] = UndoMetadata(size: size, modified: date, identifier: identifier)
+        }
+    }
+
     func undoLast() {
-        guard !busy, let entry = recent.first else { return }
+        guard let entry = recent.first else { return }
+        guard canUndo else { errorMessage = undoHelp; onResults?(); return }
+        var trashedCount = 0
         do {
             for output in entry.result.outputs {
-                let values = try output.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+                let values = try output.resourceValues(forKeys: [
+                    .isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey,
+                    .contentModificationDateKey, .fileResourceIdentifierKey
+                ])
                 guard let recorded = undoMetadata[output], recorded.size == values.fileSize,
-                      recorded.modified == values.contentModificationDate else {
-                    throw OrbitError.failed("A result changed after creation. Reveal it to manage it safely.")
+                      recorded.modified == values.contentModificationDate,
+                      values.isRegularFile == true, values.isSymbolicLink != true,
+                      let identifier = values.fileResourceIdentifier as? NSObject,
+                      recorded.identifier.isEqual(identifier) else {
+                    throw OrbitError.failed("A result changed or was replaced after creation. Reveal it to manage it safely.")
                 }
             }
-            for output in entry.result.outputs { try FileManager.default.trashItem(at: output, resultingItemURL: nil) }
-            recent.removeFirst(); undoMetadata = [:]
-        } catch { errorMessage = error.localizedDescription; onResults?() }
+            for output in entry.result.outputs {
+                try FileManager.default.trashItem(at: output, resultingItemURL: nil)
+                trashedCount += 1
+            }
+            recent.removeFirst(); undoMetadata = [:]; undoEntryID = nil
+            undoUnavailableReason = recent.isEmpty ? nil : "Only the latest operation can be undone. Reveal older results to manage them."
+            errorMessage = nil
+        } catch {
+            undoMetadata = [:]; undoEntryID = nil
+            undoUnavailableReason = "Undo could not safely finish. Reveal the remaining results to manage them."
+            if trashedCount > 0 {
+                errorMessage = "Undo moved \(trashedCount) of \(entry.result.outputs.count) outputs to Trash before it stopped. Remaining outputs are still in their saved locations. \(error.localizedDescription)"
+            } else { errorMessage = error.localizedDescription }
+        }
+        onResults?()
+    }
+
+    func clearRecent() {
+        recent = []; undoMetadata = [:]; undoEntryID = nil; undoUnavailableReason = nil
     }
 
     func copy(_ urls: [URL]) {

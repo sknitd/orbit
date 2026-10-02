@@ -49,4 +49,17 @@ final class PDFEngineTests: EngineTestCase, @unchecked Sendable {
         XCTAssertLessThan(try XCTUnwrap(document.page(at: 0)).bounds(for: .mediaBox).width,
                           try XCTUnwrap(document.page(at: 1)).bounds(for: .mediaBox).width)
     }
+
+    func testRotatedPDFPageRendersWithRotatedDimensions() async throws {
+        let source = try pdf(named: "rotated.pdf", pages: [CGSize(width: 150, height: 200)])
+        let document = try XCTUnwrap(PDFDocument(url: source))
+        let page = try XCTUnwrap(document.page(at: 0))
+        page.rotation = 90
+        page.setBounds(CGRect(x: 20, y: 30, width: 150, height: 200), for: .mediaBox)
+        XCTAssertTrue(document.write(to: source))
+        let result = try await PDFEngine().perform(.pdfToPNG, items: inspect([source]), context: .init())
+        let raster = try ImageEngine.loadUpright(XCTUnwrap(result.outputs.first))
+        XCTAssertGreaterThan(raster.width, raster.height)
+        XCTAssertEqual(Double(raster.width) / Double(raster.height), 200.0 / 150.0, accuracy: 0.01)
+    }
 }

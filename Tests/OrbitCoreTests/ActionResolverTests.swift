@@ -90,6 +90,15 @@ final class ActionResolverTests: XCTestCase {
         XCTAssertFalse(ids([item("note.txt", .text)]).contains(.formatJSON))
     }
 
+    func testContainersWithoutNativeDecoderAreNotOfferedMediaActions() {
+        for filename in ["clip.mkv", "clip.webm", "clip.avi"] {
+            XCTAssertEqual(ids([item(filename, .video)]), [.zip, .checksum, .duplicate])
+        }
+        for filename in ["sound.ogg", "sound.opus"] {
+            XCTAssertEqual(ids([item(filename, .audio)]), [.zip, .checksum, .duplicate])
+        }
+    }
+
     func testRegistryCoversEveryImplementedIdentifierExactlyOnce() {
         XCTAssertEqual(Set(ActionRegistry.all.map(\.id)), Set(ActionID.allCases))
         XCTAssertEqual(ActionRegistry.all.count, ActionID.allCases.count)

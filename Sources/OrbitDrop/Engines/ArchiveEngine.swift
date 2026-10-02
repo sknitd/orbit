@@ -10,59 +10,67 @@ struct ArchiveEngine: ActionEngine {
         var outputs: [URL] = []
         var inputBytes: Int64 = 0
         var outputBytes: Int64 = 0
-        for (index, item) in items.enumerated() {
-            try Task.checkCancellation()
-            context.progress(Double(index) / Double(items.count), action == .zip ? "Creating ZIP…" : "Inspecting ZIP…")
-            let sourceBytes = try ArchiveSafety.inspectTree(item.url, enforceArchiveNames: action == .zip)
-            inputBytes += sourceBytes
-            let stem = action == .zip ? item.url.lastPathComponent : item.url.deletingPathExtension().lastPathComponent
-            let transaction = try OutputTransaction(source: item.url, outputDirectory: context.outputDirectory,
-                                                   stem: stem, extension: action == .zip ? "zip" : "")
-            defer { transaction.cleanup() }
-            let logURL = transaction.stagingURL.deletingLastPathComponent().appendingPathComponent("process.log")
-            if action == .zip {
-                try transaction.preflight(expectedBytes: sourceBytes)
-                try await ArchiveProcess.run(arguments: ["-c", "-k", "--norsrc", "--noextattr", "--keepParent",
-                                                          item.url.path, transaction.stagingURL.path], logURL: logURL)
-                _ = try ZIPInspector.inspect(transaction.stagingURL)
-                try await ArchiveProcess.run(executable: "/usr/bin/unzip", arguments: ["-t", "-qq", transaction.stagingURL.path], logURL: logURL)
-                let finalURL = try transaction.commit { zip in _ = try ZIPInspector.inspect(zip) }
-                outputs.append(finalURL)
-                outputBytes += Int64(try finalURL.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0)
-            } else {
-                let sourceProperties = try item.url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
-                guard sourceProperties.isRegularFile == true, sourceProperties.isSymbolicLink != true else {
-                    throw OrbitError.invalidInput("Choose a regular ZIP file to extract.")
-                }
-                // Vet exactly the bytes ditto will read. The source may be
-                // changed by another application without changing this snapshot.
-                let snapshot = transaction.stagingURL.deletingLastPathComponent().appendingPathComponent("archive.zip")
-                try FileManager.default.copyItem(at: item.url, to: snapshot)
-                let snapshotProperties = try snapshot.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
-                guard snapshotProperties.isRegularFile == true, snapshotProperties.isSymbolicLink != true else {
-                    throw OrbitError.invalidInput("Symbolic-link archives cannot be extracted.")
-                }
-                try FileManager.default.setAttributes([.posixPermissions: 0o400], ofItemAtPath: snapshot.path)
-                let inventory = try ZIPInspector.inspect(snapshot)
-                try transaction.preflight(expectedBytes: inventory.expandedBytes)
-                try FileManager.default.createDirectory(at: transaction.stagingURL, withIntermediateDirectories: false,
-                                                        attributes: [.posixPermissions: 0o700])
-                context.progress((Double(index) + 0.25) / Double(items.count), "Extracting ZIP…")
-                try await ArchiveProcess.run(arguments: ["-x", "-k", "--norsrc", "--noextattr",
-                                                          snapshot.path, transaction.stagingURL.path], logURL: logURL,
-                                             extractionRoot: transaction.stagingURL, expectedExpandedBytes: inventory.expandedBytes)
-                let finalURL = try transaction.commit { folder in
-                    let expandedBytes = try ArchiveSafety.inspectTree(folder, enforceArchiveNames: true, normalizePermissions: true)
-                    guard expandedBytes <= inventory.expandedBytes else {
-                        throw OrbitError.invalidInput("ZIP extraction exceeded its verified size limits.")
+        do {
+            for (index, item) in items.enumerated() {
+                try Task.checkCancellation()
+                context.progress(Double(index) / Double(items.count), action == .zip ? "Creating ZIP…" : "Inspecting ZIP…")
+                let sourceBytes = try ArchiveSafety.inspectTree(item.url, enforceArchiveNames: action == .zip)
+                inputBytes += sourceBytes
+                let stem = action == .zip ? item.url.lastPathComponent : item.url.deletingPathExtension().lastPathComponent
+                let transaction = try OutputTransaction(source: item.url, outputDirectory: context.outputDirectory,
+                                                       stem: stem, extension: action == .zip ? "zip" : "")
+                defer { transaction.cleanup() }
+                let logURL = transaction.stagingURL.deletingLastPathComponent().appendingPathComponent("process.log")
+                if action == .zip {
+                    try transaction.preflight(expectedBytes: sourceBytes)
+                    try await ArchiveProcess.run(arguments: ["-c", "-k", "--norsrc", "--noextattr", "--keepParent",
+                                                              item.url.path, transaction.stagingURL.path], logURL: logURL)
+                    _ = try ZIPInspector.inspect(transaction.stagingURL)
+                    try await ArchiveProcess.run(executable: "/usr/bin/unzip", arguments: ["-t", "-qq", transaction.stagingURL.path], logURL: logURL)
+                    let finalURL = try transaction.commit { zip in _ = try ZIPInspector.inspect(zip) }
+                    outputs.append(finalURL)
+                    outputBytes += Int64(try finalURL.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0)
+                } else {
+                    let sourceProperties = try item.url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+                    guard sourceProperties.isRegularFile == true, sourceProperties.isSymbolicLink != true else {
+                        throw OrbitError.invalidInput("Choose a regular ZIP file to extract.")
                     }
+                    // Vet exactly the bytes ditto will read. The source may be
+                    // changed by another application without changing this snapshot.
+                    let snapshot = transaction.stagingURL.deletingLastPathComponent().appendingPathComponent("archive.zip")
+                    try FileManager.default.copyItem(at: item.url, to: snapshot)
+                    let snapshotProperties = try snapshot.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+                    guard snapshotProperties.isRegularFile == true, snapshotProperties.isSymbolicLink != true else {
+                        throw OrbitError.invalidInput("Symbolic-link archives cannot be extracted.")
+                    }
+                    try FileManager.default.setAttributes([.posixPermissions: 0o400], ofItemAtPath: snapshot.path)
+                    let inventory = try ZIPInspector.inspect(snapshot)
+                    try transaction.preflight(expectedBytes: inventory.expandedBytes)
+                    try FileManager.default.createDirectory(at: transaction.stagingURL, withIntermediateDirectories: false,
+                                                            attributes: [.posixPermissions: 0o700])
+                    context.progress((Double(index) + 0.25) / Double(items.count), "Extracting ZIP…")
+                    try await ArchiveProcess.run(arguments: ["-x", "-k", "--norsrc", "--noextattr",
+                                                              snapshot.path, transaction.stagingURL.path], logURL: logURL,
+                                                 extractionRoot: transaction.stagingURL, expectedExpandedBytes: inventory.expandedBytes)
+                    let finalURL = try transaction.commit { folder in
+                        let expandedBytes = try ArchiveSafety.inspectTree(folder, enforceArchiveNames: true, normalizePermissions: true)
+                        guard expandedBytes <= inventory.expandedBytes else {
+                            throw OrbitError.invalidInput("ZIP extraction exceeded its verified size limits.")
+                        }
+                    }
+                    outputs.append(finalURL)
+                    outputBytes += try ArchiveSafety.inspectTree(finalURL, enforceArchiveNames: false)
                 }
-                outputs.append(finalURL)
-                outputBytes += try ArchiveSafety.inspectTree(finalURL, enforceArchiveNames: false)
             }
+            try Task.checkCancellation()
+            context.progress(1, "Saved")
+            return ActionResult(outputs: outputs, inputBytes: inputBytes, outputBytes: outputBytes)
+        } catch {
+            // Roll back only outputs published by this invocation. The atomic
+            // transaction never replaced an input or preexisting result.
+            for output in outputs { try? FileManager.default.removeItem(at: output) }
+            throw error
         }
-        context.progress(1, "Saved")
-        return ActionResult(outputs: outputs, inputBytes: inputBytes, outputBytes: outputBytes)
     }
 }
 

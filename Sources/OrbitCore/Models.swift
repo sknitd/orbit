@@ -10,8 +10,10 @@ public struct FileItem: Identifiable, Sendable, Hashable {
     public let kind: FileKind
     public let byteCount: Int64
     public let typeIdentifier: String
-    public init(url: URL, kind: FileKind, byteCount: Int64 = 0, typeIdentifier: String = "") {
+    public let privacySummary: String?
+    public init(url: URL, kind: FileKind, byteCount: Int64 = 0, typeIdentifier: String = "", privacySummary: String? = nil) {
         self.url = url; self.kind = kind; self.byteCount = byteCount; self.typeIdentifier = typeIdentifier
+        self.privacySummary = privacySummary
     }
 }
 

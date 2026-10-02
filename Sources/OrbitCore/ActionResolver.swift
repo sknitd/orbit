@@ -3,10 +3,10 @@ import Foundation
 /// The fixed catalog keeps wheel positions and learned action identifiers stable.
 public enum ActionRegistry {
     public static let all: [ActionDescriptor] = [
-        .init(.jpeg, "JPEG", "photo", category: "Convert", detail: "JPEG · quality 82%"),
+        .init(.jpeg, "JPEG", "photo", category: "Convert", detail: "JPEG · quality from Settings"),
         .init(.png, "PNG", "photo", category: "Convert", detail: "PNG · lossless"),
         .init(.heic, "HEIC", "photo", category: "Convert", detail: "HEIC · compact"),
-        .init(.webp, "WebP", "photo", category: "Convert", detail: "WebP · quality 82%"),
+        .init(.webp, "WebP", "photo", category: "Convert", detail: "WebP · quality from Settings"),
         .init(.compressImage, "Compress Image", "arrow.down.right.and.arrow.up.left", category: "Compress", detail: "Save a smaller copy"),
         .init(.resize1600, "Resize to 1600 px", "arrow.up.left.and.arrow.down.right", category: "Resize", detail: "Longest edge · never upscale"),
         .init(.removeMetadata, "Remove Metadata", "shield", category: "Privacy", detail: "Keep display color and orientation"),
@@ -55,9 +55,9 @@ public enum ActionResolver {
                 if items.count > 1 { ids.append(.mergePDF) }
                 ids += [.splitPDF, .pdfToPNG, .ocr]
             case .video:
-                ids = [.videoMP4, .compressVideo, .extractAudio]
+                if items.allSatisfy(isNativeVideo) { ids = [.videoMP4, .compressVideo, .extractAudio] }
             case .audio:
-                ids = [.audioM4A]
+                if items.allSatisfy(isNativeAudio) { ids = [.audioM4A] }
             case .archive:
                 if items.count == 1, isZIP(first) { ids = [.unzip] }
             case .json:
@@ -94,5 +94,16 @@ public enum ActionResolver {
             default: return nil
             }
         }
+    }
+
+    private static func isNativeVideo(_ item: FileItem) -> Bool {
+        ["mov", "mp4", "m4v"].contains(item.url.pathExtension.lowercased()) ||
+        ["com.apple.quicktime-movie", "public.mpeg-4", "com.apple.m4v-video"].contains(item.typeIdentifier)
+    }
+
+    private static func isNativeAudio(_ item: FileItem) -> Bool {
+        ["mp3", "m4a", "aac", "wav", "wave", "aif", "aiff", "aifc", "caf", "flac"].contains(item.url.pathExtension.lowercased()) ||
+        ["public.mp3", "public.mpeg-4-audio", "com.apple.m4a-audio", "public.aac-audio",
+         "com.microsoft.waveform-audio", "public.aiff-audio", "com.apple.coreaudio-format", "org.xiph.flac"].contains(item.typeIdentifier)
     }
 }

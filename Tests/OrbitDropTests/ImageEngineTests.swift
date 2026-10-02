@@ -5,6 +5,18 @@ import OrbitCore
 @testable import OrbitDrop
 
 final class ImageEngineTests: EngineTestCase, @unchecked Sendable {
+    func testInspectorReportsGPSPresenceWithoutExposingCoordinateValues() throws {
+        let source = try image(metadata: true)
+        let item = try XCTUnwrap(inspect([source]).first)
+        let summary = try XCTUnwrap(item.privacySummary)
+        XCTAssertTrue(summary.contains("GPS tags"))
+        XCTAssertTrue(summary.contains("EXIF details"))
+        XCTAssertTrue(summary.contains("TIFF details"))
+        XCTAssertFalse(summary.contains("42.5"))
+        XCTAssertFalse(summary.contains("73.2"))
+        XCTAssertFalse(summary.contains("Orbit Test Fixture"))
+    }
+
     func testJPEGToPNGDecodesAndRetainsOriginal() async throws {
         let source = try image(metadata: true)
         let original = try Data(contentsOf: source)

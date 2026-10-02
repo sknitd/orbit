@@ -23,6 +23,7 @@ public final class WheelController {
     public init() {}
 
     public func show(items: [FileItem], actions: [ActionDescriptor], at position: NSPoint,
+                     preferredCategory: String? = nil,
                      onSelect: @escaping @MainActor (ActionDescriptor, [URL]) -> Void,
                      onCancel: @escaping @MainActor () -> Void) {
         dismiss()
@@ -53,6 +54,9 @@ public final class WheelController {
         window.setAccessibilityLabel("OrbitDrop file actions")
 
         let state = WheelModel(items: items, actions: actions, side: frame.width)
+        if let preferredCategory, let group = state.groups.first(where: { $0.name.caseInsensitiveCompare(preferredCategory) == .orderedSame }) {
+            state.activate(group)
+        }
         let view = WheelDropView(frame: NSRect(x: 0, y: 0, width: frame.width, height: frame.height), model: state,
                                  expectedURLs: items.map(\.url))
         view.onDrop = { [weak self] action, urls in self?.complete(action: action, urls: urls) }
@@ -204,6 +208,7 @@ private final class WheelModel: ObservableObject {
     let groups: [WheelGroup]
     let fileCount: Int
     let fileName: String
+    let summary: String?
     let side: Double
     let geometry: RadialGeometry
     private var keyboardIndex = 0
@@ -213,6 +218,12 @@ private final class WheelModel: ObservableObject {
         self.side = side
         fileCount = items.count
         fileName = items.count == 1 ? items[0].url.lastPathComponent : "\(items.count) files"
+        let images = items.filter { $0.kind == .image }
+        if images.count == 1 { summary = images[0].privacySummary }
+        else if !images.isEmpty {
+            let counted = Dictionary(grouping: images, by: { $0.privacySummary ?? "Metadata uninspected" })
+            summary = counted.keys.sorted().map { "\(counted[$0]?.count ?? 0)× \($0)" }.joined(separator: "\n")
+        } else { summary = nil }
         let scale = side / 432
         geometry = RadialGeometry(primaryInnerRadius: 62 * scale, primaryOuterRadius: 113 * scale,
                                   optionInnerRadius: 123 * scale, optionOuterRadius: 187 * scale)
@@ -438,13 +449,17 @@ private struct RadialWheelView: View {
                 Text(model.highlightedAction?.title ?? model.fileName)
                     .font(.system(size: 9 * model.scale, weight: .semibold))
                     .multilineTextAlignment(.center).lineLimit(2).frame(width: 78 * model.scale)
+                if model.activeGroup?.name.lowercased() == "privacy", let summary = model.summary {
+                    Text(summary).font(.system(size: 8 * model.scale))
+                        .multilineTextAlignment(.center).lineLimit(2).frame(width: 82 * model.scale)
+                }
                 Text(model.payloadValid ? (model.highlightedAction == nil ? "Drop on an action" : "Release to run") : "Different drag")
                     .font(.system(size: 8 * model.scale)).foregroundStyle(.secondary)
             }
         }
         .frame(width: 105 * model.scale, height: 105 * model.scale)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(model.fileName). Drop in the center or outside the wheel to cancel.")
+        .accessibilityLabel("\(model.fileName). \(model.activeGroup?.name.lowercased() == "privacy" ? (model.summary ?? "") : "") Drop in the center or outside the wheel to cancel.")
         .allowsHitTesting(false)
     }
 

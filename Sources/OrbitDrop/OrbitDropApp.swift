@@ -3,6 +3,7 @@ import AppKit
 import OrbitCore
 
 @main
+@MainActor
 struct OrbitDropApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     var body: some Scene {
@@ -11,13 +12,16 @@ struct OrbitDropApp: App {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     let model = AppModel()
     private let wheel = WheelController()
     private var drag: DragMonitor?
     private var statusItem: NSStatusItem?
     private var resultsPanel: NSPanel?
+    private var settingsWindow: NSWindow?
     private var welcome: NSWindow?
+    private var wheelInspection: Task<Void, Never>?
+    private var wheelRequestID: UUID?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -39,14 +43,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         drag = DragMonitor(onActivate: { [weak self] urls, point, advanced in
             guard let self else { return }
             self.presentWheel(urls, at: point, advanced: advanced)
-        }, onCancel: { [weak self] in self?.wheel.dismiss() })
+        }, onCancel: { [weak self] in self?.cancelWheelPresentation() })
         applyPreferences()
         drag?.start()
         updateMonitoringStatus()
         if !UserDefaults.standard.bool(forKey: "welcomeSeen") { showWelcome() }
     }
 
-    func applicationWillTerminate(_ notification: Notification) { drag?.stop(); model.cancel() }
+    func applicationWillTerminate(_ notification: Notification) {
+        cancelWheelPresentation(); drag?.stop(); model.cancel()
+    }
+
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(undo) {
+            menuItem.toolTip = model.undoHelp
+            return model.canUndo
+        }
+        if menuItem.action == #selector(chooseFiles) {
+            return !model.busy && !model.preferences.paused
+        }
+        return true
+    }
 
     private func add(_ menu: NSMenu, _ title: String, _ action: Selector, _ key: String) {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
@@ -55,33 +72,78 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func presentWheel(_ urls: [URL], at point: NSPoint, advanced: Bool = false) {
         guard !model.preferences.paused, !model.busy else { return }
-        Task { [weak self] in
+        cancelWheelPresentation()
+        let identifier = UUID()
+        wheelRequestID = identifier
+        wheelInspection = Task { [weak self] in
             guard let self else { return }
+            defer {
+                if self.wheelRequestID == identifier { self.wheelInspection = nil }
+            }
             do {
-                let items = try await Task.detached { try FileInspector.inspect(urls) }.value
-                var actions = ActionResolver.actions(for: items)
-                if advanced {
-                    actions.sort { ($0.category == "Privacy" ? 0 : 1) < ($1.category == "Privacy" ? 0 : 1) }
+                let inspection = Task.detached(priority: .userInitiated) { try FileInspector.inspect(urls) }
+                let items = try await withTaskCancellationHandler {
+                    try await inspection.value
+                } onCancel: {
+                    inspection.cancel()
                 }
+                try Task.checkCancellation()
+                guard self.wheelRequestID == identifier,
+                      !self.model.preferences.paused, !self.model.busy else { return }
+                let actions = ActionResolver.actions(for: items)
                 guard !actions.isEmpty else { return }
-                self.wheel.show(items: items, actions: actions, at: point, onSelect: { [weak self] action, dropped in
+                self.wheel.show(items: items, actions: actions, at: point, preferredCategory: advanced ? "Privacy" : nil, onSelect: { [weak self] action, dropped in
+                    guard let self, self.wheelRequestID == identifier else { return }
+                    self.cancelWheelPresentation()
+                    self.drag?.finishDrag()
+                    self.model.run(action, urls: dropped)
+                }, onCancel: { [weak self] in
+                    self?.cancelWheelPresentation()
                     self?.drag?.finishDrag()
-                    self?.model.run(action, urls: dropped)
-                }, onCancel: {})
-            } catch { self.model.errorMessage = error.localizedDescription; self.showResults() }
+                })
+            } catch is CancellationError {
+                // A cancelled or superseded drag must not reopen a window.
+            } catch {
+                guard !Task.isCancelled, self.wheelRequestID == identifier else { return }
+                self.model.errorMessage = error.localizedDescription; self.showResults()
+            }
         }
     }
 
+    private func cancelWheelPresentation() {
+        wheelRequestID = nil
+        wheelInspection?.cancel()
+        wheelInspection = nil
+        wheel.dismiss()
+    }
+
     func requestAccess() {
+        cancelWheelPresentation()
         drag?.requestInputMonitoringAccess()
         drag?.stop(); drag?.start(); updateMonitoringStatus()
     }
     func applyPreferences() {
+        cancelWheelPresentation()
         drag?.trigger = model.preferences.triggerOption ? [.shift, .option] : [.shift]
         drag?.paused = model.preferences.paused
+        updateMonitoringStatus()
     }
     private func updateMonitoringStatus() {
-        model.monitoringStatus = CGPreflightListenEventAccess() ? "Input Monitoring is available. Drag a file and hold Shift." : "Enable Input Monitoring in System Settings, then quit and reopen OrbitDrop."
+        if model.preferences.paused {
+            model.monitoringStatus = "Drag observation is paused. Resume OrbitDrop from the menu bar."
+            return
+        }
+        switch drag?.status {
+        case .listening:
+            let modifier = model.preferences.triggerOption ? "Shift + Option" : "Shift"
+            model.monitoringStatus = "Drag observation is active. Drag a file and hold \(modifier)."
+        case .eventTapUnavailable:
+            model.monitoringStatus = "macOS could not start drag observation. Quit and reopen OrbitDrop, then check Input Monitoring."
+        case .inputMonitoringRequired:
+            model.monitoringStatus = "Enable Input Monitoring in System Settings, then quit and reopen OrbitDrop."
+        case .stopped, .none:
+            model.monitoringStatus = "Drag observation has not started."
+        }
     }
 
     @objc private func chooseFiles() {
@@ -91,14 +153,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if chooser.runModal() == .OK { presentWheel(chooser.urls, at: NSEvent.mouseLocation) }
     }
     @objc private func togglePause() {
-        model.preferences.paused.toggle(); drag?.paused = model.preferences.paused
-        if model.preferences.paused { wheel.dismiss() }
+        model.preferences.paused.toggle(); applyPreferences()
     }
     @objc private func undo() { model.undoLast() }
     @objc private func quit() { NSApp.terminate(nil) }
     @objc private func showSettings() {
+        if settingsWindow == nil {
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 594, height: 414),
+                styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            window.title = "OrbitDrop Settings"
+            window.isReleasedWhenClosed = false
+            window.contentView = NSHostingView(rootView: SettingsView(model: model,
+                requestAccess: requestAccess, applyPreferences: applyPreferences))
+            window.center()
+            settingsWindow = window
+        }
         NSApp.activate(ignoringOtherApps: true)
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        settingsWindow?.makeKeyAndOrderFront(nil)
     }
     @objc private func showWelcome() {
         if welcome == nil {
