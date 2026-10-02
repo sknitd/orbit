@@ -86,7 +86,9 @@ final class DragMonitor {
             place: .tailAppendEventTap,
             options: .listenOnly,
             eventsOfInterest: mask,
-            callback: DragMonitor.receiveEvent,
+            callback: { proxy, type, event, userInfo in
+                DragMonitor.receiveEvent(proxy, type, event, userInfo)
+            },
             userInfo: Unmanaged.passUnretained(context).toOpaque()
         ) else {
             status = CGPreflightListenEventAccess()
