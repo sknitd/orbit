@@ -1,4 +1,15 @@
-# OrbitDrop
+# Orbit
+
+Two native macOS file utilities share local transformation engines:
+
+| App | How to open file actions | Download and setup |
+| --- | --- | --- |
+| **NotchOrbit** | Drag files toward the MacBook notch or display's top center. No modifier key; actions appear in a native semicircle. | [NotchOrbit](NotchOrbit/README.md) |
+| **OrbitDrop** | Drag files and hold Shift to open a radial wheel near the pointer. | [OrbitDrop download and installation](#download-and-install) |
+
+NotchOrbit has its own project, app bundle, and preferences in the [NotchOrbit/](NotchOrbit/) subdirectory. Both apps target macOS 14 or later on Apple Silicon and Intel.
+
+## OrbitDrop
 
 OrbitDrop is a native macOS menu bar application for transforming local files through a radial drop target. It implements a focused subset of the supplied Orbit product specification; the advanced features in that specification are not all implemented.
 
