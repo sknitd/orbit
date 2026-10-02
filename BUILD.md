@@ -46,13 +46,16 @@ The icon is an adaptation of the user-supplied Orbit logo. Its generated raster 
 
 ## Linux development environment
 
-On a Linux host with Swift 6, the portable package can be validated with:
+The cloud checkout includes a verified Swift 6.2 toolchain under `/workspace/toolchains`. Reproduce or refresh it and run the portable tests with writable caches:
 
 ```bash
-swift test --parallel
+bash Scripts/install-cloud-swift.sh
+bash Scripts/cloud-core-tests.sh
 ```
 
 `Package.swift` intentionally includes only `OrbitCore`. These tests cover capability filtering, radial geometry, actual-drop payload matching, and ZIP metadata safety. They do not compile the application or native engines. Linux has no AppKit/PDFKit/AVFoundation macOS SDK and cannot validate Finder, Input Monitoring, Spaces, or the finished `.app`.
+
+The installer verifies the release's detached signature against the pinned official Swift signing-key source. The release was signed in September 2025 before its signing key expired in September 2026; GPG verifies that historical signature and reports the current expiry. Verification stays enabled. The installer reuses retained verified downloads and the existing toolchain.
 
 Do not describe a directory assembled on Linux as a compiled macOS application. `Scripts/build.sh` explicitly fails on a non-Darwin host. A macOS CI result or a Mac build is required for native compilation and linking; a real Mac session is required for interactive acceptance.
 
