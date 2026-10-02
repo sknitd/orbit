@@ -24,7 +24,7 @@ app_path=build/DerivedData/Build/Products/Release/NotchOrbit.app
 executable="$app_path/Contents/MacOS/NotchOrbit"
 [[ -x "$executable" ]]
 [[ -s "$app_path/Contents/Resources/AppIcon.icns" ]]
-lipo -verify_arch arm64 x86_64 "$executable"
+lipo "$executable" -verify_arch arm64 x86_64
 mkdir -p "$app_path/Contents/Resources/ThirdParty" dist
 cp "$repository_root/build/ThirdParty/libwebp-COPYING.txt" "$app_path/Contents/Resources/ThirdParty/"
 cp "$repository_root/build/ThirdParty/libwebp-PATENTS.txt" "$app_path/Contents/Resources/ThirdParty/"
