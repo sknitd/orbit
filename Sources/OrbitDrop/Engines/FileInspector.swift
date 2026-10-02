@@ -45,7 +45,9 @@ enum FileInspector {
             categories.append("GPS tags")
         }
         let exifKeys = [kCGImagePropertyExifDateTimeOriginal, kCGImagePropertyExifDateTimeDigitized,
-                        kCGImagePropertyExifUserComment, kCGImagePropertyExifMakerNote]
+                        kCGImagePropertyExifUserComment, kCGImagePropertyExifMakerNote,
+                        kCGImagePropertyExifCameraOwnerName, kCGImagePropertyExifBodySerialNumber,
+                        kCGImagePropertyExifLensSerialNumber, kCGImagePropertyExifLensMake, kCGImagePropertyExifLensModel]
         if let exif = properties[kCGImagePropertyExifDictionary as String] as? [String: Any],
            exifKeys.contains(where: { exif[$0 as String] != nil }) {
             categories.append("EXIF details")

@@ -82,6 +82,25 @@ final class MediaEngineTests: EngineTestCase, @unchecked Sendable {
         }
     }
 
+    func testCompressionPublishesSmallerPlayableVideoOrExplainsExistingCompactInput() async throws {
+        let source = try await movie()
+        let original = try Data(contentsOf: source)
+        do {
+            let result = try await NativeMediaEngine().perform(.compressVideo, items: inspect([source]), context: .init())
+            XCTAssertLessThan(result.outputBytes, result.inputBytes)
+            let output = try XCTUnwrap(result.outputs.first)
+            let asset = AVURLAsset(url: output)
+            let playable = try await asset.load(.isPlayable)
+            XCTAssertTrue(playable)
+            let tracks = try await asset.loadTracks(withMediaType: .video)
+            XCTAssertFalse(tracks.isEmpty)
+        } catch OrbitError.failed(let message) {
+            XCTAssertTrue(message.contains("could not make"), message)
+            XCTAssertEqual(try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil), [source])
+        }
+        XCTAssertEqual(try Data(contentsOf: source), original)
+    }
+
     private func wave() throws -> URL {
         let samples = 44_100
         var body = Data()
