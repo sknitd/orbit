@@ -106,6 +106,17 @@ final class NotchDragMonitor {
 
     func isCurrentActivation(_ generation: UInt64) -> Bool {
         guard !paused, tracker.isCurrent(generation) else { return false }
+        // Content writes by the existing pasteboard owner can retain the same
+        // change count. Before presenting inspected files, verify the live
+        // representation still matches the candidate rather than trusting its
+        // cached URLs. This runs only at the async presentation boundary.
+        let liveCount = pasteboard.changeCount
+        let liveURLs = Self.fileURLs(from: pasteboard)
+        guard cachedPayloadCount == liveCount, pasteboard.changeCount == liveCount,
+              NotchDragPayload.matches(observed: cachedURLs, dropped: liveURLs) else {
+            finishDrag()
+            return false
+        }
         // Inspection can finish before the next queued pointer event. Recheck
         // live screen layout, pointer region, and pasteboard freshness before
         // allowing its result to create a panel at obsolete geometry.
