@@ -40,6 +40,6 @@ for library in libwebp.a libsharpyuv.a; do
   lipo -create "${inputs[@]}" -output "build/WebP/lib/$library"
   lipo -info "build/WebP/lib/$library"
 done
-mkdir -p Resources/ThirdParty
-cp Vendor/libwebp/COPYING Resources/ThirdParty/libwebp-COPYING.txt
-cp Vendor/libwebp/PATENTS Resources/ThirdParty/libwebp-PATENTS.txt
+mkdir -p build/ThirdParty
+cp Vendor/libwebp/COPYING build/ThirdParty/libwebp-COPYING.txt
+cp Vendor/libwebp/PATENTS build/ThirdParty/libwebp-PATENTS.txt

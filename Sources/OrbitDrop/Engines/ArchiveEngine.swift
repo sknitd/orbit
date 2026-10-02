@@ -22,9 +22,31 @@ struct ArchiveEngine: ActionEngine {
                 defer { transaction.cleanup() }
                 let logURL = transaction.stagingURL.deletingLastPathComponent().appendingPathComponent("process.log")
                 if action == .zip {
-                    try transaction.preflight(expectedBytes: sourceBytes)
-                    try await ArchiveProcess.run(arguments: ["-c", "-k", "--norsrc", "--noextattr", "--keepParent",
-                                                              item.url.path, transaction.stagingURL.path], logURL: logURL)
+                    let isDirectory = try item.url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory == true
+                    try transaction.preflight(expectedBytes: sourceBytes * (isDirectory ? 1 : 2))
+                    var arguments = ["-c", "-k", "--norsrc", "--noextattr"]
+                    let archiveSource: URL
+                    if isDirectory {
+                        archiveSource = item.url
+                        arguments.append("--keepParent")
+                    } else {
+                        // ditto's ZIP interface archives directories. A private
+                        // one-file directory makes the entry basename explicit
+                        // and snapshots the bytes that will be compressed.
+                        let sourceDirectory = transaction.stagingURL.deletingLastPathComponent()
+                            .appendingPathComponent("archive-input", isDirectory: true)
+                        try FileManager.default.createDirectory(at: sourceDirectory, withIntermediateDirectories: false,
+                                                                attributes: [.posixPermissions: 0o700])
+                        let snapshot = sourceDirectory.appendingPathComponent(item.url.lastPathComponent)
+                        try FileManager.default.copyItem(at: item.url, to: snapshot)
+                        let snapshotValues = try snapshot.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+                        guard snapshotValues.isRegularFile == true, snapshotValues.isSymbolicLink != true else {
+                            throw OrbitError.invalidInput("Links and special files cannot be archived.")
+                        }
+                        archiveSource = sourceDirectory
+                    }
+                    arguments.append(contentsOf: [archiveSource.path, transaction.stagingURL.path])
+                    try await ArchiveProcess.run(arguments: arguments, logURL: logURL)
                     _ = try ZIPInspector.inspect(transaction.stagingURL)
                     try await ArchiveProcess.run(executable: "/usr/bin/unzip", arguments: ["-t", "-qq", transaction.stagingURL.path], logURL: logURL)
                     let finalURL = try transaction.commit { zip in _ = try ZIPInspector.inspect(zip) }
@@ -212,6 +234,9 @@ private final class ArchiveProcess: @unchecked Sendable {
             try Task.checkCancellation()
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                 process.terminationHandler = { process in
+                    // Process retains its handler; release the handler's
+                    // capture of this runner once the child has exited.
+                    process.terminationHandler = nil
                     if self.wasCancelled { continuation.resume(throwing: OrbitError.cancelled) }
                     else if process.terminationStatus == 0 { continuation.resume() }
                     else {

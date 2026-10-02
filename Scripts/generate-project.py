@@ -3,10 +3,13 @@
 from pathlib import Path
 import hashlib
 import json
+import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 PROJECT = ROOT / "OrbitDrop.xcodeproj"
-PROJECT.mkdir(exist_ok=True)
+CHECK = "--check" in sys.argv[1:]
+if not CHECK:
+    PROJECT.mkdir(exist_ok=True)
 
 def ident(name):
     return hashlib.sha1(name.encode()).hexdigest()[:24].upper()
@@ -101,12 +104,20 @@ for scope in ["project", *products]:
         keys.append(key)
     obj("configs:" + scope, "XCConfigurationList", f"buildConfigurations = {refs(keys)}; defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;")
 obj("project", "PBXProject", f"attributes = {{ LastUpgradeCheck = 1600; }}; buildConfigurationList = {ident('configs:project')}; compatibilityVersion = \"Xcode 14.0\"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base); mainGroup = {ident('group:main')}; productRefGroup = {ident('group:products')}; projectDirPath = \"\"; projectRoot = \"\"; targets = {refs(['target:' + t for t in products])};")
-(PROJECT / "project.pbxproj").write_text("// !$*UTF8*$!\n{\n\tarchiveVersion = 1;\n\tclasses = {};\n\tobjectVersion = 56;\n\tobjects = {\n" + "\n".join(objects) + f"\n\t}};\n\trootObject = {ident('project')};\n}}\n")
+project_text = "// !$*UTF8*$!\n{\n\tarchiveVersion = 1;\n\tclasses = {};\n\tobjectVersion = 56;\n\tobjects = {\n" + "\n".join(objects) + f"\n\t}};\n\trootObject = {ident('project')};\n}}\n"
+def save_or_check(path, content):
+    if CHECK:
+        if not path.is_file() or path.read_text() != content:
+            raise SystemExit(f"{path} needs updating. Review your changes and run python3 Scripts/generate-project.py as part of the coding task.")
+    else:
+        path.write_text(content)
+save_or_check(PROJECT / "project.pbxproj", project_text)
 
 def buildable(target):
     return f'<BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="{ident("target:" + target)}" BuildableName="{products[target][0]}" BlueprintName="{target}" ReferencedContainer="container:OrbitDrop.xcodeproj"/>'
 scheme_dir = PROJECT / "xcshareddata/xcschemes"
-scheme_dir.mkdir(parents=True, exist_ok=True)
+if not CHECK:
+    scheme_dir.mkdir(parents=True, exist_ok=True)
 scheme = f'''<?xml version="1.0" encoding="UTF-8"?>
 <Scheme LastUpgradeVersion="1600" version="1.3">
 <BuildAction parallelizeBuildables="YES" buildImplicitDependencies="YES"><BuildActionEntries>
@@ -118,5 +129,5 @@ scheme = f'''<?xml version="1.0" encoding="UTF-8"?>
 <ProfileAction buildConfiguration="Release" shouldUseLaunchSchemeArgsEnv="YES" savedToolIdentifier="" useCustomWorkingDirectory="NO" debugServiceExtension="internal"><BuildableProductRunnable runnableDebuggingMode="0">{buildable('OrbitDrop')}</BuildableProductRunnable></ProfileAction>
 <AnalyzeAction buildConfiguration="Debug"/><ArchiveAction buildConfiguration="Release" revealArchiveInOrganizer="YES"/>
 </Scheme>'''
-(scheme_dir / "OrbitDrop.xcscheme").write_text(scheme)
-print(f"Generated {PROJECT} ({sum(map(len, sources.values()))} source files)")
+save_or_check(scheme_dir / "OrbitDrop.xcscheme", scheme)
+print(f"{'Verified' if CHECK else 'Generated'} {PROJECT} ({sum(map(len, sources.values()))} source files)")

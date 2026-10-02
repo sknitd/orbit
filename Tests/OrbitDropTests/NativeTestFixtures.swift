@@ -7,10 +7,11 @@ import OrbitCore
 @testable import OrbitDrop
 
 class EngineTestCase: XCTestCase {
-    var directory = FileManager.default.temporaryDirectory
+    var directory = FileManager.default.temporaryDirectory.standardizedFileURL.resolvingSymlinksInPath()
 
     override func setUpWithError() throws {
-        directory = FileManager.default.temporaryDirectory.appendingPathComponent("OrbitTests-\(UUID().uuidString)", isDirectory: true)
+        directory = FileManager.default.temporaryDirectory.standardizedFileURL.resolvingSymlinksInPath()
+            .appendingPathComponent("OrbitTests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
 

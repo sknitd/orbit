@@ -6,7 +6,7 @@ cd "$task_root"
 xcodebuild -version
 bash Scripts/prepare-webp.sh
 bash Scripts/make-icon.sh
-python3 Scripts/generate-project.py
+python3 Scripts/generate-project.py --check
 swift test --parallel
 xcodebuild -project OrbitDrop.xcodeproj -scheme OrbitDrop -configuration Debug \
   -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO test
@@ -16,7 +16,7 @@ app_path=build/DerivedData/Build/Products/Release/OrbitDrop.app
 [[ -x "$app_path/Contents/MacOS/OrbitDrop" ]]
 cp build/AppIcon.icns "$app_path/Contents/Resources/AppIcon.icns"
 mkdir -p "$app_path/Contents/Resources/ThirdParty" dist
-cp Resources/ThirdParty/* "$app_path/Contents/Resources/ThirdParty/"
+cp build/ThirdParty/* "$app_path/Contents/Resources/ThirdParty/"
 codesign --force --deep --sign - "$app_path"
 codesign --verify --deep --strict "$app_path"
 file "$app_path/Contents/MacOS/OrbitDrop"

@@ -16,7 +16,7 @@ The build script performs these steps:
 
 1. Fetch libwebp at the pinned commit, configure/build `arm64` and `x86_64` separately to keep CPU-specific SIMD flags isolated, and combine their static libraries with `lipo`.
 2. Create all required icon sizes and `AppIcon.icns` from `Resources/AppIcon.png`.
-3. Regenerate `OrbitDrop.xcodeproj` and its shared scheme from the current sources.
+3. Check that the saved Xcode project and shared scheme declare the current sources, without rewriting tracked files.
 4. Run portable `OrbitCore` tests with `swift test --parallel`.
 5. Run Debug native engine tests with `xcodebuild test`.
 6. Build Release with `ONLY_ACTIVE_ARCH=NO`, bundle dependency notices, apply an ad hoc signature, and verify the signature.
