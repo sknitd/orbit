@@ -93,7 +93,8 @@ private enum ArchiveSafety {
                                                               errorHandler: { _, error in enumerationError = error; return false }) else {
             throw OrbitError.failed("Couldn’t read the folder contents.")
         }
-        let prefix = root.standardizedFileURL.path + "/"
+        let lexicalPrefix = root.standardizedFileURL.path + "/"
+        let resolvedPrefix = root.standardizedFileURL.resolvingSymlinksInPath().path + "/"
         var count = 0
         var bytes: Int64 = 0
         for case let url as URL in enumerator {
@@ -102,11 +103,12 @@ private enum ArchiveSafety {
             guard count <= ZIPInspector.maximumEntries * 4 else { throw OrbitError.invalidInput("The folder contains too many entries.") }
             let values = try url.resourceValues(forKeys: keys)
             guard values.isSymbolicLink != true, values.isRegularFile == true || values.isDirectory == true,
-                  url.standardizedFileURL.path.hasPrefix(prefix), url.resolvingSymlinksInPath().path.hasPrefix(prefix) else {
+                  url.standardizedFileURL.path.hasPrefix(lexicalPrefix),
+                  url.resolvingSymlinksInPath().path.hasPrefix(resolvedPrefix) else {
                 throw OrbitError.invalidInput("The folder contains a link, special file, or unsafe path.")
             }
             if enforceArchiveNames {
-                _ = try ZIPInspector.safePath(String(url.standardizedFileURL.path.dropFirst(prefix.count)))
+                _ = try ZIPInspector.safePath(String(url.standardizedFileURL.path.dropFirst(lexicalPrefix.count)))
             }
             bytes += Int64(values.fileSize ?? 0) * (values.isRegularFile == true ? 1 : 0)
             guard bytes <= ZIPInspector.maximumExpandedBytes else { throw OrbitError.invalidInput("The archive exceeds the 2 GB safety limit.") }

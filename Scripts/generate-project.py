@@ -92,6 +92,7 @@ for scope in ["project", *products]:
                 "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/../Frameworks"})
         if scope == "OrbitDropTests":
             settings.update({"GENERATE_INFOPLIST_FILE": "YES", "PRODUCT_BUNDLE_IDENTIFIER": "com.sknitd.OrbitDropTests",
+                "HEADER_SEARCH_PATHS": "$(inherited) $(SRCROOT)/build/WebP/include",
                 "TEST_HOST": "$(BUILT_PRODUCTS_DIR)/OrbitDrop.app/Contents/MacOS/OrbitDrop", "BUNDLE_LOADER": "$(TEST_HOST)",
                 "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks"})
         contents = " ".join(f"{key} = {quote(value)};" for key, value in sorted(settings.items()))
