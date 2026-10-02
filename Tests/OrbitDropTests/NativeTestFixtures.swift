@@ -21,6 +21,14 @@ class EngineTestCase: XCTestCase {
 
     func inspect(_ urls: [URL]) throws -> [FileItem] { try FileInspector.inspect(urls) }
 
+    /// Directory entries are names within this one fixture root. Comparing
+    /// names avoids Foundation's /var and /private/var URL spelling aliases.
+    func assertDirectoryContainsExactly(_ expectedNames: [String], file: StaticString = #filePath, line: UInt = #line) throws {
+        let actualNames = try FileManager.default.contentsOfDirectory(atPath: directory.path)
+        XCTAssertEqual(Set(actualNames), Set(expectedNames), file: file, line: line)
+        XCTAssertEqual(actualNames.count, expectedNames.count, file: file, line: line)
+    }
+
     func image(named name: String = "photo.jpg", width: Int = 96, height: Int = 64,
                metadata: Bool = false, quality: Double = 0.96) throws -> URL {
         var pixels = [UInt8](repeating: 255, count: width * height * 4)

@@ -30,6 +30,30 @@ final class ArchiveEngineTests: EngineTestCase, @unchecked Sendable {
         XCTAssertEqual(try String(contentsOf: original, encoding: .utf8), "nested content")
     }
 
+    func testFolderUnderSymbolicParentAliasRoundTripsExactContents() async throws {
+        let physicalParent = directory.appendingPathComponent("physical-parent", isDirectory: true)
+        let physicalSource = physicalParent.appendingPathComponent("source-folder", isDirectory: true)
+        let nested = physicalSource.appendingPathComponent("nested", isDirectory: true)
+        try FileManager.default.createDirectory(at: nested, withIntermediateDirectories: true)
+        let original = nested.appendingPathComponent("content.bin")
+        let bytes = Data([0, 1, 2, 127, 128, 254, 255]) + Data("Archive parent-alias fixture\n".utf8)
+        try bytes.write(to: original)
+        let aliasParent = directory.appendingPathComponent("parent-alias", isDirectory: true)
+        try FileManager.default.createSymbolicLink(at: aliasParent, withDestinationURL: physicalParent)
+        let aliasedSource = aliasParent.appendingPathComponent("source-folder", isDirectory: true)
+        XCTAssertNotEqual(aliasedSource.standardizedFileURL, aliasedSource.resolvingSymlinksInPath())
+        let selection = try inspect([aliasedSource])
+        XCTAssertEqual(selection.first?.kind, .folder)
+
+        let context = ActionContext(outputDirectory: directory)
+        let zipped = try await ArchiveEngine().perform(.zip, items: selection, context: context)
+        let extracted = try await ArchiveEngine().perform(.unzip, items: inspect(zipped.outputs), context: context)
+        let result = try XCTUnwrap(extracted.outputs.first).appendingPathComponent("source-folder/nested/content.bin")
+        XCTAssertEqual(try Data(contentsOf: result), bytes)
+        XCTAssertEqual(try Data(contentsOf: original), bytes)
+        XCTAssertEqual(try Data(contentsOf: aliasedSource.appendingPathComponent("nested/content.bin")), bytes)
+    }
+
     func testFolderContainingSymlinkIsRejectedBeforeLaunchingArchiver() async throws {
         let source = directory.appendingPathComponent("folder", isDirectory: true)
         try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
@@ -39,7 +63,8 @@ final class ArchiveEngineTests: EngineTestCase, @unchecked Sendable {
             _ = try await ArchiveEngine().perform(.zip, items: inspect([source]), context: .init())
             XCTFail("Symlinks must never be archived")
         } catch {
-            XCTAssertEqual(try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil), [source])
+            try assertDirectoryContainsExactly([source.lastPathComponent])
+            XCTAssertEqual(try source.appendingPathComponent("escape").resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink, true)
         }
     }
 
@@ -52,7 +77,7 @@ final class ArchiveEngineTests: EngineTestCase, @unchecked Sendable {
             XCTFail("Truncated ZIP must fail")
         } catch {
             XCTAssertEqual(try Data(contentsOf: source), content)
-            XCTAssertEqual(try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil), [source])
+            try assertDirectoryContainsExactly([source.lastPathComponent])
         }
     }
 
@@ -66,7 +91,9 @@ final class ArchiveEngineTests: EngineTestCase, @unchecked Sendable {
             _ = try await ArchiveEngine().perform(.zip, items: inspect([first, folder]), context: .init())
             XCTFail("The unsafe second item must fail the batch")
         } catch {
-            XCTAssertEqual(Set(try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)), Set([first, folder]))
+            try assertDirectoryContainsExactly([first.lastPathComponent, folder.lastPathComponent])
+            XCTAssertEqual(try String(contentsOf: first, encoding: .utf8), "first content")
+            XCTAssertEqual(try folder.appendingPathComponent("link").resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink, true)
         }
     }
 }

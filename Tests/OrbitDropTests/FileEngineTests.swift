@@ -52,7 +52,7 @@ final class FileEngineTests: EngineTestCase, @unchecked Sendable {
             _ = try await FileEngine().perform(.formatJSON, items: inspect([source]), context: .init())
             XCTFail("Invalid JSON cannot be formatted")
         } catch {
-            XCTAssertEqual(try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil), [source])
+            try assertDirectoryContainsExactly([source.lastPathComponent])
             XCTAssertEqual(try Data(contentsOf: source), original)
         }
     }
@@ -65,7 +65,10 @@ final class FileEngineTests: EngineTestCase, @unchecked Sendable {
             _ = try await FileEngine().perform(.checksum, items: inspect([first, second]), context: .init())
             XCTFail("Unsafe manifest filenames must fail")
         } catch {
-            XCTAssertEqual(Set(try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)), Set([first, second]))
+            try assertDirectoryContainsExactly([first.lastPathComponent, second.lastPathComponent])
+            for source in [first, second] {
+                XCTAssertEqual(try String(contentsOf: source, encoding: .utf8), "abc")
+            }
         }
     }
 }

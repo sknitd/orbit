@@ -73,12 +73,13 @@ final class MediaEngineTests: EngineTestCase, @unchecked Sendable {
 
     func testExtractionFromSilentVideoFailsWithoutPublishingAudio() async throws {
         let source = try await movie()
+        let original = try Data(contentsOf: source)
         do {
             _ = try await NativeMediaEngine().perform(.extractAudio, items: inspect([source]), context: .init())
             XCTFail("An audio-less video must not produce synthetic audio")
         } catch {
-            let files = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
-            XCTAssertEqual(files, [source])
+            try assertDirectoryContainsExactly([source.lastPathComponent])
+            XCTAssertEqual(try Data(contentsOf: source), original)
         }
     }
 
@@ -96,7 +97,7 @@ final class MediaEngineTests: EngineTestCase, @unchecked Sendable {
             XCTAssertFalse(tracks.isEmpty)
         } catch OrbitError.failed(let message) {
             XCTAssertTrue(message.contains("could not make"), message)
-            XCTAssertEqual(try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil), [source])
+            try assertDirectoryContainsExactly([source.lastPathComponent])
         }
         XCTAssertEqual(try Data(contentsOf: source), original)
     }

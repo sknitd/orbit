@@ -20,6 +20,7 @@ cp build/ThirdParty/* "$app_path/Contents/Resources/ThirdParty/"
 codesign --force --deep --sign - "$app_path"
 codesign --verify --deep --strict "$app_path"
 file "$app_path/Contents/MacOS/OrbitDrop"
+bash Scripts/smoke-launch.sh "$app_path"
 ditto -c -k --sequesterRsrc --keepParent "$app_path" dist/OrbitDrop.app.zip
 shasum -a 256 dist/OrbitDrop.app.zip > dist/OrbitDrop.app.zip.sha256
 echo "Built: $task_root/$app_path"

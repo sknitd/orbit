@@ -43,7 +43,8 @@ final class OutputNamingTests: EngineTestCase, @unchecked Sendable {
                                                          stem: "result", extension: "txt",
                                                          writer: { try Data("bad".utf8).write(to: $0) },
                                                          validate: { _ in throw OrbitError.invalidInput("Invalid fixture output") }))
-        XCTAssertEqual(try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil), [source])
+        try assertDirectoryContainsExactly([source.lastPathComponent])
+        XCTAssertEqual(try String(contentsOf: source, encoding: .utf8), "original")
     }
 
     func testUnsafeNamesAndSymlinkOutputsAreRejected() throws {
@@ -56,6 +57,7 @@ final class OutputNamingTests: EngineTestCase, @unchecked Sendable {
                                                          stem: "result", extension: "txt",
                                                          writer: { try FileManager.default.createSymbolicLink(at: $0, withDestinationURL: source) },
                                                          validate: { _ in }))
-        XCTAssertEqual(try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil), [source])
+        try assertDirectoryContainsExactly([source.lastPathComponent])
+        XCTAssertEqual(try String(contentsOf: source, encoding: .utf8), "original")
     }
 }

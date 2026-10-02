@@ -20,7 +20,8 @@ The build script performs these steps:
 4. Run portable `OrbitCore` tests with `swift test --parallel`.
 5. Run Debug native engine tests with `xcodebuild test`.
 6. Build Release with `ONLY_ACTIVE_ARCH=NO`, bundle dependency notices, apply an ad hoc signature, and verify the signature.
-7. Package the application and write a SHA-256 checksum.
+7. Launch the Release executable and check that it remains running for three seconds, then terminate the verification process. This checks startup survival; it does not verify Finder gestures or permission grants.
+8. Package the application and write a SHA-256 checksum.
 
 Successful output locations are:
 
