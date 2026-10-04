@@ -97,6 +97,28 @@ final class CaptureFilesEvaluationTests: NativeImageFixtureCase, @unchecked Send
         store.shutdown(); shelf.shutdown()
     }
 
+    @MainActor
+    func testImmediateRecordingHideNeverChecksOrRequestsPermission() async throws {
+        let directory = fixtureDirectory.appendingPathComponent("ImmediateHideShelf")
+        let shelf = FileShelfToolStore(managedDirectory: directory, persistState: false)
+        var checked = 0; var requested = 0
+        let store = ScreenshotShelfStore(shelf: shelf, persistState: false,
+            permissionCheck: { checked += 1; return false }, permissionRequest: { requested += 1; return false })
+        store.setVisible(true)
+        // Both calls share one MainActor turn, before the recording child can run.
+        store.startRecording()
+        store.setVisible(false)
+        await Task.yield()
+        try await Task.sleep(for: .milliseconds(30))
+        XCTAssertEqual(checked, 0); XCTAssertEqual(requested, 0)
+        XCTAssertFalse(store.isWorking); XCTAssertFalse(store.isRecording)
+        XCTAssertTrue(store.history.isEmpty); XCTAssertTrue(shelf.items.isEmpty)
+        XCTAssertNil(store.error)
+        XCTAssertEqual(store.status, "Capture stopped; no partial capture will be published.")
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: directory.path).isEmpty)
+        store.shutdown(); shelf.shutdown()
+    }
+
     func testNativeWriterCreatesDecodableMOVAndExtendsAnUnchangedRealFrame() async throws {
         let output = fixtureDirectory.appendingPathComponent("unchanged.mov")
         let writer = try CaptureMovieWriter(url: output, width: 64, height: 48)

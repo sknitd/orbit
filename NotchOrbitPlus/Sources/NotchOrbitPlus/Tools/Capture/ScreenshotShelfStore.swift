@@ -141,6 +141,7 @@ final class ScreenshotShelfStore: ObservableObject {
             guard let store = self else { return }
             var pending: CaptureSession?
             do {
+                try store.check(token)
                 store.status = "Preparing recording…"; try store.permission(); try store.check(token)
                 let plan = try await store.makePlan(kind: kind, recording: true, token: token)
                 try store.check(token)

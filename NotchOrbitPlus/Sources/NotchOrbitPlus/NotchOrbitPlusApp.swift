@@ -248,7 +248,7 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
             if let appearance = shared.appearance { try PlusAppearanceStore.shared.applySynced(appearance) }
             if let priority = shared.livePriority { try PlusLivePriorityStore.shared.applySynced(priority) }
             if let zones = shared.worldZoneIDs { try WorldClockToolModel.shared.applySyncedZoneIDs(zones) }
-            self.dashboardPreferences.toolOrder = shared.toolOrder
+            self.dashboardPreferences.applySyncedToolOrder(shared.toolOrder)
             self.dashboardPreferences.hiddenToolIDs = Set(shared.hiddenToolIDs)
             self.dashboardPreferences.openMode = mode
             self.dashboardPreferences.hoverDelay = shared.hoverDelay

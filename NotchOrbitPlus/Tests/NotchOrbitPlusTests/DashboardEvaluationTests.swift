@@ -5,6 +5,24 @@ import NotchCore
 @testable import NotchOrbitPlus
 
 final class DashboardEvaluationTests: XCTestCase {
+    @MainActor
+    func testOlderSyncedOrderKeepsNewToolsReorderableAndPersistsTheirPositions() throws {
+        let suite = "DashboardLegacySyncOrder-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let preferences = DashboardPreferences(defaults: defaults)
+        preferences.register(PlusTool.defaultOrder.map { DashboardToolMetadata(id: $0.rawValue, title: $0.title, symbol: $0.symbol) })
+        preferences.applySyncedToolOrder([PlusTool.launcher.rawValue, PlusTool.nowPlaying.rawValue, PlusTool.fileActions.rawValue])
+        XCTAssertEqual(Array(preferences.toolOrder.prefix(3)), ["launcher", "nowPlaying", "fileActions"])
+        XCTAssertEqual(Set(preferences.toolOrder), Set(PlusTool.allCases.map(\.rawValue)))
+        let oldIndex = try XCTUnwrap(preferences.toolOrder.firstIndex(of: PlusTool.capture.rawValue))
+        preferences.move(PlusTool.capture.rawValue, by: -1)
+        XCTAssertEqual(preferences.toolOrder.firstIndex(of: PlusTool.capture.rawValue), oldIndex - 1)
+        let restored = DashboardPreferences(defaults: defaults)
+        restored.register(preferences.registeredTools)
+        XCTAssertEqual(restored.toolOrder, preferences.toolOrder)
+    }
+
     private let advertisedIDs = [
         "assistant", "aiUsage", "sales", "clipboard", "teleprompter", "timers", "fileShelf", "mirror",
         "calendar", "reminders", "todos", "weather", "stocks", "emoji", "converter", "system",

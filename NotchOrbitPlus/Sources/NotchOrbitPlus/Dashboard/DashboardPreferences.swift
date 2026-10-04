@@ -106,6 +106,12 @@ public final class DashboardPreferences: ObservableObject {
         let order = surviving + appended
         if order != toolOrder { toolOrder = order }
     }
+    func applySyncedToolOrder(_ order: [String]) {
+        toolOrder = order
+        // Older snapshots can omit newly introduced tools. Keep those tools
+        // in the persisted order so their Move controls continue to work.
+        register(registeredTools)
+    }
     public var orderedTools: [DashboardToolMetadata] {
         let ranks = Dictionary(toolOrder.enumerated().map { ($0.element, $0.offset) }, uniquingKeysWith: min)
         return registeredTools.sorted { (ranks[$0.id] ?? Int.max) < (ranks[$1.id] ?? Int.max) }

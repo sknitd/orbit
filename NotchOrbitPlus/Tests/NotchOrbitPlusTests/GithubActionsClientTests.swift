@@ -20,10 +20,18 @@ private actor GithubFixtureServer {
             return try JSONSerialization.data(withJSONObject: rows)
         }
         let count = fillPages ? 50 : 2
-        let rows = (0..<count).map { index -> [String: Any] in
-            ["id": (page - 1) * 50 + index + 1, "display_title": "Build fixture \(index)", "head_branch": "main",
-             "status": index == 0 ? "completed" : "in_progress", "conclusion": index == 0 ? "success" as Any : NSNull(),
-             "updated_at": "2026-10-08T12:00:00Z", "html_url": "https://github.com/owner/repo-1/actions/runs/\(index + 1)"]
+        var rows: [[String: Any]] = []
+        for index in 0..<count {
+            let id = (page - 1) * 50 + index + 1
+            var row: [String: Any] = [:]
+            row["id"] = id
+            row["display_title"] = "Build fixture \(index)"
+            row["head_branch"] = "main"
+            row["status"] = index == 0 ? "completed" : "in_progress"
+            row["conclusion"] = index == 0 ? ("success" as Any) : (NSNull() as Any)
+            row["updated_at"] = "2026-10-08T12:00:00Z"
+            row["html_url"] = "https://github.com/owner/repo-1/actions/runs/\(id)"
+            rows.append(row)
         }
         return try JSONSerialization.data(withJSONObject: ["total_count": fillPages ? 400 : 2, "workflow_runs": rows])
     }
