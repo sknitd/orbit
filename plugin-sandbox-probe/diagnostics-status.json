@@ -1,0 +1,9 @@
+{
+  "fixture_process_id": 5847,
+  "matching_crash_reports": [
+    "fixture-crash-1.ips"
+  ],
+  "unified_log_bytes": 1001,
+  "unified_log_outcome": "completed",
+  "unified_log_exit_status": 0
+}

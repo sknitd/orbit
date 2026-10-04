@@ -1,0 +1,10 @@
+{
+  "checks" : [
+
+  ],
+  "diagnostic" : "Plugin command or sandbox exited with signal 6. No output was applied.",
+  "outcome" : "failed",
+  "process_id" : 5847,
+  "terminated_by_signal" : true,
+  "termination_status" : 6
+}
