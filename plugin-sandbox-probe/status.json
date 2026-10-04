@@ -1,0 +1,7 @@
+{
+  "checks" : [
+
+  ],
+  "diagnostic" : "Plugin command or sandbox exited with signal 6. No output was applied.",
+  "outcome" : "failed"
+}
