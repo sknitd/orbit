@@ -104,6 +104,15 @@ final class WorkflowStore: ObservableObject {
         if !presets.contains(where: { $0.id == selectedPresetID }) { selectedPresetID = presets.first?.id }
         error = nil
     }
+    func prepareSyncRollback() -> @MainActor () -> Void {
+        let oldPresets = presets, oldSelection = selectedPresetID, oldError = error
+        let rawPresets = defaults.object(forKey: "workflows.presets"), rawSelection = defaults.object(forKey: "workflows.selected")
+        return {
+            self.presets = oldPresets; self.selectedPresetID = oldSelection; self.error = oldError
+            if let rawPresets { self.defaults.set(rawPresets, forKey: "workflows.presets") } else { self.defaults.removeObject(forKey: "workflows.presets") }
+            if let rawSelection { self.defaults.set(rawSelection, forKey: "workflows.selected") } else { self.defaults.removeObject(forKey: "workflows.selected") }
+        }
+    }
 
     /// Call only from an actual native dragging destination's perform operation.
     /// The immutable saved preset ID must still match the target shown on entry.

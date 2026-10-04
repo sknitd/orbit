@@ -134,6 +134,14 @@ final class ColorPickerStore: ObservableObject {
         try commit(history: history, library: library)
         if !library.palettes.contains(where: { $0.id == selectedPaletteID }) { selectedPaletteID = library.palettes.first?.id }
     }
+    /// Restore only memory: the outer transaction restores exact original bytes, including absence.
+    func prepareSyncRollback() -> @MainActor () -> Void {
+        let oldState = state, oldSelection = selectedPaletteID, oldColor = selectedColor, oldError = error
+        return {
+            self.state = oldState; self.selectedPaletteID = oldSelection
+            self.selectedColor = oldColor; self.error = oldError
+        }
+    }
     func exportPalettes() {
         let panel = NSSavePanel(); panel.nameFieldStringValue = "Orbit-Color-Palettes.json"
         panel.title = "Export Color Palettes"

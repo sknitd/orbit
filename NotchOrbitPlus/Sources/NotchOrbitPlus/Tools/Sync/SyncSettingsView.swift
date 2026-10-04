@@ -11,12 +11,16 @@ struct SyncSettingsView: View {
                 HStack { Button("Choose Shared Folder…") { sync.chooseFolder() }; Text(sync.folderName).foregroundStyle(.secondary) }
                 Toggle("Enable notes, tasks and shared preferences sync", isOn: Binding(get: { sync.enabled }, set: { sync.setEnabled($0) }))
                 HStack {
-                    Button("Sync Now") { sync.syncNow() }.disabled(!sync.enabled || sync.isSyncing)
+                    Button("Sync Now") { sync.syncNow() }.disabled(!sync.enabled || sync.isSyncing || sync.recoveryDirectory != nil)
                     if sync.isSyncing { ProgressView().controlSize(.small) }
                     if let date = sync.lastSyncAt { Text("Last pass \(date.formatted(date: .abbreviated, time: .shortened))").font(.caption) }
                 }
                 Text(sync.status).font(.caption).foregroundStyle(.secondary)
                 if let error = sync.error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
+                if sync.recoveryDirectory != nil {
+                    Button("Show Private Recovery Copies") { sync.showRecoveryFolder() }
+                    Text("Some local stores may contain incoming data. Sync stays paused across relaunches. Recover the original files and defaults.plist from this private folder before removing it and reopening the app.").font(.caption).foregroundStyle(.orange)
+                }
             }
             Section("What is shared") {
                 Text("Quick Note, To-Dos, logical launcher pins, workflow presets, saved color palettes, tool order, hidden tools, hover/click behavior, appearance, live-status priorities and saved World Clock zones.")

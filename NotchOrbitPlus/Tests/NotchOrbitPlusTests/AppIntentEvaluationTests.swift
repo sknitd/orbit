@@ -7,6 +7,28 @@ import NotchCore
 
 final class AppIntentEvaluationTests: NativeImageFixtureCase, @unchecked Sendable {
     @MainActor
+    func testShelfIntentPublishesGenericFilesBeforeRemovingPrivateInput() async throws {
+        let directory = fixtureDirectory.appendingPathComponent("Shelf")
+        let shelf = FileShelfToolStore(managedDirectory: directory, persistState: false)
+        defer { shelf.shutdown() }
+        XCTAssertFalse(shelf.autoSave)
+        for (name, bytes) in [("note.txt", Data("Durable note".utf8)), ("report.pdf", Data("%PDF-1.7 fixture".utf8))] {
+            let item = try await PlusIntentCoordinator.addFileToShelf(IntentFile(data: bytes, filename: name, type: .data), shelf: shelf)
+            let managed = try XCTUnwrap(item.managedURL)
+            XCTAssertEqual(managed.lastPathComponent, name)
+            XCTAssertEqual(try Data(contentsOf: managed), bytes)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: item.originalURL.path), "Private Shortcut input is removed only after publication")
+            XCTAssertEqual(shelf.resolve(item), managed)
+        }
+        let original = try rasterFile(named: "source.jpg", width: 20, height: 16)
+        let bytes = try Data(contentsOf: original)
+        let item = try await PlusIntentCoordinator.addFileToShelf(IntentFile(fileURL: original), shelf: shelf)
+        XCTAssertEqual(try Data(contentsOf: XCTUnwrap(item.managedURL)), bytes)
+        XCTAssertEqual(try Data(contentsOf: original), bytes)
+        XCTAssertEqual(shelf.items.count, 3)
+    }
+
+    @MainActor
     func testShortcutRegistryAndDashboardActionRequireAnInstalledHandler() throws {
         XCTAssertEqual(PlusAppShortcuts.appShortcuts.count, 5)
         let coordinator = PlusIntentCoordinator()

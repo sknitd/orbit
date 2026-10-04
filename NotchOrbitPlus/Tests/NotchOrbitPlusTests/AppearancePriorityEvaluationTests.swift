@@ -6,6 +6,52 @@ import NotchCore
 
 final class AppearancePriorityEvaluationTests: XCTestCase {
     @MainActor
+    func testSyncRollbackRestoresTypedPreferencesAndExactPriorStoredObjects() throws {
+        let suite = "DashboardSyncRollback-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let prefix = "rollback-fixture."
+        let unreadableHidden = Data([0x00, 0xFF, 0x18, 0x80])
+        let priorOrder = ["workflows", "fileShelf"]
+        let wrongTypeDelay = ["unexpected": "not a number"]
+        defaults.set(unreadableHidden, forKey: prefix + "hidden")
+        defaults.set(priorOrder, forKey: prefix + "order")
+        defaults.set(wrongTypeDelay, forKey: prefix + "delay")
+        defaults.set("local-display-fixture", forKey: prefix + "display")
+        XCTAssertNil(defaults.object(forKey: prefix + "mode"))
+
+        let preferences = DashboardPreferences(defaults: defaults, prefix: prefix)
+        XCTAssertTrue(preferences.hiddenToolIDs.isEmpty)
+        XCTAssertEqual(preferences.toolOrder, priorOrder)
+        XCTAssertEqual(preferences.openMode, .hoverAndClick)
+        XCTAssertEqual(preferences.hoverDelay, 0.2)
+        let rollback = preferences.prepareSyncRollback()
+
+        preferences.hiddenToolIDs = ["capture", "githubActions"]
+        preferences.toolOrder = ["status", "capture", "workflows"]
+        preferences.openMode = .clickOnly
+        preferences.hoverDelay = 0.95
+        XCTAssertEqual(defaults.string(forKey: prefix + "mode"), "clickOnly")
+        XCTAssertEqual(defaults.stringArray(forKey: prefix + "hidden"), ["capture", "githubActions"])
+        try rollback()
+
+        XCTAssertTrue(preferences.hiddenToolIDs.isEmpty)
+        XCTAssertEqual(preferences.toolOrder, priorOrder)
+        XCTAssertEqual(preferences.openMode, .hoverAndClick)
+        XCTAssertEqual(preferences.hoverDelay, 0.2)
+        XCTAssertEqual(defaults.object(forKey: prefix + "hidden") as? Data, unreadableHidden)
+        XCTAssertEqual(defaults.object(forKey: prefix + "order") as? [String], priorOrder)
+        XCTAssertEqual(defaults.object(forKey: prefix + "delay") as? [String: String], wrongTypeDelay)
+        XCTAssertNil(defaults.object(forKey: prefix + "mode"), "An absent key must stay absent, rather than storing its UI fallback")
+        XCTAssertEqual(defaults.string(forKey: prefix + "display"), "local-display-fixture")
+        let restored = DashboardPreferences(defaults: defaults, prefix: prefix)
+        XCTAssertEqual(restored.hiddenToolIDs, preferences.hiddenToolIDs)
+        XCTAssertEqual(restored.toolOrder, preferences.toolOrder)
+        XCTAssertEqual(restored.openMode, preferences.openMode)
+        XCTAssertEqual(restored.hoverDelay, preferences.hoverDelay)
+    }
+
+    @MainActor
     func testActualDashboardSettingsRenderLocalDisplayAndSpacePreferencesWithoutPermissionActions() async throws {
         let suite = "DashboardDisplaySpaceEvaluation-\(UUID())"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))

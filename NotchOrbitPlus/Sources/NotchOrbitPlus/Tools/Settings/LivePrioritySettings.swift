@@ -24,6 +24,13 @@ final class PlusLivePriorityStore: ObservableObject {
         try validateSyncApply(value)
         defaults.set(try value.encoded(), forKey: Self.defaultsKey); configuration = value; error = nil
     }
+    func prepareSyncRollback() -> @MainActor () -> Void {
+        let old = configuration, oldError = error, raw = defaults.object(forKey: Self.defaultsKey)
+        return {
+            self.configuration = old; self.error = oldError
+            if let raw { self.defaults.set(raw, forKey: Self.defaultsKey) } else { self.defaults.removeObject(forKey: Self.defaultsKey) }
+        }
+    }
     func move(_ kind: LiveNotchKind, by offset: Int) {
         guard let index = priorityOrder.firstIndex(of: kind), priorityOrder.indices.contains(index + offset) else { return }
         var next = priorityOrder; next.swapAt(index, index + offset)

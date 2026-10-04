@@ -79,6 +79,24 @@ public final class DashboardPreferences: ObservableObject {
         value.isFinite ? min(widthRange.upperBound, max(widthRange.lowerBound, value)) : 620
     }
 
+    /// Sync can restore both the visible settings and their exact stored
+    /// representation if another participating store fails to commit.
+    func prepareSyncRollback() -> @MainActor () throws -> Void {
+        let previous = (hiddenToolIDs, toolOrder, openMode, hoverDelay)
+        let raw = Dictionary(uniqueKeysWithValues: ["hidden", "order", "mode", "delay"].map {
+            let name = key($0)
+            return (name, defaults.object(forKey: name))
+        })
+        return { [self] in
+            hiddenToolIDs = previous.0; toolOrder = previous.1
+            openMode = previous.2; hoverDelay = previous.3
+            for (name, value) in raw {
+                if let value { defaults.set(value, forKey: name) }
+                else { defaults.removeObject(forKey: name) }
+            }
+        }
+    }
+
     func register(_ tools: [DashboardToolMetadata]) {
         registeredTools = tools
         let known = Set(tools.map(\.id))

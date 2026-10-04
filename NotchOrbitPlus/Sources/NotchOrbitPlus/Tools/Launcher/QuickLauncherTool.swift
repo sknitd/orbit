@@ -256,6 +256,18 @@ final class PlusLauncherStore: ObservableObject {
         pins = local; missingTargets = missing; logicalOrder = values.map(\.id); targetErrors = errors
         status = missing.isEmpty ? "Synced logical launcher targets; local bookmarks retained." : "\(missing.count) synced target(s) need local resolution."
     }
+    /// Direct recovery avoids resolving targets or notifying sync while restoring local bookmarks.
+    func prepareSyncRollback() -> @MainActor () -> Void {
+        let oldPins = pins, oldMissing = missingTargets, oldOrder = logicalOrder
+        let oldErrors = targetErrors, oldStatus = status
+        let rawPins = defaults.object(forKey: Self.defaultsKey), rawLogical = defaults.object(forKey: Self.portableKey)
+        return {
+            self.pins = oldPins; self.missingTargets = oldMissing; self.logicalOrder = oldOrder
+            self.targetErrors = oldErrors; self.status = oldStatus
+            if let rawPins { self.defaults.set(rawPins, forKey: Self.defaultsKey) } else { self.defaults.removeObject(forKey: Self.defaultsKey) }
+            if let rawLogical { self.defaults.set(rawLogical, forKey: Self.portableKey) } else { self.defaults.removeObject(forKey: Self.portableKey) }
+        }
+    }
     func resolveMissingTarget(_ logical: SyncLauncherPin) {
         guard !busy, missingTargets.contains(where: { $0.id == logical.id }), logical.kind != .shortcut else { return }
         let panel = NSOpenPanel(); panel.allowsMultipleSelection = false

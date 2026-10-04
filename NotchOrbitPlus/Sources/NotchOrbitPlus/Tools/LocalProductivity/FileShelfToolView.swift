@@ -123,11 +123,27 @@ final class FileShelfToolStore: ObservableObject {
     func addManagedCapture(_ url: URL,
                            isCurrent: @MainActor () -> Bool = { true },
                            didPublish: @MainActor (FileShelfItem) -> Void = { _ in }) async throws -> FileShelfItem {
+        guard ["png", "mov", "mp4"].contains(url.pathExtension.lowercased()) else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        return try await addManagedFile(url, isCurrent: isCurrent, didPublish: { [self] item in
+            status = "Saved a managed capture; its staging source is unchanged."
+            didPublish(item)
+        })
+    }
+
+    /// Explicit file imports await a durable owned copy of any regular local file.
+    /// Publication and the caller's completion callback share one MainActor turn.
+    func addManagedFile(_ url: URL,
+                        isCurrent: @MainActor () -> Bool = { true },
+                        didPublish: @MainActor (FileShelfItem) -> Void = { _ in }) async throws -> FileShelfItem {
+        try Task.checkCancellation()
         let source = url.standardizedFileURL
+        guard source.isFileURL, (source.host ?? "").isEmpty || source.host == "localhost" else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
         let values = try source.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
-        guard source.isFileURL, (source.host ?? "").isEmpty || source.host == "localhost",
-              values.isRegularFile == true, values.isSymbolicLink != true,
-              ["png", "mov", "mp4"].contains(source.pathExtension.lowercased()),
+        guard values.isRegularFile == true, values.isSymbolicLink != true,
               items.count + inFlight.count < 200, !inFlight.contains(source),
               let directory = managedDirectory else { throw CocoaError(.fileReadCorruptFile) }
         inFlight.insert(source); importing += 1
@@ -141,16 +157,16 @@ final class FileShelfToolStore: ObservableObject {
         do {
             try Task.checkCancellation()
             guard isCurrent() else { throw CancellationError() }
-            // Save the proposed index first so an error cannot leave an unindexed owned capture.
+            // Save the proposed index first so an error cannot leave an unindexed owned copy.
             if persistState {
                 try LocalToolStorage.save(ShelfLibraryArchive(state: FileShelfState(
                     items: [item] + items, autoSave: autoSave, retention: retention), metadata: metadata),
                                           file: "file-shelf.json")
             }
             items.insert(item, at: 0)
-            error = nil; status = "Saved a managed capture; its staging source is unchanged."
+            error = nil; status = "Saved a managed file; its original is unchanged."
             scheduleExpiration()
-            // The capture's history/status commit shares this MainActor turn; a
+            // The caller's completion commit shares this MainActor turn; a
             // cancelled caller never needs to remove a user-editable published item.
             didPublish(item)
             return item

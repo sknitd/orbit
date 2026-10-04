@@ -42,6 +42,13 @@ final class PlusAppearanceStore: ObservableObject {
         try validateSyncApply(value)
         defaults.set(try value.encoded(), forKey: Self.defaultsKey); settings = value; error = nil
     }
+    func prepareSyncRollback() -> @MainActor () -> Void {
+        let old = settings, oldError = error, raw = defaults.object(forKey: Self.defaultsKey)
+        return {
+            self.settings = old; self.error = oldError
+            if let raw { self.defaults.set(raw, forKey: Self.defaultsKey) } else { self.defaults.removeObject(forKey: Self.defaultsKey) }
+        }
+    }
     func update(theme: PlusTheme? = nil, accent: PlusAccent? = nil, dropSound: Bool? = nil) {
         var value = settings
         if let theme { value.theme = theme }; if let accent { value.accent = accent }; if let dropSound { value.dropSound = dropSound }

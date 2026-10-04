@@ -17,6 +17,7 @@ final class PlusSyncService: ObservableObject {
     @Published private(set) var isSyncing = false
     @Published private(set) var lastSyncAt: Date?
     @Published private(set) var state: SyncSnapshot
+    @Published private(set) var recoveryDirectory: URL?
     private var folder: URL?
     private var scoped = false
     private var timer: Task<Void, Never>?
@@ -30,6 +31,7 @@ final class PlusSyncService: ObservableObject {
     private var readSettings: (@MainActor () throws -> SyncSharedSettings)?
     private var applySettings: (@MainActor (SyncSharedSettings) throws -> Void)?
     private var validateSettings: (@MainActor (SyncSharedSettings) throws -> Void)?
+    private var prepareSettingsRollback: (@MainActor () throws -> (@MainActor () throws -> Void))?
     private let defaults = UserDefaults.standard
     private let enabledKey = "plus.sync.enabled"
     private let bookmarkKey = "plus.sync.folder.bookmark"
@@ -52,15 +54,24 @@ final class PlusSyncService: ObservableObject {
             ledgerUnreadable = true
             self.error = "Local sync metadata could not be read. Its original and your local notes/tasks are preserved. Reset metadata with a backup before enabling sync."
         }
+        do {
+            recoveryDirectory = try PlusSyncLocalTransaction.pendingRecovery(in: LocalToolStorage.directory())
+            if let recoveryDirectory {
+                error = "A previous local sync transaction needs recovery. Sync is paused; recover the private originals in \(recoveryDirectory.lastPathComponent) before removing that recovery folder and reopening the app."
+                status = "Recovery required. Some local stores may contain incoming data."
+            }
+        } catch { ledgerUnreadable = true; self.error = "Could not check local sync recovery. Sync is paused: \(error.localizedDescription)" }
     }
     func configureSettings(read: @escaping @MainActor () throws -> SyncSharedSettings,
                            apply: @escaping @MainActor (SyncSharedSettings) throws -> Void,
-                           validate: (@MainActor (SyncSharedSettings) throws -> Void)? = nil) {
+                           validate: (@MainActor (SyncSharedSettings) throws -> Void)? = nil,
+                           prepareRollback: (@MainActor () throws -> (@MainActor () throws -> Void))? = nil) {
         readSettings = read; applySettings = apply; validateSettings = validate
+        prepareSettingsRollback = prepareRollback
     }
     /// Call on launch. This does not access a shared folder unless the user previously enabled sync.
     func start() {
-        guard enabled, !ledgerUnreadable else { return }
+        guard enabled, !ledgerUnreadable, recoveryDirectory == nil else { return }
         shutdown()
         do {
             guard let bookmark = defaults.data(forKey: bookmarkKey) else { throw SyncFailure.invalid("Choose a shared folder before enabling sync.") }
@@ -97,13 +108,14 @@ final class PlusSyncService: ObservableObject {
     func setEnabled(_ value: Bool) {
         guard value != enabled else { return }
         if value && ledgerUnreadable { error = "Reset unreadable metadata with a backup before enabling sync."; return }
+        if value && recoveryDirectory != nil { error = "Recover the private local originals and reopen the app before enabling sync."; return }
         if value && defaults.data(forKey: bookmarkKey) == nil { error = "Choose a shared folder first."; return }
         enabled = value; defaults.set(value, forKey: enabledKey)
         if value { start() } else { shutdown(); status = "Sync is off. Shared snapshots stay in the folder; local notes and tasks are retained." }
     }
     /// Root preferences publish before didSet; debounce ensures the read closure sees the new value.
     func settingsDidChange() {
-        guard enabled, !applyingRemote else { return }
+        guard enabled, !applyingRemote, recoveryDirectory == nil else { return }
         settingsTask?.cancel()
         settingsTask = Task { [weak self] in
             do { try await Task.sleep(for: .milliseconds(250)) } catch { return }
@@ -111,15 +123,15 @@ final class PlusSyncService: ObservableObject {
         }
     }
     func noteDidSave(_ text: String) {
-        guard enabled, !applyingRemote, !ledgerUnreadable else { return }
+        guard enabled, !applyingRemote, !ledgerUnreadable, recoveryDirectory == nil else { return }
         mutate { try $0.captureNote(text) }
     }
     func tasksDidSave(_ items: [ToDoItem]) {
-        guard enabled, !applyingRemote, !ledgerUnreadable else { return }
+        guard enabled, !applyingRemote, !ledgerUnreadable, recoveryDirectory == nil else { return }
         mutate { try $0.captureTasks(items) }
     }
     func portableDidChange() {
-        guard enabled, !applyingRemote, !ledgerUnreadable else { return }
+        guard enabled, !applyingRemote, !ledgerUnreadable, recoveryDirectory == nil else { return }
         portableTask?.cancel()
         portableTask = Task { [weak self] in
             do { try await Task.sleep(for: .milliseconds(250)) } catch { return }
@@ -178,7 +190,7 @@ final class PlusSyncService: ObservableObject {
         try persist(next); state = next
     }
     func syncNow() {
-        guard enabled, !ledgerUnreadable, !isSyncing, let folder else { return }
+        guard enabled, !ledgerUnreadable, recoveryDirectory == nil, !isSyncing, let folder else { return }
         unsavedLocal = false
         NotificationCenter.default.post(name: .plusSyncWillReadLocal, object: nil)
         guard !unsavedLocal else { error = "Unsaved local edits could not be flushed. Sync paused so they cannot be overwritten."; return }
@@ -205,11 +217,19 @@ final class PlusSyncService: ObservableObject {
                 try applyLocally(final)
                 lastSyncAt = Date()
                 status = "Saved to the shared folder; read \(peers.count) snapshot(s). Provider upload and delivery to another Mac are not verified."
-            } catch is CancellationError {} catch { if generation == ticket { self.error = "Sync could not finish: \(error.localizedDescription)"; status = "Local originals retained. Retry when the shared folder is available." } }
+            } catch is CancellationError {} catch {
+                if generation == ticket {
+                    self.error = "Sync could not finish: \(error.localizedDescription)"
+                    status = recoveryDirectory == nil
+                        ? "Sync paused. Local changes remain saved; retry when the cause is resolved."
+                        : "Recovery required. Some local stores may contain incoming data; further sync is paused."
+                }
+            }
         }
     }
     @discardableResult
     private func applyLocally(_ next: SyncSnapshot) throws -> SyncSnapshot {
+        guard recoveryDirectory == nil else { throw SyncFailure.invalid("Recover the private local originals before applying more sync data.") }
         // Flush any edits made while coordinated reads were pending before choosing the final local state.
         unsavedLocal = false
         NotificationCenter.default.post(name: .plusSyncWillReadLocal, object: nil)
@@ -219,14 +239,46 @@ final class PlusSyncService: ObservableObject {
         let merged = try SyncMerge.threeWay(base: state, local: state, remote: next)
         try validatePortableApply(merged)
         if let settings = merged.settings.preferred(on: merged.deviceID) { try validateSettings?(settings) }
-        try LocalToolStorage.applySyncState(merged)
+        let settingsRollback: (@MainActor () throws -> Void)?
+        if merged.settings.preferred(on: merged.deviceID) != nil, let prepareSettingsRollback {
+            settingsRollback = try prepareSettingsRollback()
+        } else if let readSettings, let applySettings, merged.settings.preferred(on: merged.deviceID) != nil {
+            let oldSettings = try readSettings()
+            settingsRollback = { try applySettings(oldSettings) }
+        } else { settingsRollback = nil }
+        let transaction = try PlusSyncLocalTransaction(in: LocalToolStorage.directory(), files: [
+            ("quick-note.txt", 200_000), ("todos.json", 4 * 1024 * 1024),
+            ("sync-state-v1.json", SyncSnapshot.maximumBytes), ("color-picker-v1.json", CoreColorPaletteLibrary.maximumBytes)
+        ], defaults: defaults, defaultsKeys: [
+            PlusLauncherStore.defaultsKey, PlusLauncherStore.portableKey, "workflows.presets", "workflows.selected",
+            PlusAppearanceStore.defaultsKey, PlusLivePriorityStore.defaultsKey, WorldClockToolModel.zonesKey,
+            "dashboard.order", "dashboard.hidden", "dashboard.mode", "dashboard.delay"
+        ])
+        transaction.addRollback(PlusLauncherStore.shared.prepareSyncRollback())
+        transaction.addRollback(WorkflowStore.shared.prepareSyncRollback())
+        transaction.addRollback(ColorPickerStore.shared.prepareSyncRollback())
+        transaction.addRollback(PlusAppearanceStore.shared.prepareSyncRollback())
+        transaction.addRollback(PlusLivePriorityStore.shared.prepareSyncRollback())
+        transaction.addRollback(WorldClockToolModel.shared.prepareSyncRollback())
+        if let settingsRollback { transaction.addRollback(settingsRollback) }
         applyingRemote = true
+        defer { applyingRemote = false }
         do {
-            try applyPortable(merged)
-            if let settings = merged.settings.preferred(on: merged.deviceID) { try applySettings?(settings) }
-        } catch { applyingRemote = false; throw error }
+            try transaction.apply(merged) {
+                try applyPortable(merged)
+                if let settings = merged.settings.preferred(on: merged.deviceID) { try applySettings?(settings) }
+            }
+        } catch {
+            if let failure = error as? PlusSyncLocalApplyFailure, let directory = failure.recoveryDirectory {
+                recoveryDirectory = directory
+                settingsTask?.cancel(); settingsTask = nil; portableTask?.cancel(); portableTask = nil
+                timer?.cancel(); timer = nil
+                status = "Recovery required. Further sync is paused; private original copies are retained."
+            }
+            NotificationCenter.default.post(name: .plusSyncLocalDidChange, object: nil)
+            throw error
+        }
         state = merged
-        applyingRemote = false
         NotificationCenter.default.post(name: .plusSyncLocalDidChange, object: nil)
         return merged
     }
@@ -265,6 +317,7 @@ final class PlusSyncService: ObservableObject {
         } catch { self.error = "Could not resolve portable library conflict; variants retained: \(error.localizedDescription)" }
     }
     private func flushBeforeResolution() throws {
+        guard recoveryDirectory == nil else { throw SyncFailure.invalid("Recover the private local originals before resolving conflicts.") }
         unsavedLocal = false
         NotificationCenter.default.post(name: .plusSyncWillReadLocal, object: nil)
         guard !unsavedLocal else { throw SyncFailure.invalid("Local drafts could not be saved; conflict variants were retained.") }
@@ -278,6 +331,7 @@ final class PlusSyncService: ObservableObject {
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: backup.path)
     }
     func resetMetadataPreservingBackup() {
+        guard recoveryDirectory == nil else { error = "Metadata reset cannot repair a partial local transaction. Recover the original copies first."; return }
         setEnabled(false)
         do {
             let url = try ledgerURL
@@ -294,4 +348,5 @@ final class PlusSyncService: ObservableObject {
             status = "Metadata reset with a backup. Legacy notes/tasks and shared files are unchanged. Enable sync to merge again."
         } catch { self.error = "Could not preserve/reset metadata: \(error.localizedDescription)" }
     }
+    func showRecoveryFolder() { if let recoveryDirectory { NSWorkspace.shared.open(recoveryDirectory) } }
 }

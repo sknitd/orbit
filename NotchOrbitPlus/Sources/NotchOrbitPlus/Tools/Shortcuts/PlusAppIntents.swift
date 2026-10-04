@@ -11,6 +11,11 @@ final class PlusIntentCoordinator {
         guard let toggleDashboard else { throw PlusIntentFailure.invalid("Open NotchOrbitPlus before toggling the dashboard.") }
         toggleDashboard()
     }
+    static func addFileToShelf(_ file: IntentFile, shelf: FileShelfToolStore = .shared) async throws -> FileShelfItem {
+        try await withFile(file) { url in
+            try await shelf.addManagedFile(url)
+        }
+    }
     static func withFile<T>(_ file: IntentFile, operation: @MainActor (URL) async throws -> T) async throws -> T {
         try Task.checkCancellation()
         if let url = file.fileURL {
@@ -60,9 +65,7 @@ struct AddFileToShelfIntent: AppIntent {
     @Parameter(title: "File") var file: IntentFile
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        _ = try await PlusIntentCoordinator.withFile(file) { url in
-            try await FileShelfToolStore.shared.addManagedCapture(url)
-        }
+        _ = try await PlusIntentCoordinator.addFileToShelf(file)
         return .result(dialog: "Added the file to File Shelf.")
     }
 }
@@ -120,7 +123,7 @@ struct ToggleDashboardIntent: AppIntent {
 
 struct CaptureScreenshotIntent: AppIntent {
     static let title: LocalizedStringResource = "Capture Screenshot"
-    static let description = IntentDescription("Capture the current display into File Shelf. Screen Recording access is requested only when you run this action.")
+    static let description = IntentDescription("Capture the selected display into File Shelf. Screen Recording access is requested only when you run this action.")
     static let openAppWhenRun = true
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {

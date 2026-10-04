@@ -257,6 +257,11 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
             if let appearance = shared.appearance { try PlusAppearanceStore.shared.validateSyncApply(appearance) }
             if let priority = shared.livePriority { try PlusLivePriorityStore.shared.validateSyncApply(priority) }
             if let zones = shared.worldZoneIDs { try WorldClockToolModel.shared.validateSyncZoneIDs(zones) }
+        }, prepareRollback: { [weak self] in
+            guard let preferences = self?.dashboardPreferences else {
+                throw SyncFailure.invalid("The dashboard cannot prepare shared settings recovery.")
+            }
+            return preferences.prepareSyncRollback()
         })
         settingsSubscription = dashboardPreferences.objectWillChange.sink { [weak self] _ in
             PlusSyncService.shared.settingsDidChange()

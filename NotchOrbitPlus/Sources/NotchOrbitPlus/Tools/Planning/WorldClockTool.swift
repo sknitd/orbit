@@ -44,6 +44,17 @@ final class WorldClockToolModel: ObservableObject {
         try validateSyncZoneIDs(values)
         zoneIDs = values; defaults.set(values, forKey: Self.zonesKey); malformedPreferences = false; error = nil
     }
+    /// The sync transaction owns when this checkpoint is restored. Restoration
+    /// reinstates absence as well as a value without publishing another edit.
+    func prepareSyncRollback() -> @MainActor () -> Void {
+        let previousZones = zoneIDs, previousError = error, previousMalformed = malformedPreferences
+        let previousRawValue = defaults.object(forKey: Self.zonesKey)
+        return { [self] in
+            zoneIDs = previousZones; error = previousError; malformedPreferences = previousMalformed
+            if let previousRawValue { defaults.set(previousRawValue, forKey: Self.zonesKey) }
+            else { defaults.removeObject(forKey: Self.zonesKey) }
+        }
+    }
     func resetMalformedZonesWithBackup() {
         guard malformedPreferences else { return }
         if let raw = defaults.object(forKey: Self.zonesKey) {
