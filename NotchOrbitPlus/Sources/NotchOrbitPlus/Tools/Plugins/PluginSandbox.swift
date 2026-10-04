@@ -86,6 +86,7 @@ enum PlusPluginSandbox {
         (deny default)
         (allow process-exec (literal "/bin/bash"))
         (allow sysctl-read)
+        (allow file-read-data (literal "/"))
         (allow file-read* \(runtimeFilters) (literal "/bin/bash") (subpath \(root)))
         (allow file-map-executable \(runtimeFilters) (literal "/bin/bash"))
         """

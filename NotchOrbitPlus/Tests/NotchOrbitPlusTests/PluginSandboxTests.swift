@@ -21,6 +21,8 @@ final class PluginSandboxTests: XCTestCase, @unchecked Sendable {
         XCTAssertThrowsError(try PlusPluginFolderIO.readPackage(plugin))
         let profile = try PlusPluginSandbox.profile(folder: plugin, writable: false, readFolders: [])
         XCTAssertTrue(profile.contains("(deny default)")); XCTAssertFalse(profile.contains("network"))
+        XCTAssertTrue(profile.contains("(allow file-read-data (literal \"/\"))"), "dyld ignition needs access to the root directory itself")
+        XCTAssertFalse(profile.contains("(subpath \"/\")"), "Root-directory access must never grant recursive filesystem reads")
         XCTAssertFalse(profile.contains("process-fork")); XCTAssertFalse(profile.contains("file-write"))
         XCTAssertFalse(profile.contains(FileManager.default.homeDirectoryForCurrentUser.path))
         let cryptexRuntime = URL(fileURLWithPath: "/System/Cryptexes/OS/usr/lib", isDirectory: true).resolvingSymlinksInPath().path
