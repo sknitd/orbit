@@ -8,7 +8,7 @@ enum CornerMonitorStatus: Equatable {
     var message: String {
         switch self {
         case .disabled: "Corner monitoring is off."
-        case .listening: "Listening for left-button corner clicks and drags. macOS Hot Corners may also respond."
+        case .listening: "Listening for configured corner mouse gestures. macOS Hot Corners may also respond."
         case .inputMonitoringRequired: "Allow CornerOrbit in System Settings → Privacy & Security → Input Monitoring, then enable again. macOS may require a relaunch."
         case .eventTapUnavailable: "The listen-only mouse event tap is unavailable or was interrupted. Enable again to retry."
         case .sessionInactive: "Monitoring is suspended while this session or its displays are inactive."
@@ -30,15 +30,18 @@ private final class CornerSystemObservers: @unchecked Sendable {
     deinit { observations.forEach { $0.0.removeObserver($0.1) } }
 }
 
-/// Explicitly enabled, listen-only left-mouse observation. This class never
+/// Explicitly enabled, listen-only mouse observation. This class never
 /// captures keyboard events, consumes an OS event, or performs an app action.
-/// Click deadlines and system notifications are the only scheduled work.
+/// Pending gesture deadlines and system notifications are the only scheduled work.
 @MainActor
 final class CornerGestureMonitor: ObservableObject {
     @Published private(set) var status: CornerMonitorStatus = .disabled
     @Published private(set) var isEnabled = false
     @Published private(set) var permissionGranted = false
     @Published private(set) var screens: [CornerScreen] = []
+    @Published private(set) var practiceMode = false
+    @Published private(set) var lastPractice: String?
+    var onPractice: (@MainActor (CornerTrigger) -> Void)?
     var diagnostic: String { status.message }
 
     private let dependencies: CornerMonitorDependencies
@@ -57,8 +60,9 @@ final class CornerGestureMonitor: ObservableObject {
     private let hints = CornerHintOverlay()
 
     init(settings: CornerSettings = .defaults, dependencies: CornerMonitorDependencies = .live,
+         onPractice: (@MainActor (CornerTrigger) -> Void)? = nil,
          onRecognized: @escaping @MainActor (CornerTrigger) -> Void) {
-        self.settings = settings; self.dependencies = dependencies; self.onRecognized = onRecognized
+        self.settings = settings; self.dependencies = dependencies; self.onRecognized = onRecognized; self.onPractice = onPractice
         // Even a previously enabled persisted preference cannot start a tap
         // or request a permission from this constructor.
         do { recognizer = try CornerGestureRecognizer(configuration: settings) }
@@ -70,7 +74,7 @@ final class CornerGestureMonitor: ObservableObject {
         cancelPending()
         do {
             let valid = try settings.validated()
-            let next = try CornerGestureRecognizer(configuration: valid)
+            let next = try CornerGestureRecognizer(configuration: valid, recognizeUnassigned: practiceMode)
             self.settings = valid; self.recognizer = next; self.showHints = showHints
             if !valid.enabled { disable(); return }
             if isEnabled { refreshScreens(); updateHints() }
@@ -87,7 +91,7 @@ final class CornerGestureMonitor: ObservableObject {
         if isEnabled { return true }
         do {
             var active = try settings.validated(); active.enabled = true
-            recognizer = try CornerGestureRecognizer(configuration: active)
+            recognizer = try CornerGestureRecognizer(configuration: active, recognizeUnassigned: practiceMode)
             settings = active
         } catch { status = .invalidConfiguration(error.localizedDescription); return false }
         cancelPending()
@@ -120,6 +124,16 @@ final class CornerGestureMonitor: ObservableObject {
         isEnabled = false; status = .disabled; hints.hide()
     }
     func stop() { disable() }
+
+    /// Practice shares the explicit permission/enable flow but routes every
+    /// recognized gesture exclusively to a readout and this optional callback.
+    /// Switching mode invalidates queued native callbacks and gesture timers.
+    func setPractice(_ enabled: Bool) {
+        guard practiceMode != enabled else { return }
+        cancelPending(); practiceMode = enabled; lastPractice = nil
+        recognizer = try? CornerGestureRecognizer(configuration: settings, recognizeUnassigned: practiceMode)
+        updateHints()
+    }
 
     /// Read-only diagnostics; requesting access remains a separate explicit
     /// Enable action. Losing a grant invalidates all pending recognition.
@@ -176,30 +190,41 @@ final class CornerGestureMonitor: ObservableObject {
         case .up: kind = .up
         case .dragged: kind = .dragged
         case .moved: kind = .moved
+        case .rightDown: kind = .rightDown
+        case .rightUp: kind = .rightUp
+        case .rightDragged: kind = .rightDragged
+        case .middleDown: kind = .middleDown
+        case .middleUp: kind = .middleUp
+        case .middleDragged: kind = .middleDragged
+        case .scrollUp: kind = .scrollUp
+        case .scrollDown: kind = .scrollDown
         case .interrupted: return
         }
-        let corner = CornerGeometry.corner(at: sample.point, in: screen.frame, size: settings.cornerSize)
+        let corner = CornerGeometry.corner(at: sample.point, in: screen.frame, configuration: settings)
         let triggers = recognizer?.handle(CornerPointerEvent(kind: kind, screenID: screen.id, corner: corner,
             point: sample.point, timestamp: sample.timestamp, modifiers: sample.modifiers)) ?? []
         deliver(triggers)
         scheduleDeadline()
     }
 
-    /// An explicit test clock may advance and flush pending clicks. Production
-    /// calls this only from a pending click's one-shot deadline.
+    /// An explicit test clock may advance pending gesture deadlines. Production
+    /// calls this only from a pending gesture's one-shot deadline.
     func flushPending() {
         deadlineTask?.cancel(); deadlineTask = nil; deadline = nil
         guard isEnabled, sessionIsActive else { cancelPending(); return }
         let ticket = generation
         refreshScreens()
         guard generation == ticket else { return }
+        refreshPermissionStatus()
+        guard isEnabled, generation == ticket else { return }
         let now = dependencies.now(), modifiers = dependencies.modifiers()
-        if !modifiers.isSuperset(of: settings.modifierRequirement) {
-            if let sample = lastSample, let screen = CornerScreenGeometry.screen(at: sample.point, in: screens) {
-                _ = recognizer?.handle(.init(kind: .modifiersChanged, screenID: screen.id, corner: nil,
-                    point: sample.point, timestamp: now, modifiers: modifiers))
-            } else { cancelPending() }
-        } else { deliver(recognizer?.flush(at: now) ?? []) }
+        // Refresh every corner's effective mask at a deadline without listening
+        // to key events. The Core event prunes ineligible pending work first.
+        if let sample = lastSample, let screen = CornerScreenGeometry.screen(at: sample.point, in: screens) {
+            let corner = CornerGeometry.corner(at: sample.point, in: screen.frame, configuration: settings)
+            deliver(recognizer?.handle(.init(kind: .modifiersChanged, screenID: screen.id, corner: corner,
+                point: sample.point, timestamp: now, modifiers: modifiers)) ?? [])
+        } else { cancelPending() }
         scheduleDeadline()
     }
 
@@ -210,7 +235,7 @@ final class CornerGestureMonitor: ObservableObject {
     private func scheduleDeadline() {
         let next = recognizer?.nextDeadline
         // Pointer movement does not create/cancel a task for an unchanged
-        // pending deadline. With no pending click, no timer exists at all.
+        // pending deadline. With no pending gesture, no timer exists at all.
         guard next != deadline else { return }
         deadlineTask?.cancel(); deadlineTask = nil; deadline = next
         guard let next, isEnabled else { return }
@@ -230,10 +255,17 @@ final class CornerGestureMonitor: ObservableObject {
             guard let self, isEnabled, generation == ticket, sessionIsActive else { return }
             let current = dependencies.screens().filter { $0.frame.isValid && !$0.id.isEmpty }
             guard current == screens else { refreshScreens(); return }
+            refreshPermissionStatus()
+            guard isEnabled, generation == ticket else { return }
+            let modifiers = dependencies.modifiers()
             for trigger in triggers {
                 guard isEnabled, generation == ticket, settings.permits(displayID: trigger.screenID),
-                      screens.contains(where: { $0.id == trigger.screenID }) else { return }
-                onRecognized(trigger)
+                      screens.contains(where: { $0.id == trigger.screenID }),
+                      modifiers.isSuperset(of: settings.requiredModifiers(for: trigger.corner)) else { return }
+                if practiceMode {
+                    lastPractice = "\(trigger.corner.title): \(trigger.gesture.title)"
+                    onPractice?(trigger)
+                } else { onRecognized(trigger) }
             }
         }
     }
@@ -242,7 +274,7 @@ final class CornerGestureMonitor: ObservableObject {
         guard isEnabled, showHints, sessionIsActive, !selectedScreens.isEmpty else { hints.hide(); return }
         let corners = Set(Corner.allCases.filter { corner in
             guard let configuration = settings.corners[corner], configuration.enabled else { return false }
-            return CornerGesture.allCases.contains { configuration.action(for: $0).kind != .none }
+            return practiceMode || CornerGesture.allCases.contains { configuration.action(for: $0).kind != .none }
         })
         hints.show(screens: selectedScreens, enabledCorners: corners, size: settings.cornerSize)
     }

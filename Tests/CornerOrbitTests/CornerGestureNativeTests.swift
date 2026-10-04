@@ -1,4 +1,5 @@
 import AppKit
+import CoreGraphics
 import XCTest
 import CornerCore
 @testable import CornerOrbit
@@ -163,6 +164,145 @@ final class CornerGestureNativeTests: XCTestCase {
         try await wait { received.count == 1 }
         try await Task.sleep(for: .milliseconds(240))
         XCTAssertEqual(received.count, 1); XCTAssertEqual(received.first?.screenID, "primary")
+    }
+
+    func testProductionMouseDecoderUsesActualButtonAndScrollFieldsWithoutKeyboardTypes() throws {
+        let event = try XCTUnwrap(CGEvent(mouseEventSource: nil, mouseType: .rightMouseDown, mouseCursorPosition: .zero, mouseButton: .right))
+        XCTAssertEqual(CornerMouseEventDecoder.kind(for: .rightMouseDown, event: event), .rightDown)
+        XCTAssertEqual(CornerMouseEventDecoder.kind(for: .rightMouseUp, event: event), .rightUp)
+        event.type = .otherMouseDown
+        event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
+        XCTAssertEqual(CornerMouseEventDecoder.kind(for: .otherMouseDown, event: event), .middleDown)
+        XCTAssertEqual(CornerMouseEventDecoder.kind(for: .otherMouseUp, event: event), .middleUp)
+        event.setIntegerValueField(.mouseEventButtonNumber, value: 3)
+        XCTAssertNil(CornerMouseEventDecoder.kind(for: .otherMouseDown, event: event))
+        let scroll = try XCTUnwrap(CGEvent(scrollWheelEvent2Source: nil, units: .pixel, wheelCount: 1, wheel1: 12, wheel2: 0, wheel3: 0))
+        scroll.setDoubleValueField(.scrollWheelEventPointDeltaAxis1, value: 12)
+        scroll.setIntegerValueField(.scrollWheelEventMomentumPhase, value: 0)
+        XCTAssertEqual(CornerMouseEventDecoder.kind(for: .scrollWheel, event: scroll), .scrollUp)
+        scroll.setDoubleValueField(.scrollWheelEventPointDeltaAxis1, value: -12)
+        XCTAssertEqual(CornerMouseEventDecoder.kind(for: .scrollWheel, event: scroll), .scrollDown)
+        scroll.setIntegerValueField(.scrollWheelEventMomentumPhase, value: 2)
+        XCTAssertNil(CornerMouseEventDecoder.kind(for: .scrollWheel, event: scroll))
+        scroll.setIntegerValueField(.scrollWheelEventMomentumPhase, value: 0)
+        scroll.setDoubleValueField(.scrollWheelEventPointDeltaAxis1, value: 0)
+        scroll.setIntegerValueField(.scrollWheelEventDeltaAxis1, value: 0)
+        scroll.setIntegerValueField(.scrollWheelEventDeltaAxis2, value: 10)
+        XCTAssertNil(CornerMouseEventDecoder.kind(for: .scrollWheel, event: scroll), "Horizontal-only scrolling is not a vertical corner gesture")
+        for keyType in [CGEventType.keyDown, .keyUp, .flagsChanged] {
+            XCTAssertFalse(CornerMouseEventDecoder.observedTypes.contains(keyType))
+            XCTAssertNil(CornerMouseEventDecoder.kind(for: keyType, event: event))
+        }
+    }
+
+    func testNativeRightFamiliesMiddleAndScrollRouteAtEveryCorner() async throws {
+        let input = NativeCornerInput()
+        var received: [CornerTrigger] = []
+        let monitor = CornerGestureMonitor(settings: configured(gestures: [.rightClick, .rightDoubleClick, .rightTripleClick, .middleClick, .scrollUp, .scrollDown]), dependencies: input.dependencies) { received.append($0) }
+        defer { monitor.disable() }; XCTAssertTrue(monitor.enable())
+        let points: [(Corner, CornerPoint)] = [(.topLeft, .init(x: 3, y: 597)), (.topRight, .init(x: 797, y: 597)), (.bottomLeft, .init(x: 3, y: 3)), (.bottomRight, .init(x: 797, y: 3))]
+        for (index, entry) in points.enumerated() {
+            let start = 1 + Double(index) * 5, initialCount = received.count
+            input.send(.rightDown, at: start, point: entry.1); input.send(.rightUp, at: start + 0.01, point: entry.1)
+            input.time = start + 0.22; monitor.flushPending()
+            try await wait { received.count == initialCount + 1 }
+            for offset in [0.5, 0.6] {
+                input.send(.rightDown, at: start + offset, point: entry.1); input.send(.rightUp, at: start + offset + 0.01, point: entry.1)
+            }
+            input.time = start + 0.82; monitor.flushPending()
+            try await wait { received.count == initialCount + 2 }
+            for offset in [1.0, 1.1, 1.2] {
+                input.send(.rightDown, at: start + offset, point: entry.1); input.send(.rightUp, at: start + offset + 0.01, point: entry.1)
+            }
+            try await wait { received.count == initialCount + 3 }
+            input.time = start + 1.5; monitor.flushPending()
+            input.send(.middleDown, at: start + 2, point: entry.1); input.send(.middleUp, at: start + 2.01, point: entry.1)
+            try await wait { received.count == initialCount + 4 }
+            input.send(.scrollUp, at: start + 2.5, point: entry.1)
+            try await wait { received.count == initialCount + 5 }
+            input.send(.scrollDown, at: start + 3, point: entry.1)
+            try await wait { received.count == initialCount + 6 }
+            XCTAssertEqual(Array(received.suffix(6)).map(\.gesture), [.rightClick, .rightDoubleClick, .rightTripleClick, .middleClick, .scrollUp, .scrollDown])
+            XCTAssertTrue(received.suffix(6).allSatisfy { $0.corner == entry.0 })
+        }
+        XCTAssertEqual(input.permissionRequests, 0)
+    }
+
+    func testNativeDwellAndHoldUseOverridesAndSuppressReleaseActions() async throws {
+        let input = NativeCornerInput()
+        var settings = configured(gestures: [.hover, .longPress, .singleClick, .dragOutOfCorner])
+        settings.hoverDelay = 0.3; settings.holdDelay = 0.3; settings.modifierRequirement = .shift
+        settings.corners[.topLeft]?.modifierRequirement = []; settings.corners[.topLeft]?.cornerSize = 80
+        var received: [CornerTrigger] = []
+        let monitor = CornerGestureMonitor(settings: settings, dependencies: input.dependencies) { received.append($0) }
+        defer { monitor.disable() }; XCTAssertTrue(monitor.enable())
+        let expanded = CornerPoint(x: 60, y: 550)
+        input.send(.moved, at: 1, point: expanded)
+        input.time = 1.31; monitor.flushPending()
+        try await wait { received.count == 1 }
+        XCTAssertEqual(received.first?.gesture, .hover)
+        input.send(.moved, at: 2, point: expanded)
+        input.time = 2.5; monitor.flushPending(); await Task.yield(); XCTAssertEqual(received.count, 1)
+        input.send(.down, at: 3, point: expanded)
+        input.time = 3.31; monitor.flushPending()
+        try await wait { received.count == 2 }
+        XCTAssertEqual(received.last?.gesture, .longPress)
+        input.send(.dragged, at: 3.4, point: .init(x: 200, y: 300)); input.send(.up, at: 3.5, point: .init(x: 200, y: 300))
+        input.time = 3.8; monitor.flushPending(); await Task.yield()
+        XCTAssertEqual(received.count, 2, "Recognized hold suppresses drag and click on release")
+        input.send(.moved, at: 4, point: .init(x: 797, y: 597), modifiers: .shift)
+        input.modifierState = []; input.time = 4.31; monitor.flushPending(); await Task.yield()
+        XCTAssertEqual(received.count, 2, "A per-corner inherited modifier is checked at its dwell deadline")
+    }
+
+    func testPracticeUnassignedRoutingAndModeSwitchInvalidateDeferredDelivery() async throws {
+        let input = NativeCornerInput()
+        var normal: [CornerTrigger] = [], practiced: [CornerTrigger] = []
+        let monitor = CornerGestureMonitor(settings: CornerSettings(enabled: true, cooldown: 0), dependencies: input.dependencies,
+            onPractice: { practiced.append($0) }, onRecognized: { normal.append($0) })
+        defer { monitor.disable() }; XCTAssertTrue(monitor.enable())
+        let point = CornerPoint(x: 3, y: 597)
+        monitor.setPractice(true)
+        input.send(.scrollUp, at: 1, point: point)
+        monitor.setPractice(false)
+        await Task.yield()
+        XCTAssertTrue(normal.isEmpty); XCTAssertTrue(practiced.isEmpty); XCTAssertNil(monitor.lastPractice)
+        monitor.setPractice(true)
+        input.send(.middleDown, at: 2, point: point); input.send(.middleUp, at: 2.01, point: point)
+        try await wait { practiced.count == 1 }
+        XCTAssertTrue(normal.isEmpty); XCTAssertEqual(practiced.first?.gesture, .middleClick)
+        XCTAssertEqual(monitor.lastPractice, "Top Left: Middle Click")
+        input.click(point, at: 3)
+        monitor.setPractice(false)
+        input.time = 3.5; monitor.flushPending(); await Task.yield()
+        XCTAssertEqual(practiced.count, 1); XCTAssertTrue(normal.isEmpty)
+        try monitor.update(settings: configured(gestures: [.scrollDown]))
+        input.send(.scrollDown, at: 4, point: point)
+        try await wait { normal.count == 1 }
+        XCTAssertEqual(normal.first?.gesture, .scrollDown); XCTAssertEqual(practiced.count, 1)
+        XCTAssertEqual(input.permissionRequests, 0)
+    }
+
+    func testPermissionRevocationAndDisplayChangesCancelDwellAndHold() async throws {
+        let input = NativeCornerInput()
+        var granted = true, received: [CornerTrigger] = []
+        var dependencies = input.dependencies; dependencies.preflightAccess = { granted }
+        var settings = configured(gestures: [.hover, .longPress]); settings.hoverDelay = 0.3; settings.holdDelay = 0.3
+        let monitor = CornerGestureMonitor(settings: settings, dependencies: dependencies) { received.append($0) }
+        defer { monitor.disable() }; XCTAssertTrue(monitor.enable())
+        let point = CornerPoint(x: 3, y: 597)
+        input.send(.moved, at: 1, point: point); granted = false
+        input.time = 1.31; monitor.flushPending(); await Task.yield()
+        XCTAssertTrue(received.isEmpty); XCTAssertFalse(monitor.isEnabled); XCTAssertEqual(monitor.status, .inputMonitoringRequired)
+        granted = true; XCTAssertTrue(monitor.enable(requestPermission: false))
+        input.send(.down, at: 2, point: point)
+        input.screens = [.init(id: "primary", frame: .init(x: 0, y: 0, width: 1000, height: 600))]
+        input.time = 2.31; monitor.flushPending(); await Task.yield()
+        XCTAssertTrue(received.isEmpty)
+        input.send(.down, at: 3, point: point); monitor.sessionDidChange(active: false)
+        input.time = 3.31; monitor.flushPending(); await Task.yield()
+        XCTAssertTrue(received.isEmpty); XCTAssertEqual(monitor.status, .sessionInactive)
+        XCTAssertEqual(input.permissionRequests, 0)
     }
 
     private func configured(gestures: [CornerGesture]) -> CornerSettings {

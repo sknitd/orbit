@@ -27,7 +27,7 @@ final class CornerEvaluationTests: XCTestCase {
         }
         let saved = try persistence.load()
         XCTAssertEqual(saved, fixture.store.preferences)
-        XCTAssertEqual(saved.settings.corners.values.reduce(0) { $0 + $1.bindings.count }, 20)
+        XCTAssertEqual(saved.settings.corners.values.reduce(0) { $0 + $1.bindings.count }, 52)
         XCTAssertFalse(saved.settings.enabled)
         fixture.store.setAutomation(true)
         XCTAssertTrue(fixture.store.preferences.automationEnabled)
@@ -183,7 +183,7 @@ final class CornerEvaluationTests: XCTestCase {
             named: "CornerOrbit-Settings-onboarding-fixture.png", size: NSSize(width: 960, height: 760))
         try store.assign(.init(kind: .openURL, url: "https://example.com/custom-website"), to: .topRight, gesture: .doubleClick)
         try await CornerNativeEvaluation.render(AnyView(CornerBindingEditorView(store: store, corner: .topRight, gesture: .doubleClick)),
-            named: "CornerOrbit-BindingEditor-custom-website-fixture.png", size: NSSize(width: 600, height: 480))
+            named: "CornerOrbit-BindingEditor-custom-website-fixture.png", size: NSSize(width: 600, height: 700))
         XCTAssertFalse(store.preferences.settings.enabled, "Opening settings/editors must never enable observation")
         XCTAssertFalse(store.preferences.automationEnabled)
     }

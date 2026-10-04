@@ -1,0 +1,449 @@
+{
+  "schema_version": 1,
+  "outcome": "passed",
+  "product": "CornerOrbit",
+  "independent_reviewer": "verify_checkout",
+  "reviewed_at": "2026-10-04T22:18:00.031577+00:00",
+  "source": {
+    "full_repository_commit": "2924103225aaa0de37ea45c8ba55a0b4e5c3f3ed",
+    "standalone_build_commit": "99ee9ed0123322a4785442afb1006a5eaca555ac",
+    "matching_tree": "9d54cfbe8822565a612e8b1b08ba77509280e4ed",
+    "result_commit": "b43e13edb99503527d37639a792f7fa01bca6ae2",
+    "run_id": "37239008254",
+    "run_attempt": 1
+  },
+  "tests": {
+    "total": 77,
+    "portable_core": {
+      "inventory_count": 36,
+      "unique_execution_records": 36,
+      "method_inventory": [
+        "CornerCoreTests.CornerGeometryTests/testAllFourCornersUseAppKitCoordinatesAndHaveCentralDeadRegion",
+        "CornerCoreTests.CornerGeometryTests/testInvalidCoordinatesSizesAndFramesHaveNoHit",
+        "CornerCoreTests.CornerGeometryTests/testNegativeOriginAndMultipleDisplaysAreIndependent",
+        "CornerCoreTests.CornerGeometryTests/testPointBoundariesAreInclusiveAndRetinaIsMeasuredInPoints",
+        "CornerCoreTests.CornerGeometryTests/testTinyScreensClampRegionsAndResolveSharedBoundaryOnce",
+        "CornerCoreTests.CornerGestureRecognizerTests/testCooldownPreventsRepeatedPressWithoutADeferredSurprise",
+        "CornerCoreTests.CornerGestureRecognizerTests/testDifferentCornersAndDisplaysKeepSeparateSequences",
+        "CornerCoreTests.CornerGestureRecognizerTests/testDoubleClickNeverRunsSingleAndWaitsForPossibleThird",
+        "CornerCoreTests.CornerGestureRecognizerTests/testDragIntoRequiresRealDragMovementAndRelease",
+        "CornerCoreTests.CornerGestureRecognizerTests/testDragOutOriginTakesPriorityWhenReleaseEntersAnotherCorner",
+        "CornerCoreTests.CornerGestureRecognizerTests/testDragReturningToItsOriginDoesNotExecuteOrBecomeAClick",
+        "CornerCoreTests.CornerGestureRecognizerTests/testDuplicateDownAndUpEventsDoNotIncreaseClickCount",
+        "CornerCoreTests.CornerGestureRecognizerTests/testExactDragThresholdWorksAndSmallMovementRemainsAClick",
+        "CornerCoreTests.CornerGestureRecognizerTests/testMovementWithoutDragEventsCannotProduceDragAction",
+        "CornerCoreTests.CornerGestureRecognizerTests/testRequiredModifiersLossCancelsPendingClickAndDrag",
+        "CornerCoreTests.CornerGestureRecognizerTests/testResetAndConfigurationUpdateInvalidateOldTimers",
+        "CornerCoreTests.CornerGestureRecognizerTests/testSecondHeldPressSuspendsDeadlineUntilItsRelease",
+        "CornerCoreTests.CornerGestureRecognizerTests/testSingleClickWaitsForDoubleAndTripleWindow",
+        "CornerCoreTests.CornerGestureRecognizerTests/testStaleAndInvalidEventsAndVeryLateTimersDoNotExecuteActions",
+        "CornerCoreTests.CornerGestureRecognizerTests/testTripleClickRunsOnceAndFourthClickIsSuppressedUntilQuiet",
+        "CornerCoreTests.CornerGestureRecognizerTests/testTripleTailDuringCooldownCannotMakeFifthClickANewSingle",
+        "CornerCoreTests.CornerGestureRecognizerTests/testUnboundTripleCannotFallBackToDoubleOrSingle",
+        "CornerCoreTests.CornerGestureRecognizerTests/testUnselectedDisplayDisabledCornerAndDefaultsCannotTrigger",
+        "CornerCoreTests.CornerHistoryTests/testCanonicalDuplicatesPreserveMostRecentEntryAndDistinctQueries",
+        "CornerCoreTests.CornerHistoryTests/testChromeTimestampConversionRejectsNegativeAndUnreasonableFutureDates",
+        "CornerCoreTests.CornerHistoryTests/testCodableRecentEntriesRetainActualSelectedURLAndTitle",
+        "CornerCoreTests.CornerHistoryTests/testRecentListIsBoundedAndTiesAreDeterministic",
+        "CornerCoreTests.CornerHistoryTests/testSanitizationKeepsOnlyCredentialFreeWebsitesWithValidMetadata",
+        "CornerCoreTests.CornerSettingsTests/testCodableRoundTripRetainsEveryIndependentBindingAndDisplaySelection",
+        "CornerCoreTests.CornerSettingsTests/testCustomActionsTrimNormalizeAndRejectExecutableOrCredentialURLs",
+        "CornerCoreTests.CornerSettingsTests/testCustomApplicationRequiresBundleIDAndDirectCodableValidation",
+        "CornerCoreTests.CornerSettingsTests/testDefaultsProvideTwentyDisabledBindingsAndPresetNeverEnablesMonitoring",
+        "CornerCoreTests.CornerSettingsTests/testDesktopAssistantActionsHaveNoWebsiteFallback",
+        "CornerCoreTests.CornerSettingsTests/testModifierAndDisplayLimitsAreValidated",
+        "CornerCoreTests.CornerSettingsTests/testNumericBoundsAndNonfiniteValuesRejectRatherThanSilentlyClamp",
+        "CornerCoreTests.CornerSettingsTests/testUnsupportedSchemaAndUnknownCornerOrGestureAreRejected"
+      ],
+      "proof": "Exact-source method inventory equals all 36 numbered SwiftPM XCTest execution records. The set-e build proceeds to native testing only after swift test succeeds. Swift Testing reports a separate zero-test trailer, not a zero-XCTest result."
+    },
+    "native": {
+      "inventory_count": 41,
+      "unique_started": 41,
+      "unique_passed": 41,
+      "method_inventory": [
+        "CornerOrbitTests.CornerActionTests/testChromeNewTabCreatesWindowOnlyWhenNeededAndNeverContainsUserInput",
+        "CornerOrbitTests.CornerActionTests/testConfiguredURLAndWhatsAppAreWorkspaceChromeRequestsWithoutScripts",
+        "CornerOrbitTests.CornerActionTests/testDisabledAutomationAndMalformedActionsNeverResolveLaunchOrScript",
+        "CornerOrbitTests.CornerActionTests/testDropdownRoutesArePureAndCancellationStopsScriptWork",
+        "CornerOrbitTests.CornerActionTests/testFourDocumentActionsConstructDistinctFixedRequestsWithoutKeystrokes",
+        "CornerOrbitTests.CornerActionTests/testMissingDesktopAppsDoNotBecomeWebsitesAndNativeErrorsPropagate",
+        "CornerOrbitTests.CornerActionTests/testNativeScriptOutputIsBoundedWithoutLaunchingApplications",
+        "CornerOrbitTests.CornerActionTests/testNativeScriptTimeoutCancellationAndErrorsWithoutTargetingApplications",
+        "CornerOrbitTests.CornerAppStoreTests/testCancelledLateFailureCannotShowErrorOrSettingsAndShutdownRejectsNewActions",
+        "CornerOrbitTests.CornerAppStoreTests/testCancelledNoncooperativeCompletionStaysSerializedAndCannotRecordOrPublishSuccess",
+        "CornerOrbitTests.CornerAppStoreTests/testEveryLifecycleStopCancelsSameTurnQueuedManualActionBeforeWorkspaceAccess",
+        "CornerOrbitTests.CornerAppStoreTests/testExistingAndDanglingSymlinksAreNeverOverwrittenOrFollowed",
+        "CornerOrbitTests.CornerAppStoreTests/testPublicationFailurePreservesExactOldSettingsAndCleansPrivateStaging",
+        "CornerOrbitTests.CornerAppStoreTests/testSettingsArePrivateBeforeAtomicPublicationAndRoundTrip",
+        "CornerOrbitTests.CornerAppStoreTests/testStructuralAndSemanticCorruptionRequireExplicitPreserveBeforeReset",
+        "CornerOrbitTests.CornerEvaluationTests/testActionErrorsPreserveBindingsAndRecentWebsitesRequireSuccessfulExplicitOptInOpens",
+        "CornerOrbitTests.CornerEvaluationTests/testActualChromeAndRecentDropdownPopoversRenderLocalFixturesWithoutOpeningWebsites",
+        "CornerOrbitTests.CornerEvaluationTests/testActualSettingsAndBindingEditorRenderAllFourCornersWithoutEnablingMonitoring",
+        "CornerOrbitTests.CornerEvaluationTests/testActualStoreDisableCancelsDelayedBindingThenNewGestureRunsOnlyItsConfiguredWebsite",
+        "CornerOrbitTests.CornerEvaluationTests/testAllTwentyAssignmentsAndPresetAreDataOnlyAndPersistWithoutImplicitAccess",
+        "CornerOrbitTests.CornerEvaluationTests/testInputMonitoringDenialRequiresExplicitEnableAndSurfacesNativeRecoveryInstructions",
+        "CornerOrbitTests.CornerGestureNativeTests/testDisplaySelectionRejectsUnselectedDisplayAndRealDeadlineFiresOnce",
+        "CornerOrbitTests.CornerGestureNativeTests/testNativeAdapterDisambiguatesSingleDoubleTripleAndIndependentCorners",
+        "CornerOrbitTests.CornerGestureNativeTests/testNativeDragDirectionRequiresDraggedEventsAndRelease",
+        "CornerOrbitTests.CornerGestureNativeTests/testQuartzConversionAndFullDisplayCornersPreserveNegativeAndUpperArrangements",
+        "CornerOrbitTests.CornerGestureNativeTests/testRequiredModifierReleaseAndSessionSuspendCancelDelayedActions",
+        "CornerOrbitTests.CornerGestureNativeTests/testSameDisplayIDLayoutChangeAndRemovalInvalidatePendingClicks",
+        "CornerOrbitTests.CornerGestureNativeTests/testScreenSelectionRejectsArrangementGapsAndUsesCoreBoundaryTieBreak",
+        "CornerOrbitTests.CornerHistoryTests/testActualLiveWALReaderSeesCommittedRowsWithoutChangingDatabaseOrWAL",
+        "CornerOrbitTests.CornerHistoryTests/testActualSQLiteQuerySortsBoundsConvertsChromeDatesAndPreservesSource",
+        "CornerOrbitTests.CornerHistoryTests/testActualSQLiteSkipsUnsafeURLsMalformedDatesAndTypedRowsWithoutInventingEntries",
+        "CornerOrbitTests.CornerHistoryTests/testCancelledActualReaderReturnsCancellationAndPreservesSource",
+        "CornerOrbitTests.CornerHistoryTests/testConstructionAndPreviewNeverResolveSavedBookmarkOrReadChrome",
+        "CornerOrbitTests.CornerHistoryTests/testCorruptRecentOriginalSurvivesUntilExplicitClearAndPreviewDoesNotPersist",
+        "CornerOrbitTests.CornerHistoryTests/testDisconnectCancelsAndRejectsAStaleReaderCompletion",
+        "CornerOrbitTests.CornerHistoryTests/testLockedDatabaseReturnsBoundedHonestBusyError",
+        "CornerOrbitTests.CornerHistoryTests/testParentFolderAliasReadsSameHistoryButFinalHistorySymlinkIsRefused",
+        "CornerOrbitTests.CornerHistoryTests/testRecentLinksAreOptInBoundedPersistentAndClearedOnDisable",
+        "CornerOrbitTests.CornerHistoryTests/testRefreshFailureRetainsDatedCacheAndConnectionAndDisconnectClearsThem",
+        "CornerOrbitTests.CornerHistoryTests/testSchemaCorruptionOversizeAndSymlinksFailWithoutChangingOriginals",
+        "CornerOrbitTests.CornerHistoryTests/testSupportedReadOnlyWALRecoveryCoordinatesMissingSHMWithoutHistoryWrites"
+      ],
+      "suite_counts": {
+        "CornerActionTests": 8,
+        "CornerAppStoreTests": 7,
+        "CornerEvaluationTests": 6,
+        "CornerGestureNativeTests": 7,
+        "CornerHistoryTests": 13
+      }
+    },
+    "failures": 0,
+    "skipped_methods": 0,
+    "fatal_crashes": 0,
+    "problem_lines": []
+  },
+  "package": {
+    "archive_bytes": 1239876,
+    "archive_sha256": "881613151aa1c1e366610d1c9fa78ac53cb22e7b5628cf8f4c8951c72574c390",
+    "zip_entries": [
+      "CornerOrbit.app/",
+      "CornerOrbit.app/Contents/",
+      "CornerOrbit.app/Contents/_CodeSignature/",
+      "CornerOrbit.app/Contents/_CodeSignature/CodeResources",
+      "CornerOrbit.app/Contents/MacOS/",
+      "CornerOrbit.app/Contents/MacOS/CornerOrbit",
+      "CornerOrbit.app/Contents/Resources/",
+      "CornerOrbit.app/Contents/Resources/AppIcon.icns",
+      "CornerOrbit.app/Contents/Info.plist",
+      "CornerOrbit.app/Contents/PkgInfo"
+    ],
+    "zip_crc_valid": true,
+    "bundle_identifier": "com.sknitd.CornerOrbit",
+    "version": "0.1.0",
+    "build_number": "1",
+    "slices": [
+      {
+        "architecture": "x86_64",
+        "minimum_macos": "14.0.0",
+        "dependencies": [
+          "/usr/lib/libsqlite3.dylib",
+          "/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation",
+          "/usr/lib/libobjc.A.dylib",
+          "/usr/lib/libSystem.B.dylib",
+          "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit",
+          "/System/Library/Frameworks/ColorSync.framework/Versions/A/ColorSync",
+          "/System/Library/Frameworks/Combine.framework/Versions/A/Combine",
+          "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation",
+          "/System/Library/Frameworks/CoreGraphics.framework/Versions/A/CoreGraphics",
+          "/System/Library/Frameworks/SwiftUI.framework/Versions/A/SwiftUI",
+          "/usr/lib/swift/libswiftCore.dylib",
+          "/usr/lib/swift/libswiftCoreFoundation.dylib",
+          "/usr/lib/swift/libswiftCoreImage.dylib",
+          "/usr/lib/swift/libswiftDarwin.dylib",
+          "/usr/lib/swift/libswiftDataDetection.dylib",
+          "/usr/lib/swift/libswiftDispatch.dylib",
+          "/usr/lib/swift/libswiftIOKit.dylib",
+          "/usr/lib/swift/libswiftMetal.dylib",
+          "/usr/lib/swift/libswiftOSLog.dylib",
+          "/usr/lib/swift/libswiftObjectiveC.dylib",
+          "/usr/lib/swift/libswiftQuartzCore.dylib",
+          "/usr/lib/swift/libswiftSpatial.dylib",
+          "/usr/lib/swift/libswiftUniformTypeIdentifiers.dylib",
+          "/usr/lib/swift/libswiftXPC.dylib",
+          "/usr/lib/swift/libswift_Concurrency.dylib",
+          "/usr/lib/swift/libswiftos.dylib",
+          "/usr/lib/swift/libswiftsimd.dylib"
+        ],
+        "embedded_code_directory": {
+          "flags": 2,
+          "identifier": "com.sknitd.CornerOrbit",
+          "version": 132096
+        }
+      },
+      {
+        "architecture": "arm64",
+        "minimum_macos": "14.0.0",
+        "dependencies": [
+          "/usr/lib/libsqlite3.dylib",
+          "/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation",
+          "/usr/lib/libobjc.A.dylib",
+          "/usr/lib/libSystem.B.dylib",
+          "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit",
+          "/System/Library/Frameworks/ColorSync.framework/Versions/A/ColorSync",
+          "/System/Library/Frameworks/Combine.framework/Versions/A/Combine",
+          "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation",
+          "/System/Library/Frameworks/CoreGraphics.framework/Versions/A/CoreGraphics",
+          "/System/Library/Frameworks/SwiftUI.framework/Versions/A/SwiftUI",
+          "/usr/lib/swift/libswiftCore.dylib",
+          "/usr/lib/swift/libswiftCoreFoundation.dylib",
+          "/usr/lib/swift/libswiftCoreImage.dylib",
+          "/usr/lib/swift/libswiftDarwin.dylib",
+          "/usr/lib/swift/libswiftDataDetection.dylib",
+          "/usr/lib/swift/libswiftDispatch.dylib",
+          "/usr/lib/swift/libswiftIOKit.dylib",
+          "/usr/lib/swift/libswiftMetal.dylib",
+          "/usr/lib/swift/libswiftOSLog.dylib",
+          "/usr/lib/swift/libswiftObjectiveC.dylib",
+          "/usr/lib/swift/libswiftQuartzCore.dylib",
+          "/usr/lib/swift/libswiftSpatial.dylib",
+          "/usr/lib/swift/libswiftUniformTypeIdentifiers.dylib",
+          "/usr/lib/swift/libswiftXPC.dylib",
+          "/usr/lib/swift/libswift_Concurrency.dylib",
+          "/usr/lib/swift/libswiftos.dylib",
+          "/usr/lib/swift/libswiftsimd.dylib"
+        ],
+        "embedded_code_directory": {
+          "flags": 2,
+          "identifier": "com.sknitd.CornerOrbit",
+          "version": 132096
+        }
+      }
+    ],
+    "test_bundles_and_dylibs_absent": true,
+    "executable_mode_preserved": true,
+    "signature": "Embedded ad hoc CodeDirectory inspected independently in both slices; runner strict codesign verification completed before successful packaging. Linux reviewer did not re-run macOS codesign.",
+    "notarized": false
+  },
+  "sdk": {
+    "xcode": "Xcode 16.4\nBuild version 16F6",
+    "macos_sdk": "15.5",
+    "swift": "Apple Swift version 6.1.2 (swiftlang-6.1.2.1.2 clang-1700.0.13.5)\nTarget: arm64-apple-macosx15.0",
+    "deployment_target": "14.0",
+    "probe_architectures": [
+      "arm64",
+      "x86_64"
+    ],
+    "public_appkit_swiftui_automation_apis_typechecked": true
+  },
+  "idle": {
+    "raw_sample_count": 11,
+    "warmup_seconds": 8,
+    "measurement_seconds": 10.806270457999972,
+    "independently_recalculated_mean_cpu_percent": 0.09253886471624376,
+    "independently_recalculated_peak_rss_mb": 47.26784,
+    "budgets": {
+      "mean_cpu_percent": 3,
+      "sampled_peak_rss_mb": 250
+    },
+    "passed": true,
+    "scope": "Owned menu-bar application process only, with gesture monitoring disabled. RSS excludes WindowServer, GPU allocations and other processes. This finite CI measurement does not establish corner-gesture performance, normal first-run UI, screen-lock behavior or every Mac model.",
+    "configuration": "Release --smoke launch uses isolated .preview defaults and the actual menu bar. No preferences window, gesture monitor, permission request, history read or target-app action is started."
+  },
+  "previews": {
+    "count": 12,
+    "captures": [
+      {
+        "filename": "CornerOrbit-BindingEditor-custom-website-fixture.png",
+        "dimensions": [
+          600,
+          480
+        ],
+        "sha256": "1937e324394bc3a705b1d45a67cd88532ec33ba4a1624c8bb21db2eb3f15ee64",
+        "byte_identical_to_individually_viewed_prior_capture": true
+      },
+      {
+        "filename": "CornerOrbit-ChromeHistory-dropdown-fixture.png",
+        "dimensions": [
+          440,
+          420
+        ],
+        "sha256": "a185864200b194e9c767868039ac058afb71dbdca0bd11b9c6c0a7d68f51d6e6",
+        "byte_identical_to_individually_viewed_prior_capture": true
+      },
+      {
+        "filename": "CornerOrbit-RecentWebsites-dropdown-fixture.png",
+        "dimensions": [
+          440,
+          420
+        ],
+        "sha256": "bea763fcc7c8d2bede6ad248ee8e805f59af3fc301b62127db7cf37b358d65e9",
+        "byte_identical_to_individually_viewed_prior_capture": true
+      },
+      {
+        "filename": "CornerOrbit-Settings-action-error-fixture.png",
+        "dimensions": [
+          960,
+          760
+        ],
+        "sha256": "d39c195671ed478554c4e239285c817748a80ec6ad8a7572fec66fc0e20aa3d5",
+        "byte_identical_to_individually_viewed_prior_capture": true
+      },
+      {
+        "filename": "CornerOrbit-Settings-behavior-fixture.png",
+        "dimensions": [
+          960,
+          760
+        ],
+        "sha256": "407aa70c3ad93d4a8b7be9acef7aae3875d65dbc68b21df8fad07bc25b9625d9",
+        "byte_identical_to_individually_viewed_prior_capture": true
+      },
+      {
+        "filename": "CornerOrbit-Settings-corner-bottomLeft-fixture.png",
+        "dimensions": [
+          960,
+          760
+        ],
+        "sha256": "d194f4fa59b5309f64e6e50c4b1d7177fa8f8cf0fc85a3bc546e2e24be48244f",
+        "byte_identical_to_individually_viewed_prior_capture": true
+      },
+      {
+        "filename": "CornerOrbit-Settings-corner-bottomRight-fixture.png",
+        "dimensions": [
+          960,
+          760
+        ],
+        "sha256": "a029e9dac9f145ac5c5f6e8eaec86a97fbe6eb1b497133910106e332e48bb0b3",
+        "byte_identical_to_individually_viewed_prior_capture": true
+      },
+      {
+        "filename": "CornerOrbit-Settings-corner-topRight-fixture.png",
+        "dimensions": [
+          960,
+          760
+        ],
+        "sha256": "3dac979f244d3bcab8dc535eb6fd9fba4e083b8f1034729b5da1a62b500dfeb8",
+        "byte_identical_to_individually_viewed_prior_capture": true
+      },
+      {
+        "filename": "CornerOrbit-Settings-four-corners-fixture.png",
+        "dimensions": [
+          960,
+          760
+        ],
+        "sha256": "3fd8bc7bd719a76a2191a82661ef5bc94b4b751b365dbd6a8abd61ab01ef2128",
+        "byte_identical_to_individually_viewed_prior_capture": true
+      },
+      {
+        "filename": "CornerOrbit-Settings-history-fixture.png",
+        "dimensions": [
+          960,
+          760
+        ],
+        "sha256": "ba585792e62ddf637aa286eda8b7ff7fc8256df36c4f5b66f98e1b946334330e",
+        "byte_identical_to_individually_viewed_prior_capture": true
+      },
+      {
+        "filename": "CornerOrbit-Settings-input-monitoring-denied-fixture.png",
+        "dimensions": [
+          960,
+          760
+        ],
+        "sha256": "35973282602b2729087cbd6ae4a2a6d50f810af14513fa89739d0cf840a9d616",
+        "byte_identical_to_individually_viewed_prior_capture": true
+      },
+      {
+        "filename": "CornerOrbit-Settings-onboarding-fixture.png",
+        "dimensions": [
+          960,
+          760
+        ],
+        "sha256": "6870f58c9b14279d3bdb0caddcfb0e012d78f8a88f1c3e63ce14dfdbd97b120b",
+        "byte_identical_to_individually_viewed_prior_capture": true
+      }
+    ],
+    "visual_review": "All 12 PNGs were individually viewed in the earlier native evidence; final captures have identical SHA256 bytes. Final overview, permission-denied Behavior and actual Chrome NSPopover were viewed again. No blocking clipping/readability defect. Behavior is an intentional ScrollView with Displays/access controls below the initial viewport. History/dropdown content is synthetic fixture data and captions identify it."
+  },
+  "source_isolation": {
+    "base_commit": "3b8647749e770c85e6faa9cf34e65bfe4a2d6242",
+    "committed_paths": [
+      "CornerOrbit/.github/workflows/build.yml",
+      "CornerOrbit/.gitignore",
+      "CornerOrbit/ARCHITECTURE.md",
+      "CornerOrbit/CornerOrbit.xcodeproj/project.pbxproj",
+      "CornerOrbit/CornerOrbit.xcodeproj/xcshareddata/xcschemes/CornerOrbit.xcscheme",
+      "CornerOrbit/EVALUATION.md",
+      "CornerOrbit/Package.swift",
+      "CornerOrbit/README.md",
+      "CornerOrbit/Resources/Info.plist",
+      "CornerOrbit/Scripts/build.sh",
+      "CornerOrbit/Scripts/check-sdk.sh",
+      "CornerOrbit/Scripts/cloud-core-tests.sh",
+      "CornerOrbit/Scripts/generate-project.py",
+      "CornerOrbit/Scripts/make-icon.sh",
+      "CornerOrbit/Scripts/smoke-launch.sh",
+      "CornerOrbit/Sources/CornerCore/CornerActions.swift",
+      "CornerOrbit/Sources/CornerCore/CornerGeometry.swift",
+      "CornerOrbit/Sources/CornerCore/CornerGestureRecognizer.swift",
+      "CornerOrbit/Sources/CornerCore/CornerHistory.swift",
+      "CornerOrbit/Sources/CornerCore/CornerSettings.swift",
+      "CornerOrbit/Sources/CornerOrbit/Actions/CornerActionRunner.swift",
+      "CornerOrbit/Sources/CornerOrbit/Actions/CornerAppleScriptExecutor.swift",
+      "CornerOrbit/Sources/CornerOrbit/Actions/CornerWorkspace.swift",
+      "CornerOrbit/Sources/CornerOrbit/App/CornerAppStore.swift",
+      "CornerOrbit/Sources/CornerOrbit/App/CornerOrbitApp.swift",
+      "CornerOrbit/Sources/CornerOrbit/App/CornerPreferences.swift",
+      "CornerOrbit/Sources/CornerOrbit/Gestures/CornerGestureMonitor.swift",
+      "CornerOrbit/Sources/CornerOrbit/Gestures/CornerHintOverlay.swift",
+      "CornerOrbit/Sources/CornerOrbit/Gestures/CornerMouseEvents.swift",
+      "CornerOrbit/Sources/CornerOrbit/Gestures/CornerNativeScreenGeometry.swift",
+      "CornerOrbit/Sources/CornerOrbit/History/ChromeHistoryReader.swift",
+      "CornerOrbit/Sources/CornerOrbit/History/ChromeHistoryStore.swift",
+      "CornerOrbit/Sources/CornerOrbit/History/RecentlyOpenedStore.swift",
+      "CornerOrbit/Sources/CornerOrbit/Settings/CornerBehaviorView.swift",
+      "CornerOrbit/Sources/CornerOrbit/Settings/CornerBindingEditorView.swift",
+      "CornerOrbit/Sources/CornerOrbit/Settings/CornerSettingsView.swift",
+      "CornerOrbit/Sources/CornerOrbit/Settings/CornerWebsitesSettingsView.swift",
+      "CornerOrbit/Tests/CornerCoreTests/CornerGeometryTests.swift",
+      "CornerOrbit/Tests/CornerCoreTests/CornerGestureRecognizerTests.swift",
+      "CornerOrbit/Tests/CornerCoreTests/CornerHistoryTests.swift",
+      "CornerOrbit/Tests/CornerCoreTests/CornerSettingsTests.swift",
+      "CornerOrbit/Tests/CornerOrbitTests/CornerActionTests.swift",
+      "CornerOrbit/Tests/CornerOrbitTests/CornerAppStoreTests.swift",
+      "CornerOrbit/Tests/CornerOrbitTests/CornerEvaluationTests.swift",
+      "CornerOrbit/Tests/CornerOrbitTests/CornerGestureNativeTests.swift",
+      "CornerOrbit/Tests/CornerOrbitTests/CornerHistoryTests.swift",
+      "CornerOrbit/Validation/verify-isolation.py",
+      "CornerOrbit/implemented-features.md",
+      "CornerOrbit/known-limitations.md"
+    ],
+    "working_changed_paths": [
+      "CornerOrbit/EVALUATION.md",
+      "CornerOrbit/README.md",
+      "CornerOrbit/docs/CornerOrbit-BindingEditor-custom-website-fixture.png",
+      "CornerOrbit/docs/CornerOrbit-ChromeHistory-dropdown-fixture.png",
+      "CornerOrbit/docs/CornerOrbit-RecentWebsites-dropdown-fixture.png",
+      "CornerOrbit/docs/CornerOrbit-Settings-action-error-fixture.png",
+      "CornerOrbit/docs/CornerOrbit-Settings-behavior-fixture.png",
+      "CornerOrbit/docs/CornerOrbit-Settings-corner-bottomLeft-fixture.png",
+      "CornerOrbit/docs/CornerOrbit-Settings-corner-bottomRight-fixture.png",
+      "CornerOrbit/docs/CornerOrbit-Settings-corner-topRight-fixture.png",
+      "CornerOrbit/docs/CornerOrbit-Settings-four-corners-fixture.png",
+      "CornerOrbit/docs/CornerOrbit-Settings-history-fixture.png",
+      "CornerOrbit/docs/CornerOrbit-Settings-input-monitoring-denied-fixture.png",
+      "CornerOrbit/docs/CornerOrbit-Settings-onboarding-fixture.png",
+      "CornerOrbit/docs/binary-metadata.json",
+      "CornerOrbit/docs/build-status.json",
+      "CornerOrbit/docs/code-signature.txt",
+      "CornerOrbit/docs/idle-performance.json",
+      "CornerOrbit/docs/package-metadata.json",
+      "CornerOrbit/docs/sdk-inventory.json",
+      "CornerOrbit/docs/validation-summary.json",
+      "CornerOrbit/known-limitations.md"
+    ],
+    "untracked_paths": [],
+    "outside_cornerorbit_paths": [],
+    "scope": "Read-only Git --no-renames path audit. All committed differences and current nonignored work remain beneath CornerOrbit/. Original app sources are unchanged."
+  },
+  "acceptance_limits": [
+    "No interactive physical corner click/drag latency, macOS Hot Corners conflict or multi-display/Spaces/screen-lock acceptance was performed.",
+    "Real Input Monitoring and Automation grants and installed Chrome/Office/TextEdit actions were not exercised; injected providers and harmless built-in osascript process fixtures were used.",
+    "Chrome SQLite tests use private fixture databases including actual live WAL. No personal Chrome profile was opened. SQLite transient SHM coordination is permitted after explicit connection, while DB/WAL durable contents remain unchanged.",
+    "The finite idle measurement covers the actual Release menu-bar process with gesture monitoring disabled, not enabled monitoring or all Mac models.",
+    "The package is ad hoc signed and not notarized; Gatekeeper acceptance and Apple Developer identity remain outside this evidence."
+  ]
+}

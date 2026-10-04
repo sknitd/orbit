@@ -7,6 +7,14 @@ protocol CornerWorkspaceAccessing {
     func openApplication(at url: URL) async throws
     func openWebsite(_ url: URL, in application: URL) async throws
     func openDirectory(_ url: URL) async throws
+    func openFile(_ url: URL) async throws
+    func openFile(_ url: URL, in application: URL) async throws
+}
+
+extension CornerWorkspaceAccessing {
+    // Older injected workspaces fail visibly instead of performing a native side effect.
+    func openFile(_ url: URL) async throws { throw CornerActionExecutionError.launchFailed("This workspace cannot open files.") }
+    func openFile(_ url: URL, in application: URL) async throws { throw CornerActionExecutionError.launchFailed("This workspace cannot open a file in the selected application.") }
 }
 
 /// One callback, timeout, or cancellation resumes each request once.
@@ -38,7 +46,19 @@ private final class CornerWorkspaceReply: @unchecked Sendable {
 
 @MainActor
 final class CornerNativeWorkspace: CornerWorkspaceAccessing {
-    func applicationURL(bundleID: String) -> URL? { NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) }
+    func applicationURL(bundleID: String) -> URL? {
+        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) { return url }
+        // Hidden system helpers may not be registered with Launch Services.
+        let fallback: String?
+        switch bundleID {
+        case "com.apple.screencaptureui": fallback = "/System/Applications/Utilities/Screenshot.app"
+        case "com.apple.ScreenSaver.Engine": fallback = "/System/Library/CoreServices/ScreenSaverEngine.app"
+        default: fallback = nil
+        }
+        guard let fallback else { return nil }
+        let url = URL(fileURLWithPath: fallback, isDirectory: true)
+        return Bundle(url: url)?.bundleIdentifier == bundleID ? url : nil
+    }
     func openApplication(at url: URL) async throws {
         try Task.checkCancellation()
         let reply = CornerWorkspaceReply()
@@ -68,6 +88,24 @@ final class CornerNativeWorkspace: CornerWorkspaceAccessing {
                 }
             }
         } onCancel: { reply.finish(.failure(CancellationError())) }
+    }
+    func openFile(_ url: URL, in application: URL) async throws {
+        try requireExistingLocalFile(url)
+        try await openWebsite(url, in: application)
+    }
+    func openFile(_ url: URL) async throws {
+        try Task.checkCancellation()
+        try requireExistingLocalFile(url)
+        guard NSWorkspace.shared.open(url) else { throw CornerActionExecutionError.launchFailed("macOS rejected the file or folder request.") }
+    }
+    private func requireExistingLocalFile(_ url: URL) throws {
+        guard url.isFileURL, FileManager.default.fileExists(atPath: url.path) else {
+            throw CornerActionExecutionError.launchFailed("The selected local file or folder is unavailable.")
+        }
+        let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isDirectoryKey])
+        guard values.isRegularFile == true || values.isDirectory == true else {
+            throw CornerActionExecutionError.launchFailed("The selected target is not a regular local file or folder.")
+        }
     }
     func openDirectory(_ url: URL) async throws {
         try Task.checkCancellation()

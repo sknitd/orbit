@@ -77,13 +77,34 @@ struct CornerWebsitesSettingsView: View {
 
 @MainActor
 struct WebsiteDropdownView: View {
-    let entries: [CornerHistoryEntry]
+    private struct Option: Identifiable {
+        let id: String
+        let title: String
+        let url: URL
+    }
+    private let entries: [Option]
     let title: String
-    let onOpen: (CornerHistoryEntry) -> Void
-    var onSettings: () -> Void = {}
+    private let onOpen: (Option) -> Void
+    private let onSettings: () -> Void
+    private let emptyDescription: String
+    private let settingsTitle: String
     @State private var query = ""
     @State private var selection: String?
-    private var matches: [CornerHistoryEntry] {
+    init(entries: [CornerHistoryEntry], title: String, onOpen: @escaping (CornerHistoryEntry) -> Void,
+         onSettings: @escaping () -> Void = {}) {
+        self.entries = entries.map { Option(id: $0.id, title: $0.title, url: $0.url) }
+        self.title = title; self.onSettings = onSettings
+        self.onOpen = { option in if let entry = entries.first(where: { $0.id == option.id }) { onOpen(entry) } }
+        emptyDescription = "Connect or refresh Chrome history in Websites settings, or enable recent websites and open a link through CornerOrbit."
+        settingsTitle = "Websites Settings…"
+    }
+    init(favorites: [CornerFavorite], onOpen: @escaping (URL) -> Void, onSettings: @escaping () -> Void = {}) {
+        entries = favorites.map { Option(id: $0.id.uuidString, title: $0.title, url: $0.url) }
+        title = "Favorite Websites"; self.onOpen = { onOpen($0.url) }; self.onSettings = onSettings
+        emptyDescription = "Add a website in Favorites & Groups to keep it within reach."
+        settingsTitle = "Favorites & Groups…"
+    }
+    private var matches: [Option] {
         entries.filter { query.isEmpty || $0.title.localizedCaseInsensitiveContains(query) || $0.url.absoluteString.localizedCaseInsensitiveContains(query) }
     }
     var body: some View {
@@ -91,7 +112,7 @@ struct WebsiteDropdownView: View {
             Text(title).font(.headline)
             TextField("Search websites", text: $query).textFieldStyle(.roundedBorder).accessibilityLabel("Search websites")
             if entries.isEmpty {
-                ContentUnavailableView("No websites loaded", systemImage: "globe", description: Text("Connect or refresh Chrome history in Websites settings, or enable recent websites and open a link through CornerOrbit."))
+                ContentUnavailableView("No websites loaded", systemImage: "globe", description: Text(emptyDescription))
             } else if matches.isEmpty {
                 ContentUnavailableView.search(text: query)
             } else {
@@ -104,7 +125,7 @@ struct WebsiteDropdownView: View {
                 }.listStyle(.inset).onTapGesture(count: 2) { openSelected() }
             }
             HStack {
-                Button("Websites Settings…", action: onSettings)
+                Button(settingsTitle, action: onSettings)
                 Spacer()
                 Button("Open in Chrome") { openSelected() }.keyboardShortcut(.defaultAction)
                     .disabled(!matches.contains(where: { $0.id == selection }))

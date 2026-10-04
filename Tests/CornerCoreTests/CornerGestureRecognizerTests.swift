@@ -5,7 +5,7 @@ final class CornerGestureRecognizerTests: XCTestCase {
     private func configured() -> CornerSettings {
         var value = CornerSettings(enabled: true, cooldown: 0)
         for corner in Corner.allCases {
-            for gesture in CornerGesture.allCases { value.corners[corner]?.bindings[gesture] = .init(kind: .finder) }
+            for gesture in [CornerGesture.singleClick, .doubleClick, .tripleClick, .dragIntoCorner, .dragOutOfCorner] { value.corners[corner]?.bindings[gesture] = .init(kind: .finder) }
         }
         return value
     }

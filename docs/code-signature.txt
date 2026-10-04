@@ -1,0 +1,23 @@
+Executable=/Users/runner/work/orbit/orbit/build/DerivedData/Build/Products/Release/CornerOrbit.app/Contents/MacOS/CornerOrbit
+Identifier=com.sknitd.CornerOrbit
+Format=app bundle with Mach-O universal (x86_64 arm64)
+CodeDirectory v=20400 size=14639 flags=0x2(adhoc) hashes=451+3 location=embedded
+VersionPlatform=1
+VersionMin=917504
+VersionSDK=984320
+Hash type=sha256 size=32
+CandidateCDHash sha256=ae2e1286f37374414d4c9c61f8d06ceba144bf89
+CandidateCDHashFull sha256=ae2e1286f37374414d4c9c61f8d06ceba144bf899cc67bcb8ef1ced3d6e9d37e
+Hash choices=sha256
+CMSDigest=ae2e1286f37374414d4c9c61f8d06ceba144bf899cc67bcb8ef1ced3d6e9d37e
+CMSDigestType=2
+Executable Segment base=0
+Executable Segment limit=622592
+Executable Segment flags=0x1
+Page size=4096
+CDHash=ae2e1286f37374414d4c9c61f8d06ceba144bf89
+Signature=adhoc
+Info.plist entries=23
+TeamIdentifier=not set
+Sealed Resources version=2 rules=13 files=1
+Internal requirements count=0 size=12

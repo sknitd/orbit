@@ -17,7 +17,7 @@ struct CornerBehaviorView: View {
                         Toggle("Allow document and tab Automation", isOn: Binding(
                             get: { store.preferences.automationEnabled }, set: { store.setAutomation($0) }))
                             .accessibilityIdentifier("CornerOrbit.behavior.automation")
-                        Text("Enabling this option does not request permission. macOS asks when you explicitly run Chrome New Tab or a new Word, Excel, PowerPoint or TextEdit document action.")
+                        Text("Enabling this option does not request permission. macOS asks for the target app only when you explicitly run a browser-tab, Finder-window or blank document action. Supported document apps include Word, Excel, PowerPoint, TextEdit, Pages, Numbers and Keynote.")
                             .font(.caption).foregroundStyle(.secondary)
                         Toggle("Show corner hints", isOn: Binding(
                             get: { store.preferences.showHints }, set: { store.setHints($0) }))

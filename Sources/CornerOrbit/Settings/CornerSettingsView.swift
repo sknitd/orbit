@@ -20,8 +20,13 @@ struct CornerSettingsView: View {
                 Group {
                     switch store.page {
                     case .corners: corners
+                    case .gestures: CornerGestureOptionsView(store: store)
+                    case .profiles: CornerProfilesView(profiles: store.profiles, currentSettings: store.preferences.settings,
+                        timedPause: store.timedPause, login: store.login)
                     case .behavior: CornerBehaviorView(store: store)
                     case .history: CornerWebsitesSettingsView(store: store)
+                    case .links: CornerLinksView(store: store)
+                    case .clipboard: CornerClipboardView(store: store)
                     case .about: gettingStarted
                     }
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -44,11 +49,11 @@ struct CornerSettingsView: View {
             Image(systemName: "viewfinder").font(.system(size: 26)).foregroundStyle(.tint).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
                 Text("CornerOrbit").font(.title2.weight(.semibold))
-                Text(monitor.diagnostic).font(.caption).foregroundStyle(.secondary)
+                Text(store.suspensionReason ?? monitor.diagnostic).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
             if store.isPreview { Text("Preview").font(.caption).foregroundStyle(.secondary) }
-            Toggle("Enable gestures", isOn: Binding(get: { monitor.isEnabled }, set: { store.setMonitoring($0) }))
+            Toggle("Enable gestures", isOn: Binding(get: { store.preferences.settings.enabled }, set: { store.setMonitoring($0) }))
                 .toggleStyle(.switch).disabled(store.isPreview || store.settingsNeedRecovery)
                 .accessibilityIdentifier("CornerOrbit.enableGestures")
         }.padding(20)
@@ -62,6 +67,10 @@ struct CornerSettingsView: View {
                         Text("Choose a corner, then assign an action to each gesture.").foregroundStyle(.secondary)
                     }
                     Spacer()
+                    Button { store.undoBinding() } label: { Image(systemName: "arrow.uturn.backward") }
+                        .disabled(!store.canUndoBinding).help("Undo binding edit").accessibilityLabel("Undo binding edit")
+                    Button { store.redoBinding() } label: { Image(systemName: "arrow.uturn.forward") }
+                        .disabled(!store.canRedoBinding).help("Redo binding edit").accessibilityLabel("Redo binding edit")
                     Button("Use Starter Bindings") { store.applyPreset() }.disabled(store.settingsNeedRecovery)
                         .accessibilityIdentifier("CornerOrbit.applyPreset")
                 }
@@ -95,7 +104,7 @@ struct CornerSettingsView: View {
                 Image(systemName: corner.symbol).font(.title2).frame(width: 28)
                 VStack(alignment: .leading, spacing: 5) {
                     Text(corner.title).font(.headline)
-                    Text("\(count) of 5 gestures configured").font(.caption).foregroundStyle(.secondary)
+                    Text("\(count) of \(CornerGesture.allCases.count) gestures configured").font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
                 if chosen { Image(systemName: "checkmark.circle.fill").foregroundStyle(.tint) }
@@ -129,11 +138,13 @@ struct CornerSettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 Text("Your shortcuts, at every corner").font(.title2.weight(.semibold))
-                instruction("1", "Assign your actions", "Select any of the four corners. Single, double, triple and both drag directions have separate actions.")
+                instruction("1", "Assign your actions", "Select any of the four corners. Each has 13 independent bindings, including right clicks, middle click, hover, hold and scroll. Search the action catalog while editing a binding.")
                 instruction("2", "Enable mouse observation", "Enable gestures when ready. macOS may ask for Input Monitoring; CornerOrbit observes mouse events and lets clicks continue to the app underneath.")
                 instruction("3", "Connect only what you use", "New browser tabs and blank Office/TextEdit documents use Automation after you allow it in Behavior. Chrome history needs an explicit local connection in Websites.")
                 instruction("4", "Tune the feel", "Adjust corner size, click timing, drag distance and an optional modifier key. You can limit gestures to chosen displays.")
-                Text("The menu bar icon opens these settings and pauses gestures. CornerOrbit runs locally; it has no telemetry, cloud service or account system.")
+                instruction("5", "Try Practice mode", "Gestures & Practice reports what you do without executing gesture actions. You can try unassigned gestures, then turn Practice off to use your bindings.")
+                instruction("6", "Choose your workspace", "Save profiles and optionally select one when an app becomes active. Exclusions and timed pauses suspend recognition. Clipboard and Favorites stay local and work only when you explicitly use them.")
+                Text("Use the menu bar to open Settings or explicitly pause gestures. CornerOrbit runs locally; it has no telemetry, cloud service or account system.")
                     .foregroundStyle(.secondary)
                 if store.settingsNeedRecovery {
                     GroupBox("Saved settings need attention") {
@@ -161,6 +172,12 @@ extension Corner {
 }
 extension CornerGesture {
     var symbol: String {
-        switch self { case .singleClick: "cursorarrow.click"; case .doubleClick: "2.circle"; case .tripleClick: "3.circle"; case .dragIntoCorner: "arrow.down.forward.and.arrow.up.backward"; case .dragOutOfCorner: "arrow.up.backward.and.arrow.down.forward" }
+        switch self {
+        case .singleClick: "cursorarrow.click"; case .doubleClick: "2.circle"; case .tripleClick: "3.circle"
+        case .dragIntoCorner: "arrow.down.forward.and.arrow.up.backward"; case .dragOutOfCorner: "arrow.up.backward.and.arrow.down.forward"
+        case .rightClick: "computermouse"; case .rightDoubleClick: "2.circle"; case .rightTripleClick: "3.circle"
+        case .middleClick: "circle.inset.filled"; case .hover: "cursorarrow.rays"; case .longPress: "hand.point.up.left"
+        case .scrollUp: "arrow.up"; case .scrollDown: "arrow.down"
+        }
     }
 }

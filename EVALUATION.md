@@ -1,9 +1,7 @@
-# CornerOrbit evaluation
+# CornerOrbit 0.2.0 evaluation
 
-Evaluation is in progress. Portable core tests have passed locally; the actual native SDK build, hosted fixtures, preview inspection, universal package verification and idle launch measurements are pending. No physical Mac permission or account acceptance is claimed.
+The release adds the [50 numbered features](FEATURES-0.2.0.md) within CornerOrbit only. The integrated Linux run passed 90 portable tests with Swift 6.2; the genuine macOS build and final evaluation are in progress. The release evidence and download will be updated after that build completes.
 
-The scope boundary is the new `CornerOrbit/` directory only, against repository baseline `3b8647749e770c85e6faa9cf34e65bfe4a2d6242`. Existing app sources, settings, documentation and root workflows must remain unchanged.
+Independent review has added checks for profile-application publication failures, v0.1 migration, permission-preserving binding undo, timed pause/exclusions, practice cancellation and clipboard ownership. New native captures cover expanded settings and reviewed profile imports using labeled synthetic data. Tests do not grant permissions, access real Chrome profiles or execute personal Shortcuts.
 
-Fixture tests never use a real Chrome profile or installed Office account. Native views show clearly labeled synthetic fixture data only during evaluation; production empty and error states display real state.
-
-Results, artifact provenance and remaining acceptance will be filled from the executed macOS workflow before delivery.
+The previous version’s files under docs/ are historical until replaced by this release’s actual CI artifacts. No v0.2.0 test count, package or preview result is claimed from those older artifacts. See known-limitations.md for physical Mac acceptance that automated fixtures cannot provide.

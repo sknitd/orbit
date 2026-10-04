@@ -45,6 +45,14 @@ public enum CornerGeometry {
             distance(point, to: $0, in: frame) < distance(point, to: $1, in: frame)
         }
     }
+    /// Each corner may override its hot-zone size. Disabled corners are still
+    /// identified geometrically; recognition applies enabled/action policies.
+    public static func corner(at point: CornerPoint, in frame: CornerRect, configuration: CornerSettings) -> Corner? {
+        guard frame.contains(point) else { return nil }
+        return Corner.allCases.filter {
+            region(for: $0, in: frame, size: configuration.size(for: $0))?.contains(point) == true
+        }.min { distance(point, to: $0, in: frame) < distance(point, to: $1, in: frame) }
+    }
     public static func screen(at point: CornerPoint, among screens: [CornerScreen]) -> CornerScreen? {
         screens.filter { $0.frame.contains(point) }.sorted { $0.id < $1.id }.first
     }

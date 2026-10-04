@@ -65,7 +65,9 @@ final class CornerAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let toggle = NSMenuItem(title: "Enable Gestures…", action: #selector(toggleMonitoring), keyEquivalent: "")
         toggle.target = self; menu.addItem(toggle); monitoringItem = toggle
         menu.addItem(.separator())
-        for (title, selector) in [("Chrome History…", #selector(openChromeHistory)), ("Recent Websites…", #selector(openRecentWebsites))] {
+        for (title, selector) in [("Chrome History…", #selector(openChromeHistory)), ("Recent Websites…", #selector(openRecentWebsites)),
+                                  ("Favorite Websites…", #selector(openFavoriteWebsites)), ("Clipboard Workspace…", #selector(openClipboard)),
+                                  ("Pause for 5 Minutes", #selector(pauseFiveMinutes)), ("Resume Paused Gestures", #selector(resumeGestures))] {
             let entry = NSMenuItem(title: title, action: selector, keyEquivalent: "")
             entry.target = self; menu.addItem(entry)
         }
@@ -75,17 +77,21 @@ final class CornerAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         item.menu = menu; statusItem = item
     }
     func menuWillOpen(_ menu: NSMenu) {
-        monitoringItem?.title = store?.monitor.isEnabled == true ? "Pause Gestures" : "Enable Gestures…"
+        monitoringItem?.title = store?.preferences.settings.enabled == true ? "Disable Gestures" : "Enable Gestures…"
         monitoringItem?.isEnabled = store?.isPreview == false && store?.settingsNeedRecovery == false
     }
     @objc private func openSettings() { showSettings(page: store?.page ?? .corners) }
     @objc private func toggleMonitoring() {
         guard let store else { return }
-        store.setMonitoring(!store.monitor.isEnabled)
+        store.setMonitoring(!store.preferences.settings.enabled)
         if !store.monitor.isEnabled { showSettings(page: .behavior) }
     }
     @objc private func openChromeHistory() { store?.perform(CornerAction(kind: .chromeHistory)) }
     @objc private func openRecentWebsites() { store?.perform(CornerAction(kind: .recentWebsites)) }
+    @objc private func openFavoriteWebsites() { store?.perform(CornerAction(kind: .favoriteWebsites)) }
+    @objc private func openClipboard() { showSettings(page: .clipboard) }
+    @objc private func pauseFiveMinutes() { store?.pause(minutes: 5) }
+    @objc private func resumeGestures() { store?.resumePausedGestures() }
     @objc private func quitApp() { NSApp.terminate(nil) }
 
     private func showSettings(page: CornerSettingsPage) {
@@ -105,11 +111,18 @@ final class CornerAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func showWebsites(_ source: CornerWebsiteSource) {
         guard let store, let button = statusItem?.button else { return }
         websitePopover?.close()
-        let chrome = source == .chrome
-        let view = WebsiteDropdownView(entries: chrome ? store.history.entries : store.recent.entries,
-                                       title: chrome ? "Chrome History" : "Recent Websites", onOpen: { [weak self] entry in
-            self?.websitePopover?.close(); self?.store?.openWebsite(entry)
-        }, onSettings: { [weak self] in self?.showSettings(page: .history) })
+        let view: WebsiteDropdownView
+        switch source {
+        case .chrome, .recent:
+            view = WebsiteDropdownView(entries: source == .chrome ? store.history.entries : store.recent.entries,
+                title: source == .chrome ? "Chrome History" : "Recent Websites", onOpen: { [weak self] entry in
+                    self?.websitePopover?.close(); self?.store?.openWebsite(entry)
+                }, onSettings: { [weak self] in self?.showSettings(page: .history) })
+        case .favorites:
+            view = WebsiteDropdownView(favorites: store.links.favorites, onOpen: { [weak self] url in
+                self?.websitePopover?.close(); self?.store?.perform(.init(kind: .openURL, url: url.absoluteString))
+            }, onSettings: { [weak self] in self?.showSettings(page: .links) })
+        }
         let popover = NSPopover(); popover.behavior = .transient
         popover.contentViewController = NSHostingController(rootView: view)
         popover.animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion

@@ -40,7 +40,7 @@ for architecture in architectures:
     metadata['slices'][architecture] = {'minimum_macos': match[1], 'vtool_output': detail}
 with open(plist, 'rb') as stream:
     values = plistlib.load(stream)
-for key, expected in {'CFBundleIdentifier': 'com.sknitd.CornerOrbit', 'CFBundleShortVersionString': '0.1.0', 'CFBundleVersion': '1', 'LSMinimumSystemVersion': '14.0', 'LSUIElement': True}.items():
+for key, expected in {'CFBundleIdentifier': 'com.sknitd.CornerOrbit', 'CFBundleShortVersionString': '0.2.0', 'CFBundleVersion': '2', 'LSMinimumSystemVersion': '14.0', 'LSUIElement': True}.items():
     if values.get(key) != expected:
         raise SystemExit(f'Unexpected bundle metadata {key}: {values.get(key)!r}')
 metadata['bundle_identifier'] = values['CFBundleIdentifier']

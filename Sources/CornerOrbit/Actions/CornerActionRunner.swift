@@ -6,6 +6,10 @@ enum CornerActionExecution: Equatable, Sendable {
     case performed(title: String)
     case showChromeHistory
     case showRecentWebsites
+    case showFavorites
+    case showClipboard
+    case openURLGroup(id: String)
+    case transformClipboard(kind: CornerActionKind)
 }
 
 enum CornerActionExecutionError: LocalizedError, Equatable, Sendable {
@@ -52,6 +56,21 @@ enum CornerActionScripts {
                 tell front window to make new tab with properties {URL:"chrome://newtab/"}
             end if
             """
+        case .chromePrivateWindow:
+            target = "com.google.Chrome"; command = "make new window with properties {mode:\"incognito\"}"
+        case .safariNewTab:
+            target = "com.apple.Safari"
+            command = """
+            if (count of windows) is 0 then
+                make new document
+            else
+                tell front window to make new tab with properties {URL:"about:blank"}
+            end if
+            """
+        case .finderNewWindow: target = "com.apple.finder"; command = "make new Finder window"
+        case .newPages: target = "com.apple.iWork.Pages"; command = "make new document"
+        case .newNumbers: target = "com.apple.iWork.Numbers"; command = "make new document"
+        case .newKeynote: target = "com.apple.iWork.Keynote"; command = "make new document"
         case .newWord: target = "com.microsoft.Word"; command = "make new document"
         case .newExcel: target = "com.microsoft.Excel"; command = "make new workbook"
         case .newPowerPoint: target = "com.microsoft.Powerpoint"; command = "make new presentation"
@@ -63,11 +82,26 @@ enum CornerActionScripts {
 }
 
 @MainActor
+protocol CornerWindowActionRunning {
+    func run(_ kind: CornerActionKind) async throws -> String
+}
+
+@MainActor
 final class CornerActionRunner {
     private let workspace: any CornerWorkspaceAccessing
     private let scripts: any CornerScriptExecuting
-    init(workspace: any CornerWorkspaceAccessing = CornerNativeWorkspace(), scripts: any CornerScriptExecuting = CornerAppleScriptExecutor()) {
-        self.workspace = workspace; self.scripts = scripts
+    private let clipboard: any CornerClipboardReading
+    private let drafts: any CornerDraftWriting
+    private let shortcuts: any CornerShortcutsExecuting
+    private let windows: any CornerWindowActionRunning
+    init(workspace: any CornerWorkspaceAccessing = CornerNativeWorkspace(),
+         scripts: any CornerScriptExecuting = CornerAppleScriptExecutor(),
+         clipboard: any CornerClipboardReading = CornerNativeClipboardReader(),
+         drafts: any CornerDraftWriting = CornerTextDraftWriter(),
+         shortcuts: any CornerShortcutsExecuting = CornerShortcutsRunner(),
+         windows: any CornerWindowActionRunning = CornerWindowActionRunner()) {
+        self.workspace = workspace; self.scripts = scripts; self.clipboard = clipboard
+        self.drafts = drafts; self.shortcuts = shortcuts; self.windows = windows
     }
     func run(_ action: CornerAction, automationEnabled: Bool) async throws -> CornerActionExecution {
         try Task.checkCancellation()
@@ -81,16 +115,45 @@ final class CornerActionRunner {
             try Task.checkCancellation()
             return .performed(title: action.kind.title)
         }
+        if action.kind.isWindowAction {
+            let title = try await windows.run(action.kind)
+            try Task.checkCancellation()
+            return .performed(title: title)
+        }
+        if action.kind.isClipboardTransform { return .transformClipboard(kind: action.kind) }
         switch action.kind {
         case .none: return .performed(title: "No action configured")
         case .chromeHistory: return .showChromeHistory
         case .recentWebsites: return .showRecentWebsites
+        case .favoriteWebsites: return .showFavorites
+        case .clipboardWorkspace: return .showClipboard
+        case .openURLGroup:
+            guard let id = action.argument else { throw CornerActionError.invalid("Choose a saved website group.") }
+            return .openURLGroup(id: id)
+        case .runShortcut:
+            guard let name = action.argument else { throw CornerActionError.invalid("Choose a Shortcut.") }
+            try await shortcuts.run(name: name)
+        case .openFile:
+            guard let path = action.argument else { throw CornerActionError.invalid("Choose a local file or folder.") }
+            try await workspace.openFile(URL(fileURLWithPath: path))
+        case .chromeSearchClipboard:
+            let application = try applicationURL(name: "Google Chrome", bundleID: "com.google.Chrome")
+            let text = try clipboard.readPlainText()
+            let url = try CornerClipboardActionText.googleSearchURL(text)
+            try Task.checkCancellation()
+            try await workspace.openWebsite(url, in: application)
+        case .textEditFromClipboard:
+            let application = try applicationURL(name: "TextEdit", bundleID: "com.apple.TextEdit")
+            let text = try CornerClipboardActionText.bounded(clipboard.readPlainText())
+            let draft = try await drafts.create(text: text)
+            try Task.checkCancellation()
+            try await workspace.openFile(draft, in: application)
         case .whatsAppWeb, .openURL:
             guard let url = action.webURL else { throw CornerActionError.invalid("Choose a valid HTTP or HTTPS website.") }
             let validated = try CornerURLValidation.webURL(url.absoluteString)
             let application = try applicationURL(name: "Google Chrome", bundleID: "com.google.Chrome")
             try await workspace.openWebsite(validated, in: application)
-        case .chatGPT, .claude, .spotify, .activityMonitor, .finder, .openSystemSettings, .openApplication:
+        case .chatGPT, .claude, .spotify, .activityMonitor, .finder, .openSystemSettings, .openApplication, .screenshotToolbar, .screenSaver:
             let bundleID: String
             switch action.kind {
             case .chatGPT: bundleID = "com.openai.chat"
@@ -110,8 +173,17 @@ final class CornerActionRunner {
             }
             try await workspace.openDirectory(folder)
         case .openApplications: try await workspace.openDirectory(URL(fileURLWithPath: "/Applications", isDirectory: true))
-        case .chromeNewTab, .newWord, .newExcel, .newPowerPoint, .newTextEdit:
+        case .chromeNewTab, .chromePrivateWindow, .safariNewTab, .finderNewWindow,
+             .newWord, .newExcel, .newPowerPoint, .newTextEdit, .newPages, .newNumbers, .newKeynote:
             throw CornerActionError.invalid("This Automation action is unavailable.")
+        case .windowLeft, .windowRight, .windowMaximize, .windowCenter, .windowNextDisplay,
+             .windowRestore, .windowMinimize, .windowFullscreen, .hideOtherApps, .restoreHiddenApps:
+            throw CornerActionError.invalid("This window action is unavailable.")
+        case .clipboardPlainText, .clipboardJSONPretty, .clipboardJSONMinify, .clipboardURLEncode,
+             .clipboardURLDecode, .clipboardBase64Encode, .clipboardBase64Decode, .clipboardUppercase,
+             .clipboardLowercase, .clipboardTitleCase, .clipboardSnakeCase, .clipboardKebabCase,
+             .clipboardStripTracking, .clipboardTrimLines, .clipboardDedupeLines, .clipboardUndo:
+            throw CornerActionError.invalid("This clipboard action is unavailable.")
         }
         try Task.checkCancellation()
         return .performed(title: action.kind.title)
@@ -125,7 +197,14 @@ final class CornerActionRunner {
     }
     private func applicationName(for kind: CornerActionKind) -> String {
         switch kind {
-        case .chromeNewTab: "Google Chrome"
+        case .chromeNewTab, .chromePrivateWindow, .chromeSearchClipboard: "Google Chrome"
+        case .safariNewTab: "Safari"
+        case .finderNewWindow: "Finder"
+        case .newPages: "Pages"
+        case .newNumbers: "Numbers"
+        case .newKeynote: "Keynote"
+        case .screenshotToolbar: "macOS Screenshot"
+        case .screenSaver: "Screen Saver Engine"
         case .newWord: "Microsoft Word"
         case .newExcel: "Microsoft Excel"
         case .newPowerPoint: "Microsoft PowerPoint"

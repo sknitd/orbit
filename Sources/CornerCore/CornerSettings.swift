@@ -8,6 +8,7 @@ public enum Corner: String, CaseIterable, Codable, Hashable, Sendable {
 }
 public enum CornerGesture: String, CaseIterable, Codable, Hashable, Sendable {
     case singleClick, doubleClick, tripleClick, dragIntoCorner, dragOutOfCorner
+    case rightClick, rightDoubleClick, rightTripleClick, middleClick, hover, longPress, scrollUp, scrollDown
     public var title: String {
         switch self {
         case .singleClick: "Single Click"
@@ -15,6 +16,14 @@ public enum CornerGesture: String, CaseIterable, Codable, Hashable, Sendable {
         case .tripleClick: "Triple Click"
         case .dragIntoCorner: "Drag Into Corner"
         case .dragOutOfCorner: "Drag Out of Corner"
+        case .rightClick: "Right Click"
+        case .rightDoubleClick: "Right Double Click"
+        case .rightTripleClick: "Right Triple Click"
+        case .middleClick: "Middle Click"
+        case .hover: "Hover"
+        case .longPress: "Press and Hold"
+        case .scrollUp: "Scroll Up"
+        case .scrollDown: "Scroll Down"
         }
     }
 }
@@ -34,15 +43,22 @@ public struct CornerModifiers: OptionSet, Codable, Hashable, Sendable {
 public struct CornerConfiguration: Codable, Equatable, Sendable {
     public var enabled: Bool
     public var bindings: [CornerGesture: CornerAction]
-    public init(enabled: Bool = true, bindings: [CornerGesture: CornerAction] = [:]) {
+    /// Nil inherits the global setting; an empty modifier override requires no modifiers.
+    public var cornerSize: Double?
+    public var modifierRequirement: CornerModifiers?
+    public init(enabled: Bool = true, bindings: [CornerGesture: CornerAction] = [:],
+                cornerSize: Double? = nil, modifierRequirement: CornerModifiers? = nil) {
+        self.cornerSize = cornerSize; self.modifierRequirement = modifierRequirement
         self.enabled = enabled
         self.bindings = Dictionary(uniqueKeysWithValues: CornerGesture.allCases.map { ($0, bindings[$0] ?? .none) })
     }
     public func action(for gesture: CornerGesture) -> CornerAction { bindings[gesture] ?? .none }
-    private enum CodingKeys: String, CodingKey { case enabled, bindings }
+    private enum CodingKeys: String, CodingKey { case enabled, bindings, cornerSize, modifierRequirement }
     public init(from decoder: any Decoder) throws {
         let box = try decoder.container(keyedBy: CodingKeys.self)
         enabled = try box.decode(Bool.self, forKey: .enabled)
+        cornerSize = try box.decodeIfPresent(Double.self, forKey: .cornerSize)
+        modifierRequirement = try box.decodeIfPresent(CornerModifiers.self, forKey: .modifierRequirement)
         let raw = try box.decode([String: CornerAction].self, forKey: .bindings)
         guard raw.keys.allSatisfy({ CornerGesture(rawValue: $0) != nil }) else {
             throw CornerActionError.invalid("Settings contain an unknown corner gesture.")
@@ -52,6 +68,8 @@ public struct CornerConfiguration: Codable, Equatable, Sendable {
     public func encode(to encoder: any Encoder) throws {
         var box = encoder.container(keyedBy: CodingKeys.self)
         try box.encode(enabled, forKey: .enabled)
+        try box.encodeIfPresent(cornerSize, forKey: .cornerSize)
+        try box.encodeIfPresent(modifierRequirement, forKey: .modifierRequirement)
         try box.encode(Dictionary(uniqueKeysWithValues: CornerGesture.allCases.map { ($0.rawValue, action(for: $0)) }), forKey: .bindings)
     }
 }
@@ -65,16 +83,20 @@ public struct CornerSettings: Codable, Equatable, Sendable {
     public var clickInterval: Double
     public var dragThreshold: Double
     public var cooldown: Double
+    public var hoverDelay: Double
+    public var holdDelay: Double
     public var modifierRequirement: CornerModifiers
     /// Empty permits every display; a nonempty set permits only these stable IDs.
     public var enabledDisplayIDs: Set<String>
     public init(schemaVersion: Int = 1, enabled: Bool = false,
                 corners: [Corner: CornerConfiguration] = [:], cornerSize: Double = 24,
                 clickInterval: Double = 0.32, dragThreshold: Double = 12, cooldown: Double = 0.6,
-                modifierRequirement: CornerModifiers = [], enabledDisplayIDs: Set<String> = []) {
+                modifierRequirement: CornerModifiers = [], enabledDisplayIDs: Set<String> = [],
+                hoverDelay: Double = 1.2, holdDelay: Double = 0.7) {
         self.schemaVersion = schemaVersion; self.enabled = enabled
         self.corners = Dictionary(uniqueKeysWithValues: Corner.allCases.map { ($0, corners[$0] ?? .init()) })
         self.cornerSize = cornerSize; self.clickInterval = clickInterval; self.dragThreshold = dragThreshold
+        self.hoverDelay = hoverDelay; self.holdDelay = holdDelay
         self.cooldown = cooldown; self.modifierRequirement = modifierRequirement; self.enabledDisplayIDs = enabledDisplayIDs
     }
     public static let defaults = CornerSettings()
@@ -90,12 +112,16 @@ public struct CornerSettings: Codable, Equatable, Sendable {
     }
     public func action(for trigger: CornerTrigger) -> CornerAction { corners[trigger.corner]?.action(for: trigger.gesture) ?? .none }
     public func permits(displayID: String) -> Bool { enabledDisplayIDs.isEmpty || enabledDisplayIDs.contains(displayID) }
+    public func size(for corner: Corner) -> Double { corners[corner]?.cornerSize ?? cornerSize }
+    public func requiredModifiers(for corner: Corner) -> CornerModifiers { corners[corner]?.modifierRequirement ?? modifierRequirement }
     public func validated() throws -> CornerSettings {
         guard schemaVersion == Self.currentSchemaVersion else { throw CornerActionError.invalid("This settings schema is not supported.") }
         guard cornerSize.isFinite, (4...128).contains(cornerSize) else { throw CornerActionError.invalid("Corner size must be 4–128 points.") }
         guard clickInterval.isFinite, (0.15...1).contains(clickInterval) else { throw CornerActionError.invalid("Click interval must be 0.15–1 seconds.") }
         guard dragThreshold.isFinite, (2...100).contains(dragThreshold) else { throw CornerActionError.invalid("Drag threshold must be 2–100 points.") }
         guard cooldown.isFinite, (0...5).contains(cooldown) else { throw CornerActionError.invalid("Cooldown must be 0–5 seconds.") }
+        guard hoverDelay.isFinite, (0.3...5).contains(hoverDelay) else { throw CornerActionError.invalid("Hover delay must be 0.3–5 seconds.") }
+        guard holdDelay.isFinite, (0.3...3).contains(holdDelay) else { throw CornerActionError.invalid("Hold delay must be 0.3–3 seconds.") }
         guard modifierRequirement.subtracting(.all).isEmpty else { throw CornerActionError.invalid("Settings contain an unknown modifier key.") }
         guard enabledDisplayIDs.count <= 32, enabledDisplayIDs.allSatisfy({ !$0.isEmpty && $0.utf8.count <= 128 && !$0.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) }) else {
             throw CornerActionError.invalid("Choose at most 32 valid display identifiers.")
@@ -103,13 +129,19 @@ public struct CornerSettings: Codable, Equatable, Sendable {
         var result = self
         for corner in Corner.allCases {
             var configuration = result.corners[corner] ?? .init()
+            if let size = configuration.cornerSize {
+                guard size.isFinite, (4...128).contains(size) else { throw CornerActionError.invalid("Corner size overrides must be 4–128 points.") }
+            }
+            if let modifiers = configuration.modifierRequirement {
+                guard modifiers.subtracting(.all).isEmpty else { throw CornerActionError.invalid("A corner override contains an unknown modifier key.") }
+            }
             for gesture in CornerGesture.allCases { configuration.bindings[gesture] = try configuration.action(for: gesture).validated() }
             result.corners[corner] = configuration
         }
         return result
     }
     private enum CodingKeys: String, CodingKey {
-        case schemaVersion, enabled, corners, cornerSize, clickInterval, dragThreshold, cooldown, modifierRequirement, enabledDisplayIDs
+        case schemaVersion, enabled, corners, cornerSize, clickInterval, dragThreshold, cooldown, modifierRequirement, enabledDisplayIDs, hoverDelay, holdDelay
     }
     public init(from decoder: any Decoder) throws {
         let box = try decoder.container(keyedBy: CodingKeys.self)
@@ -122,6 +154,8 @@ public struct CornerSettings: Codable, Equatable, Sendable {
         clickInterval = try box.decode(Double.self, forKey: .clickInterval)
         dragThreshold = try box.decode(Double.self, forKey: .dragThreshold)
         cooldown = try box.decode(Double.self, forKey: .cooldown)
+        hoverDelay = try box.decodeIfPresent(Double.self, forKey: .hoverDelay) ?? 1.2
+        holdDelay = try box.decodeIfPresent(Double.self, forKey: .holdDelay) ?? 0.7
         modifierRequirement = try box.decode(CornerModifiers.self, forKey: .modifierRequirement)
         enabledDisplayIDs = try box.decode(Set<String>.self, forKey: .enabledDisplayIDs)
         self = try validated()
@@ -133,6 +167,7 @@ public struct CornerSettings: Codable, Equatable, Sendable {
         try box.encode(Dictionary(uniqueKeysWithValues: Corner.allCases.map { ($0.rawValue, valid.corners[$0]!) }), forKey: .corners)
         try box.encode(valid.cornerSize, forKey: .cornerSize); try box.encode(valid.clickInterval, forKey: .clickInterval)
         try box.encode(valid.dragThreshold, forKey: .dragThreshold); try box.encode(valid.cooldown, forKey: .cooldown)
+        try box.encode(valid.hoverDelay, forKey: .hoverDelay); try box.encode(valid.holdDelay, forKey: .holdDelay)
         try box.encode(valid.modifierRequirement, forKey: .modifierRequirement); try box.encode(valid.enabledDisplayIDs, forKey: .enabledDisplayIDs)
     }
 }

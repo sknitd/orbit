@@ -3,11 +3,11 @@ import XCTest
 @testable import CornerCore
 
 final class CornerSettingsTests: XCTestCase {
-    func testDefaultsProvideTwentyDisabledBindingsAndPresetNeverEnablesMonitoring() throws {
+    func testDefaultsProvideFiftyTwoDisabledBindingsAndPresetNeverEnablesMonitoring() throws {
         let settings = try CornerSettings.defaults.validated()
         XCTAssertFalse(settings.enabled)
         XCTAssertEqual(settings.corners.count, 4)
-        XCTAssertEqual(settings.corners.values.reduce(0) { $0 + $1.bindings.count }, 20)
+        XCTAssertEqual(settings.corners.values.reduce(0) { $0 + $1.bindings.count }, 52)
         XCTAssertTrue(settings.corners.values.allSatisfy { $0.bindings.values.allSatisfy { $0 == .none } })
         let sample = try CornerSettings.samplePreset.validated()
         XCTAssertFalse(sample.enabled)
@@ -30,7 +30,7 @@ final class CornerSettingsTests: XCTestCase {
         let corners = try XCTUnwrap(object["corners"] as? [String: Any])
         XCTAssertEqual(Set(corners.keys), Set(Corner.allCases.map(\.rawValue)))
         let topLeft = try XCTUnwrap(corners["topLeft"] as? [String: Any])
-        XCTAssertEqual((topLeft["bindings"] as? [String: Any])?.count, 5)
+        XCTAssertEqual((topLeft["bindings"] as? [String: Any])?.count, 13)
     }
     func testUnsupportedSchemaAndUnknownCornerOrGestureAreRejected() throws {
         let data = try JSONEncoder().encode(CornerSettings.defaults)

@@ -3,7 +3,8 @@ import CoreGraphics
 import CornerCore
 
 struct CornerMouseSample: Sendable {
-    enum Kind: Sendable { case down, up, dragged, moved, interrupted }
+    enum Kind: Equatable, Sendable { case down, up, dragged, moved, interrupted
+        case rightDown, rightUp, rightDragged, middleDown, middleUp, middleDragged, scrollUp, scrollDown }
     let kind: Kind
     let timestamp: Double
     let point: CornerPoint
@@ -70,6 +71,41 @@ enum CornerMouseModifiers {
     }
 }
 
+/// Production event-mask/decoder boundary. Fixtures construct CGEvents but
+/// never post them, install a global tap, or request an input permission.
+@MainActor
+enum CornerMouseEventDecoder {
+    static let observedTypes: [CGEventType] = [.leftMouseDown, .leftMouseUp, .leftMouseDragged,
+        .rightMouseDown, .rightMouseUp, .rightMouseDragged, .otherMouseDown, .otherMouseUp,
+        .otherMouseDragged, .mouseMoved, .scrollWheel]
+    static func kind(for type: CGEventType, event: CGEvent) -> CornerMouseSample.Kind? {
+        switch type {
+        case .leftMouseDown: return .down
+        case .leftMouseUp: return .up
+        case .leftMouseDragged: return .dragged
+        case .rightMouseDown: return .rightDown
+        case .rightMouseUp: return .rightUp
+        case .rightMouseDragged: return .rightDragged
+        case .otherMouseDown, .otherMouseUp, .otherMouseDragged:
+            // Button 2 is the middle button; side buttons retain
+            // their normal OS/application behavior without mappings.
+            guard event.getIntegerValueField(.mouseEventButtonNumber) == 2 else { return nil }
+            return type == .otherMouseDown ? .middleDown : (type == .otherMouseUp ? .middleUp : .middleDragged)
+        case .scrollWheel:
+            // Horizontal-only/zero packets and inertial momentum do
+            // not manufacture repeated intentional corner scrolls.
+            guard event.getIntegerValueField(.scrollWheelEventMomentumPhase) == 0 else { return nil }
+            let delta = event.getDoubleValueField(.scrollWheelEventPointDeltaAxis1)
+            let fallback = event.getIntegerValueField(.scrollWheelEventDeltaAxis1)
+            guard delta.isFinite, delta != 0 || fallback != 0 else { return nil }
+            return (delta == 0 ? Double(fallback) : delta) > 0 ? .scrollUp : .scrollDown
+        case .mouseMoved: return .moved
+        case .tapDisabledByTimeout, .tapDisabledByUserInput: return .interrupted
+        default: return nil
+        }
+    }
+}
+
 @MainActor
 private final class CornerTapContext {
     let receiver: CornerMonitorDependencies.Receiver
@@ -104,7 +140,7 @@ private final class CornerLiveMouseSource: CornerMouseEventSource {
     func stop() { lifetime.invalidate() }
     static func install(_ receiver: @escaping CornerMonitorDependencies.Receiver) -> (any CornerMouseEventSource)? {
         let context = CornerTapContext(receiver: receiver)
-        let types: [CGEventType] = [.leftMouseDown, .leftMouseUp, .leftMouseDragged, .mouseMoved]
+        let types = CornerMouseEventDecoder.observedTypes
         let mask = types.reduce(CGEventMask(0)) { $0 | (CGEventMask(1) << $1.rawValue) }
         guard let port = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .tailAppendEventTap, options: .listenOnly,
                                          eventsOfInterest: mask, callback: { _, type, event, opaque in
@@ -114,14 +150,11 @@ private final class CornerLiveMouseSource: CornerMouseEventSource {
                 // borrowed CGEvent stays within the callback; only copied
                 // position/time/modifier primitives reach the recognizer.
                 MainActor.assumeIsolated {
-                    let kind: CornerMouseSample.Kind
-                    switch type {
-                    case .leftMouseDown: kind = .down
-                    case .leftMouseUp: kind = .up
-                    case .leftMouseDragged: kind = .dragged
-                    case .mouseMoved: kind = .moved
-                    case .tapDisabledByTimeout, .tapDisabledByUserInput: kind = .interrupted
-                    default: return
+                    guard let kind = CornerMouseEventDecoder.kind(for: type, event: event) else { return }
+                    if case .interrupted = kind {
+                        context.receiver(.init(kind: kind, timestamp: Double(event.timestamp) / 1_000_000_000,
+                                               point: .init(x: 0, y: 0)))
+                        return
                     }
                     guard let primary = NSScreen.screens.first else { return }
                     context.receiver(CornerMouseSample(kind: kind, timestamp: Double(event.timestamp) / 1_000_000_000,

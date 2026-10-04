@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "product": "CornerOrbit",
+  "pid": 15519,
+  "measured_at": "2026-10-04T22:14:23.707416+00:00",
+  "source_commit": "99ee9ed0123322a4785442afb1006a5eaca555ac",
+  "configuration": "Release --smoke launch uses isolated .preview defaults and the actual menu bar. No preferences window, gesture monitor, permission request, history read or target-app action is started.",
+  "scope": "Owned menu-bar application process only, with gesture monitoring disabled. RSS excludes WindowServer, GPU allocations and other processes. This finite CI measurement does not establish corner-gesture performance, normal first-run UI, screen-lock behavior or every Mac model.",
+  "startup_check_seconds": 3,
+  "warmup_seconds": 8,
+  "sample_interval_seconds": 1,
+  "measurement_intervals": 10,
+  "budgets": {
+    "mean_cpu_percent": 3.0,
+    "sampled_peak_rss_mb": 250.0
+  },
+  "cpu_method": "Delta of ps cumulative application CPU time divided by measured monotonic wall time; 100% means one fully occupied CPU core.",
+  "memory_method": "ps resident set in KiB, converted to decimal MB (1 MB = 1,000,000 bytes).",
+  "samples": [
+    {
+      "elapsed_seconds": 8.768305707999957,
+      "cumulative_cpu_seconds": 0.29,
+      "rss_kib": 46160,
+      "rss_mb": 47.26784,
+      "interval_cpu_percent": null
+    },
+    {
+      "elapsed_seconds": 9.780701457999953,
+      "cumulative_cpu_seconds": 0.3,
+      "rss_kib": 46160,
+      "rss_mb": 47.26784,
+      "interval_cpu_percent": 0.9877560232745
+    },
+    {
+      "elapsed_seconds": 10.905439915999978,
+      "cumulative_cpu_seconds": 0.3,
+      "rss_kib": 46160,
+      "rss_mb": 47.26784,
+      "interval_cpu_percent": 0.0
+    },
+    {
+      "elapsed_seconds": 12.054655707999927,
+      "cumulative_cpu_seconds": 0.3,
+      "rss_kib": 46160,
+      "rss_mb": 47.26784,
+      "interval_cpu_percent": 0.0
+    },
+    {
+      "elapsed_seconds": 13.18454916600001,
+      "cumulative_cpu_seconds": 0.3,
+      "rss_kib": 46160,
+      "rss_mb": 47.26784,
+      "interval_cpu_percent": 0.0
+    },
+    {
+      "elapsed_seconds": 14.20614620799995,
+      "cumulative_cpu_seconds": 0.3,
+      "rss_kib": 46160,
+      "rss_mb": 47.26784,
+      "interval_cpu_percent": 0.0
+    },
+    {
+      "elapsed_seconds": 15.254273291000004,
+      "cumulative_cpu_seconds": 0.3,
+      "rss_kib": 46160,
+      "rss_mb": 47.26784,
+      "interval_cpu_percent": 0.0
+    },
+    {
+      "elapsed_seconds": 16.373774165999976,
+      "cumulative_cpu_seconds": 0.3,
+      "rss_kib": 46160,
+      "rss_mb": 47.26784,
+      "interval_cpu_percent": 0.0
+    },
+    {
+      "elapsed_seconds": 17.415555208,
+      "cumulative_cpu_seconds": 0.3,
+      "rss_kib": 46112,
+      "rss_mb": 47.218688,
+      "interval_cpu_percent": 0.0
+    },
+    {
+      "elapsed_seconds": 18.529223708000018,
+      "cumulative_cpu_seconds": 0.3,
+      "rss_kib": 46112,
+      "rss_mb": 47.218688,
+      "interval_cpu_percent": 0.0
+    },
+    {
+      "elapsed_seconds": 19.57457616599993,
+      "cumulative_cpu_seconds": 0.3,
+      "rss_kib": 46112,
+      "rss_mb": 47.218688,
+      "interval_cpu_percent": 0.0
+    }
+  ],
+  "startup_passed": true,
+  "measurement_seconds": 10.806270457999972,
+  "mean_cpu_percent": 0.09253886471624376,
+  "sampled_peak_rss_mb": 47.26784,
+  "cpu_budget_passed": true,
+  "rss_budget_passed": true,
+  "outcome": "passed"
+}
