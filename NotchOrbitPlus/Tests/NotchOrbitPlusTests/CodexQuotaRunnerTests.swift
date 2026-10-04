@@ -39,7 +39,7 @@ final class CodexQuotaRunnerTests: XCTestCase, @unchecked Sendable {
             _ = try await OnlineCodexQuotaReader.read(executable: fixture.executable)
             XCTFail("An exited CLI must not fabricate quota")
         } catch {
-            XCTAssertFalse(error.localizedDescription.isEmpty)
+            XCTAssertEqual(error.localizedDescription, "Codex closed its protocol channel.")
         }
     }
 
