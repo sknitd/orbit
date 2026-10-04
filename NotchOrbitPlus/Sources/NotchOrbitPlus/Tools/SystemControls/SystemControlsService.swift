@@ -26,7 +26,7 @@ final class SystemControlsService: ObservableObject {
     func enable() {
         guard tap == nil else { return }
         error = nil
-        let prompt = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        let prompt = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
         guard AXIsProcessTrustedWithOptions(prompt) else {
             status = "Accessibility permission required. Enable it in System Settings, then try again."
             return
