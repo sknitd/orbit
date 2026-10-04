@@ -135,17 +135,18 @@ struct DownloadsToolView: View {
     }
     private func description(_ value: DownloadActivity) -> String {
         let bytes = value.byteCount.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "Size unknown"
-        return switch value.state {
+        switch value.state {
         case .active:
             if let total = value.expectedTotalBytes {
                 let totalText = ByteCountFormatter.string(fromByteCount: total, countStyle: .file)
                 let rate = value.bytesPerSecond.map { String(format: "%.0f bytes/s", $0) } ?? "Rate unknown"
                 let eta = value.estimatedRemaining.map { String(format: "%.0f s ETA", ceil($0)) } ?? "ETA unknown"
-                "\(bytes) of user-supplied \(totalText) · \(rate) · \(eta)"
-            } else { "Partial file observed · \(bytes) · Total/ETA unknown" }
-        case .completed: "Matching final file observed · \(bytes)"
-        case .removed: "Partial file removed · Completion unknown"
-        case .paused: "Tracking paused · \(bytes)"
+                return "\(bytes) of user-supplied \(totalText) · \(rate) · \(eta)"
+            }
+            return "Partial file observed · \(bytes) · Total/ETA unknown"
+        case .completed: return "Matching final file observed · \(bytes)"
+        case .removed: return "Partial file removed · Completion unknown"
+        case .paused: return "Tracking paused · \(bytes)"
         }
     }
     private func setTotal(_ value: DownloadActivity) {

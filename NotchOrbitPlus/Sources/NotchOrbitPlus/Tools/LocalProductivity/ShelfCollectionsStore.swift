@@ -39,6 +39,7 @@ struct ShelfRulePreview: Identifiable {
     @Published var preview: ShelfRulePreview?
     @Published private(set) var editorOpen = false
     var onWatchedFiles: (@MainActor ([URL], CoreShelfRule) -> Void)?
+    var onLocalExpiryChange: (@MainActor () -> Void)?
     private var url: URL?
     private let persistState: Bool
     private let onChange: @MainActor () -> Void
@@ -68,21 +69,29 @@ struct ShelfRulePreview: Identifiable {
             if let index = value.library.rules.firstIndex(where: { $0.id == rule.id }) { value.library.rules[index] = rule } else { value.library.rules.append(rule) }
             value.enabledRuleIDs.remove(rule.id)
         }
-        if saved { preview = nil; startIfConfigured() }; return saved
+        if saved { preview = nil; startIfConfigured(); onLocalExpiryChange?() }; return saved
     }
-    func removeRule(_ id: UUID) { if edit({ value in value.library.rules.removeAll { $0.id == id }; value.enabledRuleIDs.remove(id); value.folderBookmarks.removeValue(forKey: id.uuidString) }) { preview = nil; startIfConfigured() } }
+    func removeRule(_ id: UUID) { if edit({ value in value.library.rules.removeAll { $0.id == id }; value.enabledRuleIDs.remove(id); value.folderBookmarks.removeValue(forKey: id.uuidString) }) { preview = nil; startIfConfigured(); onLocalExpiryChange?() } }
     func moveRule(_ id: UUID, by offset: Int) {
         guard let index = rules.firstIndex(where: { $0.id == id }), rules.indices.contains(index + offset) else { return }
         _ = edit { $0.library.rules.swapAt(index, index + offset) }
     }
     func isEnabled(_ id: UUID) -> Bool { state.enabledRuleIDs.contains(id) }
-    func disableRule(_ id: UUID) { if edit(notify: false, { $0.enabledRuleIDs.remove(id) }) { startIfConfigured() } }
+    func disableRule(_ id: UUID) { if edit(notify: false, { $0.enabledRuleIDs.remove(id) }) { startIfConfigured(); onLocalExpiryChange?() } }
+    /// Undo must persist local inhibition before restoring already-expired copies.
+    func disableExpiryRules(for shelfIDs: Set<UUID>) throws {
+        var next = state
+        let ids = Set(rules.filter { $0.kind == .expireOwnedCopies && shelfIDs.contains($0.shelfID) }.map(\.id))
+        next.enabledRuleIDs.subtract(ids)
+        try persist(next)
+        preview = nil // Re-enabling after Undo requires a fresh exact-definition preview.
+    }
     func enablePreviewedRule(_ id: UUID) {
         guard let preview, preview.rule.id == id, rules.contains(preview.rule), Date().timeIntervalSince(preview.createdAt) <= 300 else {
             error = "Preview this exact rule again before enabling it."; return
         }
         if preview.rule.kind == .watchFolder && state.folderBookmarks[id.uuidString] == nil { error = "Choose the watched folder on this Mac first."; return }
-        if edit(notify: false, { $0.enabledRuleIDs.insert(id) }) { startIfConfigured() }
+        if edit(notify: false, { $0.enabledRuleIDs.insert(id) }) { startIfConfigured(); if preview.rule.kind == .expireOwnedCopies { onLocalExpiryChange?() } }
     }
     func chooseFolder(for rule: CoreShelfRule) {
         guard rule.kind == .watchFolder, rules.contains(rule) else { return }

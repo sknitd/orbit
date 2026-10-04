@@ -42,6 +42,44 @@ final class PublicServiceEvaluationTests: XCTestCase {
         XCTAssertTrue(converted.excluded.isEmpty)
     }
 
+    func testRealPublicAirQualityResponseDecodesItsDatedAQIUVAndParticleFields() throws {
+        let data = try response(for: "weather-air-quality")
+        let air = try WeatherAirObservation.decode(data)
+        XCTAssertTrue(air.usAQI.isFinite && (0...1_000).contains(air.usAQI))
+        XCTAssertTrue(air.uvIndex.isFinite && (0...30).contains(air.uvIndex))
+        XCTAssertTrue(air.pm25.isFinite && (0...10_000).contains(air.pm25))
+        XCTAssertFalse(air.aqiLabel.isEmpty)
+        let root = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let current = try XCTUnwrap(root["current"] as? [String: Any])
+        XCTAssertEqual(air.date.timeIntervalSince1970, try XCTUnwrap(current["time"] as? NSNumber).doubleValue, accuracy: 0.001)
+        XCTAssertEqual(air.usAQI, try XCTUnwrap(current["us_aqi"] as? NSNumber).doubleValue, accuracy: 0.000_001)
+        XCTAssertEqual(air.uvIndex, try XCTUnwrap(current["uv_index"] as? NSNumber).doubleValue, accuracy: 0.000_001)
+        XCTAssertEqual(air.pm25, try XCTUnwrap(current["pm2_5"] as? NSNumber).doubleValue, accuracy: 0.000_001)
+    }
+
+    func testRealPublicMinutelyRainResponseDecodesBoundedConsecutiveFifteenMinuteSlots() throws {
+        let data = try response(for: "weather-minutely-rain")
+        let rain = try WeatherRainForecast.decode(data)
+        XCTAssertFalse(rain.points.isEmpty)
+        XCTAssertLessThanOrEqual(rain.points.count, 16)
+        XCTAssertEqual(Set(rain.points.map(\.date)).count, rain.points.count)
+        let root = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let source = try XCTUnwrap(root["minutely_15"] as? [String: Any])
+        let times = try XCTUnwrap(source["time"] as? [NSNumber])
+        let amounts = try XCTUnwrap(source["precipitation"] as? [NSNumber])
+        XCTAssertEqual(rain.points.count, times.count)
+        XCTAssertEqual(rain.points.count, amounts.count)
+        guard rain.points.count == times.count, rain.points.count == amounts.count else { return }
+        for (index, point) in rain.points.enumerated() {
+            XCTAssertTrue(point.millimetres.isFinite && (0...1_000).contains(point.millimetres))
+            XCTAssertEqual(point.date.timeIntervalSince1970, times[index].doubleValue, accuracy: 0.001)
+            XCTAssertEqual(point.millimetres, amounts[index].doubleValue, accuracy: 0.000_001)
+            if index > 0 {
+                XCTAssertEqual(point.date.timeIntervalSince(rain.points[index - 1].date), 900, accuracy: 0.001)
+            }
+        }
+    }
+
     private func response(for id: String) throws -> Data {
         let directory = probeDirectory()
         let statusURL = directory.appendingPathComponent("status.json")

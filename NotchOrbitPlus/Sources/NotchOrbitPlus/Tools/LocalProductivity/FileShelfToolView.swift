@@ -30,6 +30,7 @@ final class FileShelfToolStore: ObservableObject {
     @Published private(set) var importing = 0
     @Published private(set) var cleanupPreview: CoreShelfCleanupPlan?
     @Published private(set) var canUndoRemoval = false
+    @Published private(set) var expiryRequiresRetry = false
     let collections: ShelfCollectionsStore
     private var lastTrash: ShelfTrashRecord?
     private var managedDirectory: URL?
@@ -37,12 +38,14 @@ final class FileShelfToolStore: ObservableObject {
     private var inFlight = Set<URL>()
     private var scopedURLs: [UUID: URL] = [:]
     private let persistState: Bool
+    private let suppliedIndexDirectory: URL?
     private let previews = ShelfQuickLookController()
 
     init(managedDirectory suppliedDirectory: URL? = nil, persistState: Bool = true,
          archive suppliedArchive: ShelfLibraryArchive? = nil,
          onPortableChange: @escaping @MainActor () -> Void = { PlusSyncService.shared.portableDidChange() }) {
         self.persistState = persistState
+        suppliedIndexDirectory = suppliedDirectory
         let layoutDirectory = suppliedDirectory ?? ((try? LocalToolStorage.directory()) ?? URL(fileURLWithPath: NSTemporaryDirectory()))
         collections = ShelfCollectionsStore(directory: layoutDirectory, persistState: persistState, onChange: onPortableChange)
         do {
@@ -52,8 +55,10 @@ final class FileShelfToolStore: ObservableObject {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
                                                    attributes: [.posixPermissions: 0o700])
             managedDirectory = directory
+            expiryRequiresRetry = try PlusSyncFolderIO.hasNode(directory.appendingPathComponent("expiry-requires-retry.txt"))
             let archive = try suppliedArchive ?? (persistState
-                ? try LocalToolStorage.load(ShelfLibraryArchive.self, file: "file-shelf.json", fallback: .init())
+                ? try suppliedDirectory.map { try PlusPortableLibraryFile.load(at: $0.appendingPathComponent("file-shelf.json"), limit: 40 * 1024 * 1024, decode: { try JSONDecoder().decode(ShelfLibraryArchive.self, from: $0) }) ?? .init() }
+                    ?? LocalToolStorage.load(ShelfLibraryArchive.self, file: "file-shelf.json", fallback: .init())
                 : ShelfLibraryArchive())
             items = archive.state.items; autoSave = archive.state.autoSave; retention = archive.state.retention
             metadata = archive.metadata
@@ -62,6 +67,8 @@ final class FileShelfToolStore: ObservableObject {
             collections.onWatchedFiles = { [weak self] urls, rule in
                 for url in urls { self?.add(url, shelfID: rule.shelfID, tags: rule.tags, forceCopy: true, watchedRuleID: rule.id) }
             }
+            collections.onLocalExpiryChange = { [weak self] in self?.pruneExpired() }
+            pruneExpired()
         } catch { self.error = "Could not open the local file shelf: \(error.localizedDescription)" }
     }
     deinit {
@@ -72,9 +79,7 @@ final class FileShelfToolStore: ObservableObject {
     private func save() {
         guard persistState else { scheduleExpiration(); return }
         do {
-            try LocalToolStorage.save(ShelfLibraryArchive(
-                state: FileShelfState(items: items, autoSave: autoSave, retention: retention), metadata: metadata
-            ), file: "file-shelf.json")
+            try persistIndex(items: items, metadata: metadata)
             scheduleExpiration()
         } catch { self.error = "Could not save the shelf index: \(error.localizedDescription)" }
     }
@@ -201,8 +206,13 @@ final class FileShelfToolStore: ObservableObject {
         items.insert(item, at: 0); metadata = nextMetadata
     }
     private func persistIndex(items: [FileShelfItem], metadata: [String: ShelfFileMetadata]) throws {
-        if persistState { try LocalToolStorage.save(ShelfLibraryArchive(state: FileShelfState(items: items, autoSave: autoSave, retention: retention), metadata: metadata), file: "file-shelf.json") }
+        guard persistState else { return }
+        let value = ShelfLibraryArchive(state: FileShelfState(items: items, autoSave: autoSave, retention: retention), metadata: metadata)
+        if let suppliedIndexDirectory {
+            try PlusPortableLibraryFile.save(JSONEncoder().encode(value), at: suppliedIndexDirectory.appendingPathComponent("file-shelf.json"), limit: 40 * 1024 * 1024, decode: { try JSONDecoder().decode(ShelfLibraryArchive.self, from: $0) })
+        } else { try LocalToolStorage.save(value, file: "file-shelf.json") }
     }
+    private func indexURL() throws -> URL? { persistState ? try (suppliedIndexDirectory ?? LocalToolStorage.directory()).appendingPathComponent("file-shelf.json") : nil }
     func shelfID(for item: FileShelfItem) -> UUID {
         let id = info(for: item).shelfID ?? CoreShelfCollection.inboxID
         return collections.shelves.contains(where: { $0.id == id }) ? id : CoreShelfCollection.inboxID
@@ -212,7 +222,7 @@ final class FileShelfToolStore: ObservableObject {
         do {
             var next = metadata
             for id in ids { var info = next[id.uuidString] ?? .init(); info.shelfID = shelfID; next[id.uuidString] = info }
-            try persistIndex(items: items, metadata: next); metadata = next; status = "Moved shelf metadata; all file contents and originals are unchanged."; error = nil; return true
+            try persistIndex(items: items, metadata: next); metadata = next; status = "Moved shelf metadata; all file contents and originals are unchanged."; error = nil; pruneExpired(); return true
         } catch { self.error = error.localizedDescription; return false }
     }
 
@@ -345,6 +355,7 @@ final class FileShelfToolStore: ObservableObject {
 
     func pruneExpired() {
         guard let managedDirectory else { return }
+        applyEnabledExpiryRules()
         let now = Date()
         var ids: Set<UUID> = []
         if let duration = retention.duration { ids.formUnion(CoreShelfCleanupPlan.preview(items: items, managedRoot: managedDirectory, olderThan: now.addingTimeInterval(-duration), now: now).itemIDs) }
@@ -358,16 +369,59 @@ final class FileShelfToolStore: ObservableObject {
     }
     private func scheduleExpiration() {
         expiration?.cancel(); expiration = nil
-        guard let duration = retention.duration else { return }
         let now = Date()
+        var deadlines: [Date] = []
+        if let duration = retention.duration { deadlines += items.map { $0.addedAt.addingTimeInterval(duration) } }
+        if !expiryRequiresRetry {
+            for rule in collections.rules where rule.kind == .expireOwnedCopies && collections.isEnabled(rule.id) {
+                deadlines += items.filter { shelfID(for: $0) == rule.shelfID && $0.managedURL != nil }.map { $0.addedAt.addingTimeInterval(Double(rule.days) * 86_400) }
+            }
+        }
         // Failed cleanup waits for an explicit retry; do not repeatedly wake
         // for the same expired entry when its filesystem error is unchanged.
-        guard let next = items.map({ $0.addedAt.addingTimeInterval(duration) }).filter({ $0 > now }).min() else { return }
+        guard let next = deadlines.filter({ $0 > now }).min() else { return }
         let seconds = max(1, next.timeIntervalSince(now))
         expiration = Task { @MainActor [weak self] in
             do { try await Task.sleep(for: .seconds(seconds)) } catch { return }
             self?.pruneExpired()
         }
+    }
+    private func applyEnabledExpiryRules() {
+        guard !expiryRequiresRetry, let managedDirectory else { return }
+        let now = Date()
+        var ids: Set<UUID> = []
+        for rule in collections.rules where rule.kind == .expireOwnedCopies && collections.isEnabled(rule.id) {
+            let eligible = items.filter { shelfID(for: $0) == rule.shelfID }
+            ids.formUnion(CoreShelfCleanupPlan.preview(items: eligible, managedRoot: managedDirectory,
+                olderThan: now.addingTimeInterval(-Double(rule.days) * 86_400), now: now).itemIDs)
+        }
+        guard !ids.isEmpty else { return }
+        do {
+            // This private marker survives a crash or failed rollback. No further
+            // background retry occurs until the user explicitly clears it.
+            let marker = managedDirectory.appendingPathComponent("expiry-requires-retry.txt")
+            try Data("Automatic shelf expiry requires explicit retry if this marker remains.\n".utf8).write(to: marker, options: .atomic)
+            expiryRequiresRetry = true
+            try retainInTrash(items.filter { ids.contains($0.id) })
+            try FileManager.default.removeItem(at: marker)
+            expiryRequiresRetry = false
+            collections.preview = nil; error = nil
+            status = "Background expiry moved \(ids.count) managed copies to retained Undo trash. Originals and references are unchanged."
+        } catch {
+            expiryRequiresRetry = true
+            self.error = "Automatic expiry paused after a local IO error. Retained recovery copies are preserved; explicitly retry after resolving the cause: \(error.localizedDescription)"
+        }
+    }
+    func retryAutomaticExpiry() {
+        do {
+            guard let managedDirectory else { throw CocoaError(.fileWriteUnknown) }
+            let marker = managedDirectory.appendingPathComponent("expiry-requires-retry.txt")
+            if try PlusSyncFolderIO.hasNode(marker) {
+                _ = try PlusSyncFolderIO.boundedData(marker, limit: 1_024)
+                try FileManager.default.removeItem(at: marker)
+            }
+            expiryRequiresRetry = false; pruneExpired()
+        } catch { expiryRequiresRetry = true; self.error = "Automatic expiry remains paused: \(error.localizedDescription)" }
     }
 
     func previewRule(_ rule: CoreShelfRule) {
@@ -411,7 +465,7 @@ final class FileShelfToolStore: ObservableObject {
         let recordBytes = try JSONEncoder().encode(record)
         guard recordBytes.count <= 16 * 1024 * 1024 else { throw SyncFailure.invalid("The retained undo record exceeds 16 MB; nothing was removed.") }
         try recordBytes.write(to: batch.appendingPathComponent("undo.json"), options: .atomic)
-        let indexURL = persistState ? try LocalToolStorage.directory().appendingPathComponent("file-shelf.json") : nil
+        let indexURL = try indexURL()
         let originalIndex = try indexURL.flatMap { try PlusSyncFolderIO.hasNode($0) ? PlusSyncFolderIO.boundedData($0, limit: 40 * 1024 * 1024) : nil }
         if let originalIndex { try originalIndex.write(to: batch.appendingPathComponent("index-before.json"), options: .atomic) }
         var moved: [(UUID, URL)] = []
@@ -456,8 +510,13 @@ final class FileShelfToolStore: ObservableObject {
         guard let record = lastTrash else { return }
         do {
             guard items.count + record.entries.count <= 200, record.entries.allSatisfy({ entry in !items.contains(where: { $0.id == entry.item.id }) }) else { throw SyncFailure.invalid("Undo would duplicate entries or exceed 200 files; current originals are unchanged.") }
+            let shelfIDs = Set(record.entries.map { entry in
+                let id = entry.metadata.shelfID ?? CoreShelfCollection.inboxID
+                return collections.shelves.contains(where: { $0.id == id }) ? id : CoreShelfCollection.inboxID
+            })
+            try collections.disableExpiryRules(for: shelfIDs)
             let batch = try trashRoot().appendingPathComponent(record.id.uuidString, isDirectory: true)
-            let indexURL = persistState ? try LocalToolStorage.directory().appendingPathComponent("file-shelf.json") : nil
+            let indexURL = try indexURL()
             let previousIndex = try indexURL.flatMap { try PlusSyncFolderIO.hasNode($0) ? PlusSyncFolderIO.boundedData($0, limit: 40 * 1024 * 1024) : nil }
             if let previousIndex { try previousIndex.write(to: batch.appendingPathComponent("index-before-undo.json"), options: .atomic) }
             var moved: [(URL, URL)] = []
@@ -556,6 +615,7 @@ struct FileShelfToolView: View {
             }
             Text("Drag entries onto a shelf name to move metadata. Cleanup requires preview and confirmation; retained copies support Undo. Originals are never deleted.")
                 .font(.caption).foregroundStyle(.secondary)
+            Text("Enabled background expiry rules move managed copies to retained Undo trash, including while this tool is hidden.").font(.caption2).foregroundStyle(.secondary)
             HStack {
                 TextField("Search filenames or tags", text: $search).textFieldStyle(.roundedBorder)
                 Toggle("Favourites Only", isOn: $favouritesOnly)
@@ -622,6 +682,7 @@ struct FileShelfToolView: View {
                 Button("Shelves & Rules") { showSettings = true }
                 Button("Preview Cleanup") { store.pruneExpired(); showCleanup = true }
                 Button("Undo Removal") { store.undoRemoval() }.disabled(!store.canUndoRemoval)
+                if store.expiryRequiresRetry { Button("Retry Expiry") { store.retryAutomaticExpiry() } }
             }
         }.padding().onAppear { store.pruneExpired(); collections.startIfConfigured() }
             .sheet(isPresented: $showSettings) { ShelfSettingsView(store: store).frame(width: 560, height: 540) }

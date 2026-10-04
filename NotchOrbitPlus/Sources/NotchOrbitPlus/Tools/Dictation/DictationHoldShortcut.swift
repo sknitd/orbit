@@ -23,7 +23,7 @@ final class DictationHoldShortcut {
                 let owner = Unmanaged<DictationHoldShortcut>.fromOpaque(raw).takeUnretainedValue()
                 Task { @MainActor [weak owner] in owner?.action?(pressed) }
                 return noErr
-            }, UInt32(types.count), pointer.baseAddress, context, &handler)
+            }, types.count, pointer.baseAddress, context, &handler)
         }
         guard installed == noErr else { stop(); return false }
         let code: UInt32

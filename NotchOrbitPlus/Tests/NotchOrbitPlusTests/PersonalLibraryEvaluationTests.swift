@@ -76,6 +76,63 @@ final class PersonalLibraryEvaluationTests: NativeImageFixtureCase, @unchecked S
     }
 
     @MainActor
+    func testPreviewedEnabledExpiryAutomaticallyRetainsCopiesAndUndoDisablesRulesAcrossRelaunch() throws {
+        let managed = fixtureDirectory.appendingPathComponent("AutoExpiry", isDirectory: true)
+        let original = fixtureDirectory.appendingPathComponent("original-auto.txt"), bytes = Data("Original must remain unchanged".utf8)
+        try bytes.write(to: original)
+        let id = UUID(), folder = managed.appendingPathComponent(id.uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let copy = folder.appendingPathComponent("original-auto.txt"); try bytes.write(to: copy)
+        let item = FileShelfItem(id: id, originalURL: original, managedURL: copy, addedAt: Date().addingTimeInterval(-10 * 86_400))
+        let reference = FileShelfItem(originalURL: original, addedAt: item.addedAt)
+        let archive = ShelfLibraryArchive(state: .init(items: [item, reference], retention: .forever))
+        try JSONEncoder().encode(archive).write(to: managed.appendingPathComponent("file-shelf.json"))
+        let store = FileShelfToolStore(managedDirectory: managed, persistState: true, onPortableChange: {}); defer { store.shutdown() }
+        let rule = CoreShelfRule(name: "Seven-day owned-copy expiry", kind: .expireOwnedCopies, days: 7)
+        XCTAssertTrue(store.collections.saveRule(rule)); store.pruneExpired()
+        XCTAssertEqual(store.items.count, 2); XCTAssertEqual(try Data(contentsOf: copy), bytes)
+        store.collections.enablePreviewedRule(rule.id); XCTAssertFalse(store.collections.isEnabled(rule.id))
+        store.previewRule(rule); XCTAssertEqual(store.collections.preview?.cleanupIDs, [item.id])
+        store.collections.enablePreviewedRule(rule.id)
+        XCTAssertTrue(store.collections.isEnabled(rule.id)); XCTAssertNil(store.error)
+        XCTAssertEqual(store.items.map(\.id), [reference.id]); XCTAssertTrue(store.canUndoRemoval)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: copy.path)); XCTAssertEqual(try Data(contentsOf: original), bytes)
+        store.shutdown()
+        let reopened = FileShelfToolStore(managedDirectory: managed, persistState: true, onPortableChange: {}); defer { reopened.shutdown() }
+        XCTAssertTrue(reopened.collections.isEnabled(rule.id)); XCTAssertTrue(reopened.canUndoRemoval)
+        reopened.undoRemoval(); XCTAssertNil(reopened.error); XCTAssertFalse(reopened.collections.isEnabled(rule.id))
+        XCTAssertEqual(Set(reopened.items.map(\.id)), [item.id, reference.id]); XCTAssertEqual(try Data(contentsOf: copy), bytes)
+        reopened.pruneExpired(); XCTAssertEqual(try Data(contentsOf: copy), bytes)
+        reopened.collections.enablePreviewedRule(rule.id)
+        XCTAssertFalse(reopened.collections.isEnabled(rule.id), "Undo invalidates the old preview; renewed background expiry requires a fresh preview")
+        let third = FileShelfToolStore(managedDirectory: managed, persistState: true, onPortableChange: {}); defer { third.shutdown() }
+        XCTAssertFalse(third.collections.isEnabled(rule.id)); XCTAssertEqual(try Data(contentsOf: copy), bytes)
+        XCTAssertEqual(try Data(contentsOf: original), bytes)
+    }
+
+    @MainActor
+    func testFailedAutomaticExpiryStaysPausedAcrossRelaunchUntilExplicitRetry() throws {
+        let managed = fixtureDirectory.appendingPathComponent("FailedExpiry", isDirectory: true)
+        try FileManager.default.createDirectory(at: managed, withIntermediateDirectories: false)
+        let original = fixtureDirectory.appendingPathComponent("source-paused.txt"), bytes = Data("Keep this source".utf8); try bytes.write(to: original)
+        let id = UUID(), folder = managed.appendingPathComponent(id.uuidString, isDirectory: true), copy = folder.appendingPathComponent("source-paused.txt")
+        let item = FileShelfItem(id: id, originalURL: original, managedURL: copy, addedAt: Date().addingTimeInterval(-8 * 86_400))
+        try JSONEncoder().encode(ShelfLibraryArchive(state: .init(items: [item], retention: .forever))).write(to: managed.appendingPathComponent("file-shelf.json"))
+        let store = FileShelfToolStore(managedDirectory: managed, persistState: true, onPortableChange: {}); defer { store.shutdown() }
+        let rule = CoreShelfRule(name: "Expiry with IO failure", kind: .expireOwnedCopies, days: 7)
+        XCTAssertTrue(store.collections.saveRule(rule)); store.previewRule(rule); store.collections.enablePreviewedRule(rule.id)
+        XCTAssertTrue(store.expiryRequiresRetry); XCTAssertEqual(store.items.map(\.id), [item.id]); XCTAssertNotNil(store.error)
+        XCTAssertEqual(try Data(contentsOf: original), bytes); store.shutdown()
+        let reopened = FileShelfToolStore(managedDirectory: managed, persistState: true, onPortableChange: {}); defer { reopened.shutdown() }
+        XCTAssertTrue(reopened.expiryRequiresRetry)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false); try bytes.write(to: copy)
+        reopened.pruneExpired(); XCTAssertEqual(try Data(contentsOf: copy), bytes, "Restoring readable access alone must not cause an automatic retry")
+        reopened.retryAutomaticExpiry(); XCTAssertFalse(reopened.expiryRequiresRetry); XCTAssertNil(reopened.error)
+        XCTAssertTrue(reopened.items.isEmpty); XCTAssertTrue(reopened.canUndoRemoval); XCTAssertFalse(FileManager.default.fileExists(atPath: copy.path))
+        XCTAssertEqual(try Data(contentsOf: original), bytes)
+    }
+
+    @MainActor
     func testChosenFolderRuleDoesNotImportUntilActualPreviewAndExplicitEnable() async throws {
         let source = fixtureDirectory.appendingPathComponent("Chosen", isDirectory: true), managed = fixtureDirectory.appendingPathComponent("Managed", isDirectory: true)
         try FileManager.default.createDirectory(at: source, withIntermediateDirectories: false)

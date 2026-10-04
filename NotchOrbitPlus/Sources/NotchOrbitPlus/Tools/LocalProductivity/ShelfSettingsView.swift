@@ -31,7 +31,9 @@ import NotchCore
                         }.font(.caption)
                     }
                 }
-                Text("Capture rules route future owned capture copies and tags. Folder rules copy matching regular files (≤100 MB) from an explicitly chosen folder every 15 seconds. Expiry rules only flag eligible owned copies; deletion always needs confirmation and keeps an undo backup.").font(.caption).foregroundStyle(.secondary)
+                Text("Capture rules route future owned capture copies and tags. Folder rules copy matching regular files (≤100 MB) from an explicitly chosen folder every 15 seconds. Background expiry moves managed copies to retained Undo trash, including while this tool is hidden; originals and references are excluded.").font(.caption).foregroundStyle(.secondary)
+                Text("Expiry is off until you preview its exact definition and explicitly enable it. Undo disables matching local expiry rules; re-enable needs a fresh preview. Legacy Keep retention stays manual without an enabled expiry rule.").font(.caption).foregroundStyle(.secondary)
+                if shelf.expiryRequiresRetry { Button("Retry Paused Automatic Expiry") { shelf.retryAutomaticExpiry() } }
                 Text("Rule descriptions and named shelves may sync. Folder bookmarks, selected shelf and rule enablement stay local; changed incoming rules need a new local preview.").font(.caption).foregroundStyle(.secondary)
                 if store.watching { Text("Watching readable chosen folders. Provider availability and access can still fail.").font(.caption) }
                 LocalToolError(message: store.error)
@@ -46,7 +48,7 @@ import NotchCore
                 Text("Preview: \(preview.rule.name)").font(.headline)
                 if preview.lines.isEmpty { Text("No matching entries at this time. No deletion or import has occurred.") }
                 ScrollView { VStack(alignment: .leading) { ForEach(Array(preview.lines.enumerated()), id: \.offset) { _, line in Text(line).font(.caption).textSelection(.enabled) } } }.frame(maxHeight: 220)
-                Text(preview.rule.kind == .watchFolder ? "Enable to copy the previewed matching files and future arrivals. Originals stay intact." : "Enable this rule on this Mac after reviewing. Expiry never deletes automatically.").font(.caption).foregroundStyle(.secondary)
+                Text(preview.rule.kind == .watchFolder ? "Enable to copy the previewed matching files and future arrivals. Originals stay intact." : preview.rule.kind == .expireOwnedCopies ? "Enable to move these and future expired owned copies into retained Undo trash automatically, even while hidden. Originals and references remain intact." : "Enable to route future owned capture copies and tags on this Mac.").font(.caption).foregroundStyle(.secondary)
                 LocalToolError(message: store.error)
                 HStack {
                     Button("Close") { store.preview = nil }
@@ -56,7 +58,7 @@ import NotchCore
             }.padding().frame(width: 470)
         }
     }
-    private func title(_ kind: CoreShelfRuleKind) -> String { switch kind { case .captures: "Capture copies"; case .watchFolder: "Watch chosen folder"; case .expireOwnedCopies: "Preview owned copies older than N days" } }
+    private func title(_ kind: CoreShelfRuleKind) -> String { switch kind { case .captures: "Capture copies"; case .watchFolder: "Watch chosen folder"; case .expireOwnedCopies: "Move owned copies older than N days to retained trash" } }
 }
 
 @MainActor private struct ShelfRuleEditor: View {
@@ -70,7 +72,7 @@ import NotchCore
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Shelf Rule").font(.headline); TextField("Name", text: $rule.name).textFieldStyle(.roundedBorder)
-            Picker("Action", selection: $rule.kind) { Text("Capture copies + tags").tag(CoreShelfRuleKind.captures); Text("Watch chosen folder + copy").tag(CoreShelfRuleKind.watchFolder); Text("Preview owned-copy expiry").tag(CoreShelfRuleKind.expireOwnedCopies) }
+            Picker("Action", selection: $rule.kind) { Text("Capture copies + tags").tag(CoreShelfRuleKind.captures); Text("Watch chosen folder + copy").tag(CoreShelfRuleKind.watchFolder); Text("Owned-copy expiry to retained trash").tag(CoreShelfRuleKind.expireOwnedCopies) }
             Picker("Destination shelf", selection: $rule.shelfID) { ForEach(shelves) { Text($0.name).tag($0.id) } }
             if rule.kind == .expireOwnedCopies { Stepper("Older than \(rule.days) days", value: $rule.days, in: 1...365) }
             else { TextField("Tags, comma separated", text: $tags).textFieldStyle(.roundedBorder); TextField("Extensions: png, pdf (empty = all)", text: $extensions).textFieldStyle(.roundedBorder) }

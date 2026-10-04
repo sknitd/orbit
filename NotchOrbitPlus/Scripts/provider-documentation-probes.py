@@ -8,7 +8,7 @@ from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 LIMIT = 8_388_608
-ALLOWED_HOSTS = {'aviationstack.com', 'docs.apilayer.com', 'www.api-football.com', 'raw.githubusercontent.com'}
+ALLOWED_HOSTS = {'aviationstack.com', 'docs.apilayer.com', 'api.swaggerhub.com', 'www.api-football.com', 'raw.githubusercontent.com'}
 
 
 class DocumentationRedirect(HTTPRedirectHandler):
@@ -30,15 +30,22 @@ for name, url, markers in [
     ('aviationstack', 'https://aviationstack.com/documentation', ['flight_iata', 'flight_status', 'access_key', 'https://api.aviationstack.com/v1/flights']),
     ('aviationstack-api-documentation', 'https://docs.apilayer.com/aviationstack/docs/api-documentation',
      ['flight_iata', 'flight_status', 'access_key', 'api.aviationstack.com/v1/flights', 'scheduled', 'estimated', 'departure', 'arrival', 'gate', 'limit']),
+    ('aviationstack-api-reference', 'https://docs.apilayer.com/aviationstack/docs/aviationstack-api-v-1-0-0',
+     ['flight_iata', 'flight_status', 'access_key', '/v1/flights', 'scheduled', 'estimated', 'departure', 'arrival', 'gate', 'limit']),
+    ('aviationstack-openapi', 'https://api.swaggerhub.com/apis/apilayer-863/AviationstackAPI/1.0.0/swagger.json',
+     ['flight_iata', 'flight_status', 'access_key', 'scheduled', 'estimated', 'departure', 'arrival', 'gate', 'limit']),
     ('api-sports', 'https://www.api-football.com/documentation-v3', ['teams', 'search', 'x-apisports-key', 'v3.football.api-sports.io']),
     ('api-sports-sdk-teams', 'https://raw.githubusercontent.com/api-sports/api-sports/55887ecf0d5b2a494162561ead5a244dd7f64f56/src/API-Football.SDK/V3/Teams.cs',
      ['teams?', 'season=', 'league=', 'search']),
 ]:
     record = {'provider': name, 'url': url, 'account_api_called': False}
+    if name in ('aviationstack-api-reference', 'aviationstack-openapi'):
+        record.update(linked_from='https://docs.apilayer.com/aviationstack/docs/api-documentation',
+                      link_evidence='Official page API Endpoints link and inert SSR apiSpec/shubUrl metadata, recorded in run-37226333904-1.')
     if name == 'api-sports-sdk-teams':
         record.update(source_commit='55887ecf0d5b2a494162561ead5a244dd7f64f56',
                       evidence_scope='Official SDK documents season/league queries; this file does not establish support for teams?search.')
-    suffix = '.cs' if name == 'api-sports-sdk-teams' else '.html'
+    suffix = '.cs' if name == 'api-sports-sdk-teams' else '.json' if name == 'aviationstack-openapi' else '.html'
     artifact = root / (name + suffix)
     artifact.unlink(missing_ok=True)
     (root / (name + '.error-response.txt')).unlink(missing_ok=True)
@@ -52,6 +59,23 @@ for name, url, markers in [
                           final_url=response.geturl(), response_file=artifact.name,
                           markers={marker: marker in text for marker in markers})
             artifact.write_bytes(body)
+            if name == 'aviationstack-openapi':
+                spec = json.loads(text)
+                if not isinstance(spec, dict):
+                    raise ValueError('Public OpenAPI document is not a JSON object.')
+                paths = spec.get('paths', {})
+                flight_paths = [path for path in paths if path in ('/v1/flights', '/flights')]
+                details = {}
+                for path in flight_paths:
+                    route = paths[path]
+                    operation = route.get('get', {})
+                    parameters = route.get('parameters', []) + operation.get('parameters', [])
+                    details[path] = {'get_present': 'get' in route,
+                                     'inline_parameter_names': [item.get('name') for item in parameters if isinstance(item, dict) and 'name' in item],
+                                     'parameter_refs': [item['$ref'] for item in parameters if isinstance(item, dict) and '$ref' in item]}
+                record['openapi_summary'] = {'version': spec.get('openapi', spec.get('swagger')),
+                                             'servers': spec.get('servers'), 'host': spec.get('host'),
+                                             'base_path': spec.get('basePath'), 'flights': details}
     except HTTPError as error:
         body = error.read(LIMIT + 1)[:LIMIT]
         error_artifact = root / (name + '.error-response.txt')
