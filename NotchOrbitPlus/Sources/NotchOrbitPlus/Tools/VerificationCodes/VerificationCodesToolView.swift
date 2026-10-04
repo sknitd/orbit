@@ -123,9 +123,9 @@ struct VerificationCodesToolView: View {
             Text("Messages Verification Codes").font(.headline)
             Text("Enable reads up to 50 incoming plain-text Messages from the last minute. Full Disk Access is required. Codes stay in memory for 60 seconds from the message timestamp; messages and codes are never saved by this tool.")
                 .font(.caption).foregroundStyle(.secondary)
-            Toggle("Enable read-only Messages codes", isOn: Binding(get: { store.enabled }, set: store.setEnabled))
+            Toggle("Enable read-only Messages codes", isOn: Binding(get: { store.enabled }, set: { store.setEnabled($0) }))
             Toggle("Keep reading while the notch is closed", isOn: $store.backgroundEnabled).disabled(!store.enabled)
-            HStack { Button("Open Full Disk Access Settings", action: store.openFullDiskAccessSettings); Button("Retry / Refresh", action: store.refresh).disabled(!store.enabled) }
+            HStack { Button("Open Full Disk Access Settings") { store.openFullDiskAccessSettings() }; Button("Retry / Refresh") { store.refresh() }.disabled(!store.enabled) }
             if store.reading { ProgressView().controlSize(.small) }
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 VStack(alignment: .leading, spacing: 8) {

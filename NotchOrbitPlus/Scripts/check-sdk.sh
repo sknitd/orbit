@@ -37,9 +37,32 @@ xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
   -module-cache-path "$task_root/build/sdk-probe-cache" "$task_probe_dir/FoundationModelsProbe.swift"
 cat > "$task_probe_dir/TranslationSpeechProbe.swift" <<'SWIFT'
 import Foundation
+import Combine
 import SwiftUI
 import Translation
 import Speech
+
+@MainActor
+final class ActorBindingSDKStore: NSObject, ObservableObject {
+    @Published private(set) var enabled = false
+    func setEnabled(_ enabled: Bool) { self.enabled = enabled }
+    func refresh() { }
+}
+
+@MainActor
+struct ActorBindingSDKProbe: View {
+    @ObservedObject private var store = ActorBindingSDKStore()
+    var body: some View {
+        VStack {
+            Toggle("Explicit actor binding", isOn: Binding(
+                get: { store.enabled }, set: { store.setEnabled($0) }))
+            HStack {
+                Button("Refresh") { store.refresh() }
+                Button("Disable") { store.setEnabled(false) }
+            }
+        }
+    }
+}
 
 struct TranslationSDKRequest: Sendable {
     let id: UUID
@@ -91,20 +114,37 @@ func onDeviceSpeechSDKProbe() {
 }
 SWIFT
 for architecture in arm64 x86_64; do
-  xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
+  xcrun swiftc -emit-object -parse-as-library -swift-version 6 -strict-concurrency=complete \
     -target "$architecture-apple-macos14.0" -sdk "$sdk_path" \
-    -module-cache-path "$task_root/build/sdk-probe-cache" "$task_probe_dir/TranslationSpeechProbe.swift"
+    -module-cache-path "$task_root/build/sdk-probe-cache" \
+    -o "$task_probe_dir/TranslationSpeech-$architecture.o" "$task_probe_dir/TranslationSpeechProbe.swift"
+  [[ -s "$task_probe_dir/TranslationSpeech-$architecture.o" ]]
 done
 swift_version="$(xcrun swiftc --version)"
-python3 - "$xcode_version" "$sdk_version" "$sdk_path" "$swift_version" "$host_arch" <<'PY'
-import json, pathlib, sys
+python3 - "$xcode_version" "$sdk_version" "$sdk_path" "$swift_version" "$host_arch" "$task_probe_dir" <<'PY'
+import hashlib, json, pathlib, struct, sys
+probe = pathlib.Path(sys.argv[6])
+objects = []
+for architecture, cpu in [('arm64', 0x100000c), ('x86_64', 0x1000007)]:
+    data = (probe / f'TranslationSpeech-{architecture}.o').read_bytes()
+    if len(data) < 32:
+        raise SystemExit(f'Missing generated SDK probe object for {architecture}.')
+    magic, actual_cpu, subtype, filetype = struct.unpack_from('<IIII', data)
+    if magic != 0xfeedfacf or actual_cpu != cpu or filetype != 1:
+        raise SystemExit(f'The generated SDK probe is not a {architecture} Mach-O object.')
+    objects.append({'architecture': architecture, 'mach_o_cpu': hex(actual_cpu),
+                    'file_type': 'MH_OBJECT', 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()})
 pathlib.Path('build/sdk-inventory.json').write_text(json.dumps({
     'xcode': sys.argv[1], 'macos_sdk': sys.argv[2], 'sdk_path': sys.argv[3],
     'swift': sys.argv[4], 'host_architecture': sys.argv[5],
     'deployment_target': '14.0', 'foundation_models_api_typechecked': True,
     'translation_api_typechecked': True, 'on_device_speech_api_typechecked': True,
     'translation_nonisolated_session_action_typechecked': True,
-    'translation_speech_probe_architectures': ['arm64', 'x86_64']
+    'translation_speech_probe_architectures': ['arm64', 'x86_64'],
+    'translation_speech_probe_codegen_verified': True,
+    'main_actor_bool_binding_codegen_verified': True,
+    'translation_speech_probe_source_sha256': hashlib.sha256((probe / 'TranslationSpeechProbe.swift').read_bytes()).hexdigest(),
+    'translation_speech_probe_objects': objects
 }, indent=2) + '\n')
 PY
-echo "SDK $sdk_version verified: public FoundationModels, Translation and on-device Speech APIs compile with deployment target 14.0."
+echo "SDK $sdk_version verified: FoundationModels typecheck and both-CPU Translation, Speech and explicit actor-binding object generation passed with deployment target 14.0."

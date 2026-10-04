@@ -52,14 +52,14 @@ struct ClipboardTransformToolView: View {
     init(store: ClipboardTransformStore = .shared) { self.store = store }
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack { Text("Transform text locally").font(.headline); Spacer(); Button("Load Clipboard", action: store.loadClipboard) }
+            HStack { Text("Transform text locally").font(.headline); Spacer(); Button("Load Clipboard") { store.loadClipboard() } }
             TextEditor(text: $store.input).font(.system(.body, design: .monospaced)).frame(height: 90)
                 .accessibilityLabel("Text to transform")
             Picker("Transformation", selection: $store.transformation) { ForEach(CoreClipboardTransform.allCases) { Text($0.title).tag($0) } }
-            HStack { Button("Transform", action: store.transform).disabled(store.busy); if store.busy { ProgressView().controlSize(.small) } }
+            HStack { Button("Transform") { store.transform() }.disabled(store.busy); if store.busy { ProgressView().controlSize(.small) } }
             if let output = store.output {
                 ScrollView { Text(output).font(.system(.body, design: .monospaced)).frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled) }.frame(maxHeight: 100)
-                Button("Copy Result", action: store.copyOutput)
+                Button("Copy Result") { store.copyOutput() }
             }
             if let error = store.error { Text(error).font(.caption).foregroundStyle(.orange) }
             Text("Formatting JSON preserves numeric values and string escapes. Tracking removal removes utm_*, fbclid, gclid, dclid, msclkid, mc_cid, mc_eid and igshid. Input is never uploaded.")

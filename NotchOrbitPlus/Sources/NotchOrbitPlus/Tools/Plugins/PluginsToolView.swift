@@ -223,8 +223,8 @@ struct PluginsToolView: View {
             Toggle("Enable plugins for this session", isOn: $store.enabled)
             Text("Install a chosen folder containing manifest.json and declared .sh files. Text, lists, and explicit command buttons are supported. Scripts use shell builtins inside macOS sandbox-exec; network, other runtimes, arbitrary executables, and undeclared files are blocked. Scripts have five seconds and 64 KB of output.")
                 .font(.caption).foregroundStyle(.secondary)
-            Button("Install Plugin Folder", action: store.chooseFolder).disabled(!store.enabled || store.busy || store.requiresReset)
-            Button("Open Bundled Samples", action: store.openSamples)
+            Button("Install Plugin Folder") { store.chooseFolder() }.disabled(!store.enabled || store.busy || store.requiresReset)
+            Button("Open Bundled Samples") { store.openSamples() }
             if store.requiresReset { Button("Reset Saved Declarations (Keep Backup)") { showReset = true } }
             if !store.sandboxAvailable { Text("The macOS sandbox runner is unavailable. Script execution is disabled.").font(.caption).foregroundStyle(.orange) }
             ForEach(store.plugins) { plugin in
@@ -243,13 +243,13 @@ struct PluginsToolView: View {
                     }
                 }.padding(10).background(Color.secondary.opacity(0.08)).clipShape(RoundedRectangle(cornerRadius: 8))
             }
-            if store.busy { HStack { ProgressView().controlSize(.small); Button("Cancel", action: store.cancel) } }
+            if store.busy { HStack { ProgressView().controlSize(.small); Button("Cancel") { store.cancel() } } }
             if let message = store.message { Text(message).font(.caption).textSelection(.enabled) }
-        }.onDisappear(perform: store.cancel)
+        }.onDisappear { store.cancel() }
             .alert("Reset saved plugin declarations?", isPresented: $showReset) {
-                Button("Reset With Backup", action: store.resetWithBackup); Button("Cancel", role: .cancel) {}
+                Button("Reset With Backup") { store.resetWithBackup() }; Button("Cancel", role: .cancel) {}
             } message: { Text("The original unreadable registry is copied to a backup. Plugin folders are retained.") }
-            .background(OrbitNativeToolVisibility(onVisible: {}, onHidden: store.cancel).frame(width: 0, height: 0))
+            .background(OrbitNativeToolVisibility(onVisible: {}, onHidden: { store.cancel() }).frame(width: 0, height: 0))
     }
     @ViewBuilder private func items(_ items: [CorePluginItem], plugin: PlusInstalledPlugin) -> some View {
         ForEach(Array(items.enumerated()), id: \.offset) { _, item in

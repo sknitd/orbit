@@ -75,7 +75,7 @@ struct GlobalSearchToolView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Global Search").font(.headline)
             TextField("Search tools, notes, tasks, snippets, clipboard and files", text: $store.query)
-                .textFieldStyle(.roundedBorder).focused($fieldFocused).onSubmit(store.activateSelection)
+                .textFieldStyle(.roundedBorder).focused($fieldFocused).onSubmit { store.activateSelection() }
                 .onKeyPress(.downArrow) { store.moveSelection(1); return .handled }
                 .onKeyPress(.upArrow) { store.moveSelection(-1); return .handled }
             ForEach(store.results) { entry in
@@ -89,7 +89,7 @@ struct GlobalSearchToolView: View {
                 }.buttonStyle(.plain)
             }
             Text(store.message).font(.caption).foregroundStyle(.secondary)
-        }.onAppear { fieldFocused = true; if !store.query.isEmpty { store.refresh() } }.onDisappear(perform: store.stop)
-            .background(OrbitNativeToolVisibility(onVisible: { if !store.query.isEmpty { store.refresh() } }, onHidden: store.stop).frame(width: 0, height: 0))
+        }.onAppear { fieldFocused = true; if !store.query.isEmpty { store.refresh() } }.onDisappear { store.stop() }
+            .background(OrbitNativeToolVisibility(onVisible: { if !store.query.isEmpty { store.refresh() } }, onHidden: { store.stop() }).frame(width: 0, height: 0))
     }
 }
