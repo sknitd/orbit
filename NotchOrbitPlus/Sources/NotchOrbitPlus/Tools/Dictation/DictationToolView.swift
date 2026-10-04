@@ -22,6 +22,7 @@ struct DictationToolView: View {
                 })) { ForEach(DictationShortcutKey.allCases) { Text($0.rawValue).tag($0) } }
             }.disabled(store.isPreparing || store.isListening || store.isFinishing)
             Toggle("Enable \(store.shortcut.title) hold shortcut", isOn: Binding(get: { store.shortcutEnabled }, set: { store.setShortcutEnabled($0) }))
+            Toggle("Append completed hold dictation to Quick Note", isOn: Binding(get: { store.appendHoldToQuickNote }, set: { store.setAppendHoldToQuickNote($0) }))
             Toggle("Allow dictation while dashboard is hidden", isOn: Binding(get: { store.backgroundMonitoring }, set: { store.setBackgroundMonitoring($0) }))
             HStack {
                 Button("Start") { store.start() }.disabled(store.isPreparing || store.isListening || store.isFinishing)
@@ -48,7 +49,7 @@ struct DictationToolView: View {
                 }
             }
             if let error = store.error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
-            Text("Start may request Speech and Microphone access. Recognition requires an available on-device model; there is no cloud fallback. Hiding stops the microphone unless you explicitly allow background dictation above. No audio files are saved.")
+            Text("Start may request Speech and Microphone access. Recognition requires an available on-device model; there is no cloud fallback. With hold append enabled, release sends the final transcript once; canceled or partial text stays here. Start-button recordings use Send. Hiding stops the microphone unless you explicitly allow background dictation above. No audio files are saved.")
                 .font(.caption2).foregroundStyle(.secondary)
         }.background(CaptureToolVisibility(onVisible: { store.setVisible(true) }, onHidden: { store.setVisible(false) }).frame(width: 0, height: 0))
     }

@@ -13,6 +13,7 @@ final class DictationEvaluationTests: XCTestCase, @unchecked Sendable {
         }, microphonePermission: { fixture.microphone += 1; return true })
         store.setVisible(true); store.setVisible(false); store.shutdown()
         XCTAssertFalse(store.shortcutEnabled); XCTAssertFalse(store.backgroundMonitoring)
+        XCTAssertFalse(store.appendHoldToQuickNote)
         XCTAssertEqual(fixture.speech, 0); XCTAssertEqual(fixture.microphone, 0); XCTAssertEqual(fixture.started, 0)
         store.setVisible(true); store.start(); store.setVisible(false)
         try await Task.sleep(for: .milliseconds(40))
@@ -69,6 +70,30 @@ final class DictationEvaluationTests: XCTestCase, @unchecked Sendable {
     }
 
     @MainActor
+    func testFailedHoldRevealAndRepeatedHiddenStateCannotStartPermissionOrPublishText() async throws {
+        let fixture = DictationFixture()
+        let store = DictationToolStore(driver: fixture.driver,
+            speechPermission: { fixture.speech += 1; return true },
+            microphonePermission: { fixture.microphone += 1; return true })
+        var reveals = 0
+        store.onRequestShow = { reveals += 1; return false }
+        store.holdShortcutChanged(true)
+        XCTAssertEqual(reveals, 1); XCTAssertNotNil(store.error)
+        XCTAssertFalse(store.isPreparing); XCTAssertFalse(store.isListening)
+        try await Task.sleep(for: .milliseconds(40))
+        XCTAssertEqual(fixture.supportChecks, 0); XCTAssertEqual(fixture.speech, 0)
+        XCTAssertEqual(fixture.microphone, 0); XCTAssertEqual(fixture.started, 0)
+        // A repeated hidden notification must also invalidate work started
+        // before the native visibility observer has reported its first show.
+        store.start(); store.setVisible(false)
+        try await Task.sleep(for: .milliseconds(40))
+        XCTAssertEqual(fixture.supportChecks, 0); XCTAssertEqual(fixture.speech, 0)
+        XCTAssertEqual(fixture.microphone, 0); XCTAssertEqual(fixture.started, 0)
+        XCTAssertFalse(store.isPreparing); XCTAssertTrue(store.transcript.isEmpty)
+        store.shutdown()
+    }
+
+    @MainActor
     func testUnsupportedOnDeviceRecognizerFailsBeforeConsentAndExplicitBackgroundOptInControlsHide() async throws {
         let fixture = DictationFixture(); fixture.supported = false
         let store = DictationToolStore(driver: fixture.driver,
@@ -81,6 +106,66 @@ final class DictationEvaluationTests: XCTestCase, @unchecked Sendable {
         try await NativeFeatureEvaluation.waitUntil("Explicit background dictation started") { store.isListening }
         store.setVisible(false); XCTAssertTrue(store.isListening)
         store.setBackgroundMonitoring(false); XCTAssertFalse(store.isListening)
+        store.shutdown()
+    }
+
+    @MainActor
+    func testOptedInHoldReleaseAppendsOnlyOneFinalTranscriptAndManualStartStillRequiresSend() async throws {
+        let fixture = DictationFixture()
+        let store = DictationToolStore(driver: fixture.driver, speechPermission: { true }, microphonePermission: { true })
+        store.onAppendToQuickNote = { fixture.appendCount += 1; fixture.appended = $0 }
+        store.setVisible(true); store.setAppendHoldToQuickNote(true); store.start(fromHoldShortcut: true)
+        try await NativeFeatureEvaluation.waitUntil("Hold dictation is listening") { store.isListening }
+        let events = try XCTUnwrap(fixture.events)
+        events(.transcript("Partial hold words", isFinal: false))
+        try await NativeFeatureEvaluation.waitUntil("Partial hold transcript retained") { store.transcript == "Partial hold words" }
+        XCTAssertEqual(fixture.appendCount, 0)
+        store.stop(); XCTAssertEqual(fixture.finished, 1)
+        events(.transcript("Final hold words", isFinal: true))
+        events(.transcript("Duplicate final event", isFinal: true))
+        try await NativeFeatureEvaluation.waitUntil("Final hold transcript appended") { fixture.appendCount == 1 }
+        XCTAssertEqual(fixture.appended, "Final hold words"); XCTAssertEqual(store.transcript, "Final hold words")
+        XCTAssertFalse(store.isFinishing); XCTAssertNil(store.error)
+        store.start()
+        try await NativeFeatureEvaluation.waitUntil("Manual Start is listening") { store.isListening }
+        let manualEvents = try XCTUnwrap(fixture.events)
+        store.stop(); manualEvents(.transcript("Manual preview words", isFinal: true))
+        try await NativeFeatureEvaluation.waitUntil("Manual transcript is ready") { !store.isFinishing }
+        XCTAssertEqual(fixture.appendCount, 1)
+        store.sendToQuickNote()
+        XCTAssertEqual(fixture.appendCount, 2); XCTAssertEqual(fixture.appended, "Manual preview words")
+        store.shutdown()
+    }
+
+    @MainActor
+    func testHoldAppendFailureRetainsFinalTextAndCanceledOrFailedRecognitionNeverAppends() async throws {
+        let fixture = DictationFixture()
+        let store = DictationToolStore(driver: fixture.driver, speechPermission: { true }, microphonePermission: { true })
+        store.setVisible(true); store.setAppendHoldToQuickNote(true)
+        store.onAppendToQuickNote = { _ in fixture.appendCount += 1; throw CocoaError(.fileWriteNoPermission) }
+        store.start(fromHoldShortcut: true)
+        try await NativeFeatureEvaluation.waitUntil("Hold recording before save failure") { store.isListening }
+        let failedSaveEvents = try XCTUnwrap(fixture.events)
+        store.stop(); failedSaveEvents(.transcript("Final text remains after save failure", isFinal: true))
+        try await NativeFeatureEvaluation.waitUntil("Actual append error reported") { store.error != nil }
+        XCTAssertEqual(fixture.appendCount, 1)
+        XCTAssertEqual(store.transcript, "Final text remains after save failure")
+        XCTAssertEqual(store.status, "Quick Note was not updated; the transcript is retained.")
+        store.onAppendToQuickNote = { fixture.appendCount += 1; fixture.appended = $0 }
+        store.start(fromHoldShortcut: true)
+        try await NativeFeatureEvaluation.waitUntil("Hold recording before recognition failure") { store.isListening }
+        let partialEvents = try XCTUnwrap(fixture.events)
+        partialEvents(.transcript("Actual partial words", isFinal: false))
+        try await NativeFeatureEvaluation.waitUntil("Partial transcript present") { store.transcript == "Actual partial words" }
+        store.stop(); partialEvents(.failure("Recognition fixture ended without a final result"))
+        try await NativeFeatureEvaluation.waitUntil("Failed finishing preserves partial") { !store.isFinishing }
+        XCTAssertEqual(fixture.appendCount, 1); XCTAssertEqual(store.transcript, "Actual partial words")
+        store.start(fromHoldShortcut: true)
+        try await NativeFeatureEvaluation.waitUntil("Hold recording before cancellation") { store.isListening }
+        let canceledEvents = try XCTUnwrap(fixture.events)
+        store.cancel(); canceledEvents(.transcript("Late canceled result", isFinal: true))
+        try await Task.sleep(for: .milliseconds(40))
+        XCTAssertEqual(fixture.appendCount, 1); XCTAssertTrue(store.transcript.isEmpty)
         store.shutdown()
     }
 
@@ -115,6 +200,7 @@ private final class DictationFixture {
     var cancelled = 0
     var finished = 0
     var appended: String?
+    var appendCount = 0
     var events: (@Sendable (DictationEvent) -> Void)?
     var speechContinuation: CheckedContinuation<Bool, Never>?
     var driver: DictationDriver {

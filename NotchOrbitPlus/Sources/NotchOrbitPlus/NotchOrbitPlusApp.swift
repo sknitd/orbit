@@ -21,7 +21,7 @@ struct NotchOrbitPlusApp: App {
 final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     let model = AppModel()
     let dashboardPreferences = DashboardPreferences()
-    private lazy var dashboard = NotchDashboardController(
+    private lazy var dashboard: NotchDashboardController = NotchDashboardController(
         modules: Self.dashboardModules(chooseFiles: { [weak self] in self?.chooseFiles() }, model: model),
         preferences: dashboardPreferences, isInteractionActive: {
             ScreenshotShelfStore.shared.isWorking || ScreenshotShelfStore.shared.isRecording || ColorPickerStore.shared.isPicking ||
@@ -32,7 +32,7 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
             return AnyView(PlusCompactView(model: self.model, openDashboard: { [weak self] in
                 guard let self else { return }
                 self.dashboard.onOpenCompact?()
-                self.dashboard.show(expanded: true)
+                self.dashboard.toggleExpanded()
             }, preferences: self.dashboardPreferences))
         })
     private let shortcut = GlobalNotchShortcut()
@@ -46,6 +46,8 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
     private var inspectionTask: Task<Void, Never>?
     private var presentationID: UUID?
     private var settingsSubscription: AnyCancellable?
+    private var localSyncSubscriptions: [AnyCancellable] = []
+    private var contextPreviousToolID: String?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -126,6 +128,7 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
         FocusAppHidingStore.shared.shutdown()
         ContextService.shared.shutdown()
         ContextService.shared.onProposal = nil
+        ContextService.shared.onUndoSelection = nil
         DownloadsService.shared.shutdown()
         CommandsService.shared.shutdown()
         DictationToolStore.shared.shutdown()
@@ -154,6 +157,7 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
         NetworkService.shared.shutdown()
         PlusIntentCoordinator.shared.toggleDashboard = nil
         settingsSubscription?.cancel()
+        localSyncSubscriptions.forEach { $0.cancel() }; localSyncSubscriptions = []
         LocalProductivityLifecycle.shutdown()
         model.cancel()
     }
@@ -285,12 +289,17 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
     }
 
     private func applyContextProposal(_ proposal: ContextProposal) {
+        let previous = dashboard.selectedToolID
         guard !model.preferences.paused, !ContextService.shared.editorOpen,
               !SnippetsStore.shared.editorOpen, !DictationToolStore.shared.isPreparing,
               !DictationToolStore.shared.isListening, !DictationToolStore.shared.isFinishing,
               !ScreenshotShelfStore.shared.isWorking, !ScreenshotShelfStore.shared.isRecording,
               !ColorPickerStore.shared.isPicking, !WorkflowStore.shared.isRunning, !model.busy,
               dashboard.selectTool(id: proposal.toolID) else { return }
+        if previous != proposal.toolID, let previous {
+            contextPreviousToolID = previous
+            ContextService.shared.canUndoSelection = true
+        }
         if proposal.showExpanded { dashboard.show(on: NotchScreenLayout.screen(at: NSEvent.mouseLocation), expanded: true) }
     }
 
@@ -299,14 +308,38 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
         context.visibleToolIDsProvider = { [weak self] in self?.visibleToolIDs ?? [] }
         context.injectedStateProvider = { [weak self] in self?.contextSignals() ?? .init() }
         context.onProposal = { [weak self] in self?.applyContextProposal($0) }
+        context.onUndoSelection = { [weak self] in
+            guard let self, let previous = self.contextPreviousToolID else { return }
+            if !self.dashboard.selectTool(id: previous) {
+                self.model.errorMessage = "The previous context tool is hidden. Enable it in dashboard settings to select it again."
+                self.showResults()
+            }
+            self.contextPreviousToolID = nil; context.canUndoSelection = false
+        }
         DictationToolStore.shared.onAppendToQuickNote = { try QuickNoteToolStore.shared.appendRecognizedText($0) }
         DictationToolStore.shared.onRequestShow = { [weak self] in
-            guard let self, self.dashboard.selectTool(id: PlusTool.dictation.rawValue) else { return }
+            guard let self, !self.model.preferences.paused,
+                  self.dashboard.selectTool(id: PlusTool.dictation.rawValue) else { return false }
             self.dashboard.show(expanded: true)
+            return self.dashboard.isExpanded && self.dashboard.frame != nil
         }
         FileShelfToolStore.shared.collections.startIfConfigured()
         SportsScoresService.shared.start()
         OnlineWeatherModel.shared.start()
+        // Shared editor stores also serve Search and Dictation while their views
+        // are absent. Sync notifications are posted synchronously on MainActor.
+        localSyncSubscriptions = [
+            NotificationCenter.default.publisher(for: .plusSyncWillReadLocal).sink { _ in
+                MainActor.assumeIsolated {
+                    QuickNoteToolStore.shared.saveNow(); ToDosToolStore.shared.flushBeforeSync()
+                }
+            },
+            NotificationCenter.default.publisher(for: .plusSyncLocalDidChange).sink { _ in
+                MainActor.assumeIsolated {
+                    QuickNoteToolStore.shared.reloadAfterSync(); ToDosToolStore.shared.reloadAfterSync()
+                }
+            }
+        ]
         PlusGlobalSearchStore.shared.configure(providers: [
             PlusSearchProvider(id: "tools", title: "Tools") { [weak self] in
                 let visible = self?.visibleToolIDs ?? []
@@ -341,7 +374,7 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
             }
         ], onActivate: { [weak self] entry in
             guard let self, self.dashboard.selectTool(id: entry.toolID) else { return }
-            self.dashboard.show(expanded: true)
+            self.dashboard.showInteractive()
             if entry.id.hasPrefix("shelf:"), let id = UUID(uuidString: String(entry.id.dropFirst(6))),
                let item = FileShelfToolStore.shared.items.first(where: { $0.id == id }) { FileShelfToolStore.shared.reveal(item) }
         })
@@ -362,7 +395,7 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
         let screen = NotchScreenLayout.screen(at: NSEvent.mouseLocation) ?? NSScreen.main
         if NSApp.currentEvent?.type != .rightMouseUp, !model.preferences.paused,
            let screen, NotchScreenLayout.layout(for: screen).notchRect == nil {
-            dashboard.show(on: screen, expanded: true)
+            dashboard.showInteractive(on: screen)
         } else if let statusMenu { statusItem?.popUpMenu(statusMenu) }
     }
 

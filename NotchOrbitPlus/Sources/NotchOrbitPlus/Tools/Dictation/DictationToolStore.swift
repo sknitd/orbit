@@ -13,6 +13,7 @@ final class DictationToolStore: ObservableObject {
     @Published var shortcut = DictationShortcut()
     @Published private(set) var shortcutEnabled = false
     @Published private(set) var backgroundMonitoring = false
+    @Published private(set) var appendHoldToQuickNote = false
     @Published private(set) var isPreparing = false
     @Published private(set) var isListening = false
     @Published private(set) var isFinishing = false
@@ -22,7 +23,7 @@ final class DictationToolStore: ObservableObject {
     @Published private(set) var status = "Enable a hold shortcut or choose Start. Dictation stays on this Mac."
     @Published private(set) var error: String?
     var onAppendToQuickNote: (@MainActor (String) throws -> Void)?
-    var onRequestShow: (@MainActor () -> Void)?
+    var onRequestShow: (@MainActor () -> Bool)?
     private let driver: DictationDriver
     private let speechPermission: Permission
     private let microphonePermission: Permission
@@ -32,6 +33,7 @@ final class DictationToolStore: ObservableObject {
     private var generation = UUID()
     private var visible = false
     private var lastLevelTime = 0.0
+    private var holdSession = false
     init(driver: DictationDriver? = nil, speechPermission: Permission? = nil, microphonePermission: Permission? = nil) {
         self.driver = driver ?? DictationNativeSession().driver
         self.speechPermission = speechPermission ?? {
@@ -48,34 +50,40 @@ final class DictationToolStore: ObservableObject {
         }
     }
     func setVisible(_ value: Bool) {
-        if visible && !value && !backgroundMonitoring { cancel() }
+        if !value && !backgroundMonitoring && (isPreparing || isListening || isFinishing) { cancel() }
         visible = value
     }
     func setBackgroundMonitoring(_ value: Bool) {
         backgroundMonitoring = value
         if !value && !visible { cancel() }
     }
+    func setAppendHoldToQuickNote(_ value: Bool) { appendHoldToQuickNote = value }
     func setShortcutEnabled(_ value: Bool) {
         if !value { hotkey.stop(); shortcutEnabled = false; cancel(); return }
         shortcutEnabled = hotkey.configure(shortcut) { [weak self] pressed in
-            guard let self else { return }
-            if pressed {
-                if !self.visible && !self.backgroundMonitoring {
-                    guard let reveal = self.onRequestShow else { self.error = "Show Dictation or explicitly allow background monitoring first."; return }
-                    reveal()
-                }
-                self.start()
-            } else { self.stop() }
+            self?.holdShortcutChanged(pressed)
         }
         if !shortcutEnabled { error = "This shortcut is unavailable. Choose another key or modifier combination." }
+    }
+    func holdShortcutChanged(_ pressed: Bool) {
+        if pressed {
+            if !visible && !backgroundMonitoring {
+                guard let reveal = onRequestShow, reveal() else {
+                    error = "Dictation could not be shown. Show it or explicitly allow background dictation first."
+                    return
+                }
+            }
+            start(fromHoldShortcut: true)
+        } else { stop() }
     }
     func updateShortcut(_ value: DictationShortcut) {
         shortcut = value
         if shortcutEnabled { setShortcutEnabled(true) }
     }
-    func start() {
+    func start(fromHoldShortcut: Bool = false) {
         guard !isPreparing, !isListening, !isFinishing else { return }
         let token = UUID(); generation = token
+        holdSession = fromHoldShortcut
         isPreparing = true; error = nil; transcript = ""; amplitude = 0; waveform = []
         let language = locale
         task = Task { @MainActor [weak self] in
@@ -99,7 +107,7 @@ final class DictationToolStore: ObservableObject {
                 store.status = "Listening on-device. Release the hold key or choose Stop. No audio file is saved."
             } catch {
                 guard store.generation == token else { return }
-                store.driver.cancel(); store.isPreparing = false; store.isListening = false; store.task = nil
+                store.driver.cancel(); store.isPreparing = false; store.isListening = false; store.task = nil; store.holdSession = false
                 if error is CancellationError { store.status = "Dictation stopped." }
                 else { store.error = error.localizedDescription; store.status = "Dictation could not start." }
             }
@@ -115,13 +123,14 @@ final class DictationToolStore: ObservableObject {
         finalDeadline = Task { @MainActor [weak self] in
             do { try await Task.sleep(for: .seconds(3)) } catch { return }
             guard let self, self.generation == token else { return }
-            self.driver.cancel(); self.isFinishing = false; self.generation = UUID()
+            self.driver.cancel(); self.isFinishing = false; self.generation = UUID(); self.holdSession = false
             self.status = self.transcript.isEmpty ? "Stopped; no speech was recognized." : "Stopped; the recognized transcript is retained."
         }
     }
     func cancel() {
         generation = UUID(); task?.cancel(); task = nil; finalDeadline?.cancel(); finalDeadline = nil
         driver.cancel(); isPreparing = false; isListening = false; isFinishing = false
+        holdSession = false
         amplitude = 0; waveform = []; status = "Dictation stopped; recognized text is retained."
     }
     func shutdown() { cancel(); hotkey.stop(); shortcutEnabled = false; visible = false }
@@ -145,9 +154,12 @@ final class DictationToolStore: ObservableObject {
             do { transcript = try DictationText.validated(words) }
             catch { cancel(); self.error = error.localizedDescription; return }
             if final {
+                let shouldAppend = holdSession && isFinishing && appendHoldToQuickNote && !transcript.isEmpty
                 driver.cancel(); isListening = false; isFinishing = false; amplitude = 0; waveform = []
                 finalDeadline?.cancel(); finalDeadline = nil; generation = UUID()
+                holdSession = false
                 status = transcript.isEmpty ? "No speech was recognized." : "Recognized transcript ready. Copy it or send it to Quick Note."
+                if shouldAppend { sendToQuickNote() }
             }
         case .failure(let message):
             let wasFinishing = isFinishing

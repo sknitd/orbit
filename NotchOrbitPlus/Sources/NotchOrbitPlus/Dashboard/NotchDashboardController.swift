@@ -128,6 +128,11 @@ public final class NotchDashboardController {
         }
     }
 
+    public func showInteractive(on screen: NSScreen? = nil) {
+        show(on: screen, expanded: true)
+        if isExpanded { panel?.makeKey() }
+    }
+
     @discardableResult
     public func selectTool(id: String) -> Bool {
         guard visibleModules.contains(where: { $0.id == id }) else { return false }

@@ -7,14 +7,18 @@ final class ContextService: ObservableObject {
     static let shared = ContextService()
     @Published private(set) var rules: [ContextRule]
     @Published private(set) var proposal: ContextProposal?
+    @Published private(set) var previewProposal: ContextProposal?
+    @Published private(set) var hasPreviewed = false
     @Published private(set) var error: String?
     @Published private(set) var isSampling = false
     @Published private(set) var editorOpen = false
     @Published var enabled = false { didSet { reconcile() } }
     @Published var backgroundMonitoring = false { didSet { reconcile() } }
+    @Published var canUndoSelection = false
     var visibleToolIDsProvider: (@MainActor () -> Set<String>)?
     var injectedStateProvider: (@MainActor () -> ContextSignals)?
     var onProposal: (@MainActor (ContextProposal) -> Void)?
+    var onUndoSelection: (@MainActor () -> Void)?
     private let defaults: UserDefaults
     private var visible = false
     private var task: Task<Void, Never>?
@@ -51,8 +55,17 @@ final class ContextService: ObservableObject {
     }
     func resume() { visible = true; reconcile() }
     func setEditorOpen(_ value: Bool) { editorOpen = value }
+    func previewCurrent() {
+        previewProposal = ContextRuleSelection.proposal(rules: rules, observation: currentObservation(),
+                                                       visibleToolIDs: visibleToolIDsProvider?() ?? [])
+        hasPreviewed = true
+    }
+    func undoLastSelection() {
+        guard canUndoSelection else { return }
+        onUndoSelection?()
+    }
     func stop() { visible = false; reconcile() }
-    func shutdown() { enabled = false; backgroundMonitoring = false; visible = false; reconcile() }
+    func shutdown() { enabled = false; backgroundMonitoring = false; visible = false; canUndoSelection = false; reconcile() }
     private func reconcile() {
         guard enabled, visible || backgroundMonitoring else {
             task?.cancel(); task = nil; isSampling = false; proposal = nil; lastProposal = nil; return
@@ -67,11 +80,13 @@ final class ContextService: ObservableObject {
             }
         }
     }
-    private func sample() {
+    private func currentObservation() -> ContextObservation {
         let workspace = NSWorkspace.shared
-        let observation = ContextObservation(frontmostApp: workspace.frontmostApplication?.bundleIdentifier,
+        return ContextObservation(frontmostApp: workspace.frontmostApplication?.bundleIdentifier,
             runningApps: Set(workspace.runningApplications.compactMap(\.bundleIdentifier)), signals: injectedStateProvider?() ?? .init())
-        let next = ContextRuleSelection.proposal(rules: rules, observation: observation, visibleToolIDs: visibleToolIDsProvider?() ?? [])
+    }
+    private func sample() {
+        let next = ContextRuleSelection.proposal(rules: rules, observation: currentObservation(), visibleToolIDs: visibleToolIDsProvider?() ?? [])
         proposal = next
         if next != lastProposal { lastProposal = next; if let next { onProposal?(next) } }
     }
@@ -102,6 +117,16 @@ struct ContextToolView: View {
                 }
             }.frame(height: 200)
             Button("Add Rule") { service.setEditorOpen(true); editing = .init(name: "New rule", trigger: .frontmostApp, toolID: "teleprompter") }.disabled(service.rules.count >= 32)
+            HStack {
+                Button("Preview Current Match", action: service.previewCurrent)
+                Button("Undo Last Selection", action: service.undoLastSelection)
+                    .disabled(!service.canUndoSelection || service.onUndoSelection == nil)
+            }
+            if service.hasPreviewed {
+                if let preview = service.previewProposal {
+                    Text("Preview: \(preview.ruleName) → \(PlusTool(rawValue: preview.toolID)?.title ?? "Unavailable tool"). No selection was applied.").font(.caption).foregroundStyle(.secondary)
+                } else { Text("Preview: no enabled rule matches a visible tool in the current context.").font(.caption).foregroundStyle(.secondary) }
+            }
             if let proposal = service.proposal { Text("Matched: \(proposal.ruleName) → \(PlusTool(rawValue: proposal.toolID)?.title ?? "Unavailable tool")").font(.caption) }
             LocalToolError(message: service.error)
         }.sheet(item: $editing, onDismiss: { service.setEditorOpen(false) }) { rule in ContextRuleEditor(rule: rule, save: service.save) }

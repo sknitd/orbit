@@ -61,6 +61,40 @@ def validate_forecast(payload):
             raise ValueError("Daily weather code is missing.")
 
 
+def validate_provider_timestamp(value):
+    # Both supplemental requests explicitly ask for Unix timestamps. These are
+    # the same finite/range bounds used by OnlineServiceDecoding.date.
+    if not finite(value) or not -62_135_596_800 <= value <= 253_402_300_799:
+        raise ValueError("Supplemental weather timestamp is invalid.")
+
+
+def validate_air_quality(payload):
+    current = payload.get("current")
+    if not isinstance(current, dict):
+        raise ValueError("Current air-quality fields are unavailable.")
+    validate_provider_timestamp(current.get("time"))
+    for key, maximum in (("us_aqi", 1_000), ("uv_index", 30), ("pm2_5", 10_000)):
+        value = current.get(key)
+        if not finite(value) or not 0 <= value <= maximum:
+            raise ValueError(f"Current air quality has invalid {key}.")
+
+
+def validate_minutely_rain(payload):
+    forecast = payload.get("minutely_15")
+    if not isinstance(forecast, dict):
+        raise ValueError("15-minute precipitation fields are unavailable.")
+    times, amounts = forecast.get("time"), forecast.get("precipitation")
+    if (not isinstance(times, list) or not isinstance(amounts, list)
+            or not 1 <= len(times) <= 16 or len(times) != len(amounts)):
+        raise ValueError("The provider did not return bounded, aligned 15-minute precipitation values.")
+    for timestamp, amount in zip(times, amounts):
+        validate_provider_timestamp(timestamp)
+        if not finite(amount) or not 0 <= amount <= 1_000:
+            raise ValueError("15-minute precipitation amount is invalid.")
+    if any(later - earlier != 900 for earlier, later in zip(times, times[1:])):
+        raise ValueError("Precipitation timestamps are not consecutive 15-minute intervals.")
+
+
 def validate_fx(payload):
     if payload.get("base") != "USD":
         raise ValueError("FX provider did not use the requested USD base.")
@@ -76,6 +110,8 @@ def validate_fx(payload):
 PROBES = (
     ("weather-geocoding", "https://geocoding-api.open-meteo.com/v1/search?name=Berlin&count=1&language=en&format=json", validate_geocoding),
     ("weather-forecast", "https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.405&current=temperature_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=7", validate_forecast),
+    ("weather-air-quality", "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=52.52&longitude=13.405&current=us_aqi,uv_index,pm2_5&timezone=GMT&timeformat=unixtime", validate_air_quality),
+    ("weather-minutely-rain", "https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.405&minutely_15=precipitation&forecast_minutely_15=8&timezone=GMT&timeformat=unixtime", validate_minutely_rain),
     ("fx-usd", "https://api.frankfurter.dev/v1/latest?base=USD", validate_fx),
 )
 
