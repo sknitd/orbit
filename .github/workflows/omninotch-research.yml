@@ -18,6 +18,8 @@ jobs:
           set -euo pipefail
           report_dir="$(mktemp -d)"
           curl --fail --location --max-time 45 --silent --show-error https://omninotch.app/ --output "$report_dir/website.html"
+          curl --fail --location --max-time 45 --silent --show-error https://unicode.org/Public/emoji/latest/emoji-test.txt --output "$report_dir/emoji-test.txt"
+          curl --fail --location --max-time 45 --silent --show-error https://www.unicode.org/license.txt --output "$report_dir/unicode-license.txt"
           python3 - "$report_dir" <<'PY'
           from pathlib import Path
           from html.parser import HTMLParser
@@ -37,12 +39,22 @@ jobs:
           (root/'website.txt').write_text('\n'.join(p.text)+'\n')
           (root/'links.json').write_text(json.dumps(p.links,indent=2)+'\n')
           (root/'source.json').write_text(json.dumps({'url':'https://omninotch.app/','purpose':'User-requested feature research'},indent=2)+'\n')
+          emoji=[]; group=''
+          for line in (root/'emoji-test.txt').read_text().splitlines():
+              if line.startswith('# group:'): group=line.split(':',1)[1].strip()
+              if '; fully-qualified' not in line: continue
+              codes,details=line.split(';',1)
+              glyph=''.join(chr(int(code,16)) for code in codes.strip().split())
+              comment=details.split('#',1)[1].strip()
+              name=comment.split(' ',2)[-1]
+              emoji.append({'emoji':glyph,'name':name,'group':group})
+          (root/'EmojiCatalog.json').write_text(json.dumps(emoji,ensure_ascii=False,indent=2)+'\n')
           PY
           git config user.name github-actions
           git config user.email github-actions@users.noreply.github.com
           git checkout --orphan "codex/omninotch-reference/run-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           git rm -rf --ignore-unmatch .
           cp "$report_dir/"* .
-          git add website.html website.txt links.json source.json
+          git add website.html website.txt links.json source.json emoji-test.txt EmojiCatalog.json unicode-license.txt
           git commit -m 'Record public OmniNotch feature reference'
           git push origin HEAD
