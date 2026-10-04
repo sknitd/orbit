@@ -1,0 +1,10 @@
+{
+  "product": "NotchOrbitPlus",
+  "source_directory": "NotchOrbitPlus",
+  "outcome": "success",
+  "source_commit": "872ea4eab4fbec98d81d622b6100d41cdf5a71ab",
+  "public_service_probes_outcome": "success",
+  "runner": "macos-26",
+  "run_id": "37198489083",
+  "native_notch_drag_acceptance": "requires interactive Mac validation"
+}
