@@ -1,0 +1,22 @@
+{
+  "checks" : [
+    {
+      "outcome" : "passed",
+      "output" : "{\"items\":[{\"kind\":\"text\",\"text\":\"Actual sandbox fixture\"}]}",
+      "test" : "builtin-json"
+    },
+    {
+      "outcome" : "passed",
+      "test" : "outside-write"
+    },
+    {
+      "outcome" : "passed",
+      "test" : "outside-read"
+    },
+    {
+      "outcome" : "passed",
+      "test" : "explicit-folder-read"
+    }
+  ],
+  "outcome" : "passed"
+}

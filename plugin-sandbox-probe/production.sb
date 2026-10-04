@@ -1,0 +1,8 @@
+(version 1)
+(deny default)
+(allow process-exec (literal "/bin/bash"))
+(allow sysctl-read)
+(allow file-read-data (literal "/"))
+(allow file-read-metadata (literal "/") (literal "/System") (literal "/System/Cryptexes") (literal "/System/Cryptexes/OS") (literal "/System/Cryptexes/OS/System") (literal "/System/Cryptexes/OS/usr") (literal "/System/Volumes") (literal "/System/Volumes/Preboot") (literal "/System/Volumes/Preboot/Cryptexes") (literal "/System/Volumes/Preboot/Cryptexes/OS") (literal "/System/Volumes/Preboot/Cryptexes/OS/System") (literal "/System/Volumes/Preboot/Cryptexes/OS/usr") (literal "/private") (literal "/private/var") (literal "/private/var/folders") (literal "/private/var/folders/36") (literal "/private/var/folders/36/tjdph2t965j8snz9_vkdnw0r0000gn") (literal "/private/var/folders/36/tjdph2t965j8snz9_vkdnw0r0000gn/T") (literal "/private/var/folders/36/tjdph2t965j8snz9_vkdnw0r0000gn/T/OrbitPluginProbe-24925162-974C-4762-B317-53AE51397DB9") (literal "/usr"))
+(allow file-read* (subpath "/System/Cryptexes/OS/System/Library") (subpath "/System/Cryptexes/OS/usr/lib") (subpath "/System/Library") (subpath "/System/Volumes/Preboot/Cryptexes/OS/System/Library") (subpath "/System/Volumes/Preboot/Cryptexes/OS/usr/lib") (subpath "/usr/lib") (literal "/bin/bash") (subpath "/private/var/folders/36/tjdph2t965j8snz9_vkdnw0r0000gn/T/OrbitPluginProbe-24925162-974C-4762-B317-53AE51397DB9/plugin"))
+(allow file-map-executable (subpath "/System/Cryptexes/OS/System/Library") (subpath "/System/Cryptexes/OS/usr/lib") (subpath "/System/Library") (subpath "/System/Volumes/Preboot/Cryptexes/OS/System/Library") (subpath "/System/Volumes/Preboot/Cryptexes/OS/usr/lib") (subpath "/usr/lib") (literal "/bin/bash"))
