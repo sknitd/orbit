@@ -77,7 +77,10 @@ final class DistributionEvaluationTests: NativeImageFixtureCase, @unchecked Send
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 560),
                               styleMask: [.titled, .closable], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
-        let host = NSHostingView(rootView: view)
+        // cacheDisplay captures the hosting view, so include the real window background
+        // that ordinarily sits behind its transparent SwiftUI content.
+        let host = NSHostingView(rootView: view.frame(width: 560, height: 560)
+            .background(Color(nsColor: window.backgroundColor)))
         window.contentView = host
         defer { window.close() }
         window.makeKeyAndOrderFront(nil)
@@ -89,6 +92,8 @@ final class DistributionEvaluationTests: NativeImageFixtureCase, @unchecked Send
         XCTAssertGreaterThanOrEqual(bitmap.pixelsWide, 560)
         XCTAssertGreaterThanOrEqual(bitmap.pixelsHigh, 560)
         XCTAssertGreaterThan(png.count, 1_000)
+        let background = try XCTUnwrap(bitmap.colorAt(x: 0, y: 0))
+        XCTAssertGreaterThan(background.alphaComponent, 0.99, "Evidence must retain the native window background")
         let directory = evaluationDirectory()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try png.write(to: directory.appendingPathComponent(name), options: .atomic)
