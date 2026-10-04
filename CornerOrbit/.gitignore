@@ -5,3 +5,6 @@ dist/
 *.xcuserstate
 xcuserdata/
 .DS_Store
+*.log
+Validation/*
+!Validation/verify-isolation.py
