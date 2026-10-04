@@ -1,0 +1,101 @@
+name: Build and test CornerOrbit
+on:
+  push:
+    branches: [codex/cornerorbit-build]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: cornerorbit-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      CORNERORBIT_EVAL_DIR: '${{ github.workspace }}/build/evaluation'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test and build the standalone CornerOrbit app
+        id: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          bash Scripts/build.sh 2>&1 | tee build/build.log
+      - name: Upload app and native evaluation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CornerOrbit-macOS-${{ github.sha }}
+          if-no-files-found: warn
+          path: |
+            dist/CornerOrbit.app.zip
+            dist/CornerOrbit.app.zip.sha256
+            dist/package-metadata.json
+            build/build.log
+            build/sdk-inventory.json
+            build/binary-metadata.json
+            build/code-signature.log
+            build/launch-smoke.log
+            build/idle-performance.json
+            build/evaluation/*.png
+            build/*.xcresult
+            build/DerivedData/Logs/Test/*.xcresult
+      - name: Preserve exact-source results for Git-only retrieval
+        if: always()
+        env:
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          SOURCE_COMMIT: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_dir="$(mktemp -d)"
+          if [[ -f build/build.log ]]; then
+            cp build/build.log "$report_dir/build.log"
+          else
+            printf '%s\n' 'The build step did not produce a log; inspect the Actions job status.' > "$report_dir/build.log"
+          fi
+          for name in sdk-inventory.json binary-metadata.json code-signature.log launch-smoke.log idle-performance.json; do
+            if [[ -f "build/$name" ]]; then cp "build/$name" "$report_dir/$name"; fi
+          done
+          if [[ -d build/evaluation ]]; then
+            mkdir -p "$report_dir/evaluation"
+            shopt -s nullglob
+            images=(build/evaluation/*.png)
+            if (( ${#images[@]} )); then cp "${images[@]}" "$report_dir/evaluation/"; fi
+          fi
+          if [[ "$BUILD_OUTCOME" == success && -f dist/CornerOrbit.app.zip ]]; then
+            cp dist/CornerOrbit.app.zip dist/CornerOrbit.app.zip.sha256 dist/package-metadata.json "$report_dir/"
+          fi
+          python3 - "$report_dir" <<'PY'
+          import datetime, json, os, pathlib, sys
+          root = pathlib.Path(sys.argv[1])
+          metadata = {
+              'product': 'CornerOrbit', 'source_layout': 'standalone CornerOrbit subtree',
+              'source_commit': os.environ['SOURCE_COMMIT'],
+              'outcome': os.environ.get('BUILD_OUTCOME') or 'not_started',
+              'run_id': os.environ['GITHUB_RUN_ID'], 'run_attempt': os.environ['GITHUB_RUN_ATTEMPT'],
+              'runner': 'macos-15', 'recorded_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              'native_preview_count': len(list(root.glob('evaluation/*.png'))),
+              'archive_available': (root / 'CornerOrbit.app.zip').is_file(),
+              'notarized': False,
+              'physical_mac_acceptance': 'Corner clicks/drags, permission prompts, live Chrome history profile, installed target apps, displays/Spaces and screen locking require interactive Mac validation.'
+          }
+          (root / 'build-status.json').write_text(json.dumps(metadata, indent=2) + '\n')
+          PY
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git checkout --orphan "codex/cornerorbit-builds/run-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          git rm -rf --ignore-unmatch .
+          cp -R "$report_dir/"* .
+          git add --force build.log build-status.json
+          for name in sdk-inventory.json binary-metadata.json code-signature.log launch-smoke.log idle-performance.json; do
+            if [[ -f "$name" ]]; then git add --force "$name"; fi
+          done
+          if [[ -d evaluation ]]; then git add --force evaluation; fi
+          if [[ -f CornerOrbit.app.zip ]]; then
+            git add --force CornerOrbit.app.zip CornerOrbit.app.zip.sha256 package-metadata.json
+          fi
+          git commit -m "CornerOrbit build results for ${SOURCE_COMMIT}"
+          git push origin HEAD
