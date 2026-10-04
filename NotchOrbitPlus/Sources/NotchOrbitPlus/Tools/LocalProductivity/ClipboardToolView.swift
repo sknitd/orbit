@@ -210,7 +210,7 @@ struct ClipboardToolView: View {
                     Button("Copy Again") { store.copy(clip) }
                     Button("Delete", role: .destructive) { store.remove(clip) }
                 }
-            }
+            }.frame(height: 200)
             HStack {
                 Text(store.status).font(.caption).foregroundStyle(.secondary)
                 Spacer()

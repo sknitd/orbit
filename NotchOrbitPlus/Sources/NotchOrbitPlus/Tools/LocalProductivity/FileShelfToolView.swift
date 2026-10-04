@@ -290,7 +290,21 @@ struct FileShelfToolView: View {
                     Button { store.remove(item) } label: { Image(systemName: "trash") }
                         .buttonStyle(.borderless).accessibilityLabel("Remove \(item.originalURL.lastPathComponent) from shelf")
                 }
-            }.overlay(RoundedRectangle(cornerRadius: 6).stroke(targeted ? Color.accentColor : Color.clear, lineWidth: 2))
+            }.frame(height: 200)
+                .overlay {
+                    if store.items.isEmpty {
+                        VStack(spacing: 6) {
+                            Image(systemName: "tray.and.arrow.down").font(.title2)
+                            Text("Drop Files Here").font(.headline)
+                            Text("Or choose Add Files. Originals stay intact.").font(.caption)
+                        }.foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .allowsHitTesting(false)
+                    }
+                }
+                .overlay(RoundedRectangle(cornerRadius: 6)
+                    .stroke(targeted ? Color.accentColor : Color.secondary.opacity(0.4), lineWidth: targeted ? 2 : 1))
+                .contentShape(Rectangle())
                 .onDrop(of: [UTType.fileURL], isTargeted: $targeted) { providers in store.receive(providers) }
             HStack {
                 if store.importing > 0 { ProgressView().controlSize(.small); Text("Adding \(store.importing) file(s)…") }

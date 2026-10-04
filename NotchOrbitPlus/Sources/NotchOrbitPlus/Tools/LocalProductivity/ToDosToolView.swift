@@ -70,7 +70,7 @@ struct ToDosToolView: View {
                     Button { store.remove(item.id) } label: { Image(systemName: "trash") }
                         .buttonStyle(.borderless).accessibilityLabel("Delete task")
                 }
-            }
+            }.frame(height: 200)
             Text("\(store.items.filter { !$0.completed }.count) open · Saved on this Mac")
                 .font(.caption).foregroundStyle(.secondary)
         }.padding()
