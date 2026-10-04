@@ -103,6 +103,8 @@ struct CalendarToolView: View {
                 Text(model.status).foregroundStyle(.secondary)
                 Button("Connect Apple Calendar") { Task { await model.connect(month: month) } }.buttonStyle(.borderedProminent)
             }
+            Divider()
+            MeetingControlsView()
             Spacer(minLength: 0)
             Text("Calendar data stays on this Mac. Access is requested only when you connect.").font(.caption).foregroundStyle(.secondary)
         }.padding(12).onAppear { model.refresh(month: month) }

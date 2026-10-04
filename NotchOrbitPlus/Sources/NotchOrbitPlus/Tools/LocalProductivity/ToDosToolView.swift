@@ -5,13 +5,21 @@ import NotchCore
 private final class ToDosToolStore: ObservableObject {
     @Published var items: [ToDoItem] = []
     @Published var error: String?
+    private var dirty = false
     init() {
         do { items = try LocalToolStorage.load([ToDoItem].self, file: "todos.json", fallback: []) }
         catch { self.error = "Could not load tasks: \(error.localizedDescription)" }
     }
     private func save() {
-        do { try LocalToolStorage.save(items, file: "todos.json"); error = nil }
-        catch { self.error = "Could not save tasks: \(error.localizedDescription)" }
+        dirty = true
+        do { try LocalToolStorage.save(items, file: "todos.json"); error = nil; dirty = false; PlusSyncService.shared.tasksDidSave(items) }
+        catch { self.error = "Could not save tasks: \(error.localizedDescription)"; PlusSyncService.shared.reportUnsavedLocalChanges() }
+    }
+    func flushBeforeSync() { if dirty { save() } }
+    func reloadAfterSync() {
+        guard !dirty else { return }
+        do { items = try LocalToolStorage.load([ToDoItem].self, file: "todos.json", fallback: []); error = nil }
+        catch { self.error = "Could not reload synced tasks; current list retained: \(error.localizedDescription)" }
     }
     @discardableResult
     func add(_ value: String) -> Bool {
@@ -40,6 +48,7 @@ private final class ToDosToolStore: ObservableObject {
 @MainActor
 struct ToDosToolView: View {
     @StateObject private var store = ToDosToolStore()
+    @ObservedObject private var sync = PlusSyncService.shared
     @State private var draft = ""
     @State private var filter = "open"
     private var visible: [ToDoItem] {
@@ -71,8 +80,10 @@ struct ToDosToolView: View {
                         .buttonStyle(.borderless).accessibilityLabel("Delete task")
                 }
             }.frame(height: 200)
-            Text("\(store.items.filter { !$0.completed }.count) open · Saved on this Mac")
+            Text("\(store.items.filter { !$0.completed }.count) open · \(sync.enabled ? "Shared folder sync enabled" : "Saved on this Mac")")
                 .font(.caption).foregroundStyle(.secondary)
         }.padding()
+            .onReceive(NotificationCenter.default.publisher(for: .plusSyncWillReadLocal)) { _ in store.flushBeforeSync() }
+            .onReceive(NotificationCenter.default.publisher(for: .plusSyncLocalDidChange)) { _ in store.reloadAfterSync() }
     }
 }

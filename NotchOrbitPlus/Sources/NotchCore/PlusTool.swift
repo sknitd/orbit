@@ -3,13 +3,13 @@ import Foundation
 public enum PlusTool: String, CaseIterable, Codable, Sendable, Identifiable {
     case assistant, aiUsage, sales, clipboard, teleprompter, timers, fileShelf, mirror
     case calendar, reminders, todos, weather, stocks, emoji, converter, system
-    case quickNote, nowPlaying, shortcuts, fileActions
+    case quickNote, nowPlaying, shortcuts, launcher, workflows, fileActions
 
     public var id: String { rawValue }
     public static let defaultOrder: [PlusTool] = [
         .assistant, .aiUsage, .sales, .clipboard, .teleprompter, .timers, .fileShelf, .mirror,
         .calendar, .reminders, .todos, .weather, .stocks, .emoji, .converter, .system,
-        .quickNote, .nowPlaying, .shortcuts, .fileActions
+        .quickNote, .nowPlaying, .shortcuts, .launcher, .workflows, .fileActions
     ]
     public var title: String {
         switch self {
@@ -32,6 +32,8 @@ public enum PlusTool: String, CaseIterable, Codable, Sendable, Identifiable {
         case .quickNote: "Quick Note"
         case .nowPlaying: "Now Playing"
         case .shortcuts: "Shortcuts"
+        case .launcher: "Quick Launcher"
+        case .workflows: "Workflows"
         case .fileActions: "File Actions"
         }
     }
@@ -56,6 +58,8 @@ public enum PlusTool: String, CaseIterable, Codable, Sendable, Identifiable {
         case .quickNote: "note.text"
         case .nowPlaying: "music.note"
         case .shortcuts: "command"
+        case .launcher: "square.grid.2x2"
+        case .workflows: "point.3.connected.trianglepath.dotted"
         case .fileActions: "wand.and.stars"
         }
     }
@@ -80,6 +84,8 @@ public enum PlusTool: String, CaseIterable, Codable, Sendable, Identifiable {
         case .quickNote: "Write a local note that saves automatically."
         case .nowPlaying: "Open supported music players and their available controls."
         case .shortcuts: "Run your installed macOS Shortcuts."
+        case .launcher: "Launch pinned apps, folders and favourite Shortcuts."
+        case .workflows: "Run saved image-processing steps through one real drop."
         case .fileActions: "Transform files through the original authenticated drop wheel."
         }
     }

@@ -41,6 +41,15 @@ jobs:
       - uses: actions/checkout@v4
       - name: Prepare build tools
         run: command -v cmake || brew install cmake
+      - name: Prepare optional Developer ID and notarization credentials
+        env:
+          NOTCHORBITPLUS_DEVELOPER_ID_P12_BASE64: ${{ secrets.NOTCHORBITPLUS_DEVELOPER_ID_P12_BASE64 }}
+          NOTCHORBITPLUS_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.NOTCHORBITPLUS_DEVELOPER_ID_P12_PASSWORD }}
+          NOTCHORBITPLUS_SIGNING_IDENTITY: ${{ secrets.NOTCHORBITPLUS_SIGNING_IDENTITY }}
+          NOTCHORBITPLUS_NOTARY_KEY_BASE64: ${{ secrets.NOTCHORBITPLUS_NOTARY_KEY_BASE64 }}
+          NOTCHORBITPLUS_NOTARY_KEY_ID: ${{ secrets.NOTCHORBITPLUS_NOTARY_KEY_ID }}
+          NOTCHORBITPLUS_NOTARY_ISSUER_ID: ${{ secrets.NOTCHORBITPLUS_NOTARY_ISSUER_ID }}
+        run: bash NotchOrbitPlus/Scripts/prepare-signing.sh
       - name: Probe live public weather and FX endpoints
         id: public_probes
         continue-on-error: true
@@ -55,6 +64,10 @@ jobs:
             swift test --parallel
             bash NotchOrbitPlus/Scripts/build.sh
           } 2>&1 | tee NotchOrbitPlus/build/build.log
+      - name: Publish verified stable update channel
+        if: success()
+        id: update_feed
+        run: python3 NotchOrbitPlus/Scripts/publish-update-feed.py
       - name: Upload application and evaluation evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -67,6 +80,11 @@ jobs:
             NotchOrbitPlus/build/launch-smoke.log
             NotchOrbitPlus/build/package-verification.json
             NotchOrbitPlus/build/sdk-inventory.json
+            NotchOrbitPlus/build/distribution-signing.json
+            NotchOrbitPlus/build/signing-credential-status.json
+            NotchOrbitPlus/build/notary-submit.json
+            NotchOrbitPlus/build/update-feed.json
+            NotchOrbitPlus/build/update-publication.json
             NotchOrbitPlus/build/public-probes/
             NotchOrbitPlus/build/evaluation/*.png
             NotchOrbitPlus/build/DerivedData/Logs/Test/*.xcresult
@@ -76,6 +94,7 @@ jobs:
           BUILD_OUTCOME: ${{ steps.build.outcome }}
           SOURCE_COMMIT: ${{ github.sha }}
           PUBLIC_PROBES_OUTCOME: ${{ steps.public_probes.outcome }}
+          UPDATE_FEED_OUTCOME: ${{ steps.update_feed.outcome }}
         shell: bash
         run: |
           set -euo pipefail
@@ -90,6 +109,9 @@ jobs:
           if [[ -f NotchOrbitPlus/build/sdk-inventory.json ]]; then
             cp NotchOrbitPlus/build/sdk-inventory.json "$report_dir/"
           fi
+          for evidence in distribution-signing.json signing-credential-status.json notary-submit.json update-feed.json update-publication.json; do
+            if [[ -f "NotchOrbitPlus/build/$evidence" ]]; then cp "NotchOrbitPlus/build/$evidence" "$report_dir/"; fi
+          done
           if [[ -d NotchOrbitPlus/build/evaluation ]]; then
             mkdir -p "$report_dir/evaluation"
             cp NotchOrbitPlus/build/evaluation/*.png "$report_dir/evaluation/" || true
@@ -106,6 +128,7 @@ jobs:
             'product': 'NotchOrbitPlus', 'source_directory': 'NotchOrbitPlus',
             'outcome': os.environ['BUILD_OUTCOME'], 'source_commit': os.environ['SOURCE_COMMIT'],
             'public_service_probes_outcome': os.environ['PUBLIC_PROBES_OUTCOME'],
+            'update_feed_outcome': os.environ['UPDATE_FEED_OUTCOME'],
             'runner': 'macos-26', 'run_id': os.environ['GITHUB_RUN_ID'],
             'native_notch_drag_acceptance': 'requires interactive Mac validation'
           }, indent=2) + '\n')
@@ -119,8 +142,19 @@ jobs:
           if [[ -f launch-smoke.log ]]; then git add --force launch-smoke.log; fi
           if [[ -f package-verification.json ]]; then git add --force package-verification.json; fi
           if [[ -f sdk-inventory.json ]]; then git add --force sdk-inventory.json; fi
+          for evidence in distribution-signing.json signing-credential-status.json notary-submit.json update-feed.json update-publication.json; do
+            if [[ -f "$evidence" ]]; then git add --force "$evidence"; fi
+          done
           if [[ -d evaluation ]]; then git add --force evaluation; fi
           if [[ -d public-probes ]]; then git add --force public-probes; fi
           if [[ -f NotchOrbitPlus.app.zip ]]; then git add --force NotchOrbitPlus.app.zip NotchOrbitPlus.app.zip.sha256; fi
           git commit -m "NotchOrbitPlus build results for ${SOURCE_COMMIT}"
           git push origin HEAD
+      - name: Remove temporary signing credentials
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +x
+          if [[ -n "${NOTCHORBITPLUS_SIGNING_KEYCHAIN:-}" ]]; then security delete-keychain "$NOTCHORBITPLUS_SIGNING_KEYCHAIN"; fi
+          if [[ -n "${NOTCHORBITPLUS_SIGNING_DIRECTORY:-}" ]]; then rm -rf "$NOTCHORBITPLUS_SIGNING_DIRECTORY"; fi

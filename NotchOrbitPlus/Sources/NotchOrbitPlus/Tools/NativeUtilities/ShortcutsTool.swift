@@ -65,8 +65,8 @@ private final class OrbitShortcutProcess: @unchecked Sendable {
 }
 
 @MainActor
-private final class OrbitShortcutsModel: NSObject, ObservableObject {
-    static let shared = OrbitShortcutsModel()
+final class PlusShortcutsStore: NSObject, ObservableObject {
+    static let shared = PlusShortcutsStore()
     @Published var choices: [OrbitShortcutChoice] = []
     @Published var selectedID = ""
     @Published var busy = false
@@ -85,9 +85,16 @@ private final class OrbitShortcutsModel: NSObject, ObservableObject {
     func load() { execute(["list", "--show-identifiers"], listing: true) }
     func runSelected() {
         guard choices.contains(where: { $0.id == selectedID }) else { return }
+        run(identifier: selectedID)
+    }
+    func run(identifier: String) {
+        guard let id = UUID(uuidString: identifier) else {
+            message = "This shortcut has no valid identifier. Refresh and pin it again."
+            return
+        }
         // A parsed UUID is used as the argument, so a shortcut's display name
         // can never inject an option or command into CLI execution.
-        execute(["run", selectedID], listing: false)
+        execute(["run", id.uuidString], listing: false)
     }
     private func execute(_ arguments: [String], listing: Bool) {
         guard !busy else { return }
@@ -120,7 +127,7 @@ private final class OrbitShortcutsModel: NSObject, ObservableObject {
 
 @MainActor
 struct ShortcutsToolView: View {
-    @StateObject private var model = OrbitShortcutsModel.shared
+    @StateObject private var model = PlusShortcutsStore.shared
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Shortcuts").font(.headline)

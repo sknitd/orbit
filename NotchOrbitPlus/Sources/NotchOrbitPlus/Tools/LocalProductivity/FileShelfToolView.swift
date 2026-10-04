@@ -15,6 +15,7 @@ final class FileShelfToolStore: ObservableObject {
     static func shutdownIfInitialized() { instance?.shutdown() }
 
     @Published private(set) var items: [FileShelfItem] = []
+    @Published private(set) var metadata: [String: ShelfFileMetadata] = [:]
     @Published var autoSave = false { didSet { save() } }
     @Published var retention: ShelfRetention = .week { didSet { pruneExpired(); save() } }
     @Published var error: String?
@@ -25,6 +26,7 @@ final class FileShelfToolStore: ObservableObject {
     private var inFlight = Set<URL>()
     private var scopedURLs: [UUID: URL] = [:]
     private let persistState: Bool
+    private let previews = ShelfQuickLookController()
 
     init(managedDirectory suppliedDirectory: URL? = nil, persistState: Bool = true) {
         self.persistState = persistState
@@ -35,10 +37,11 @@ final class FileShelfToolStore: ObservableObject {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
                                                    attributes: [.posixPermissions: 0o700])
             managedDirectory = directory
-            let state = persistState
-                ? try LocalToolStorage.load(FileShelfState.self, file: "file-shelf.json", fallback: .init())
-                : FileShelfState()
-            items = state.items; autoSave = state.autoSave; retention = state.retention
+            let archive = persistState
+                ? try LocalToolStorage.load(ShelfLibraryArchive.self, file: "file-shelf.json", fallback: .init())
+                : ShelfLibraryArchive()
+            items = archive.state.items; autoSave = archive.state.autoSave; retention = archive.state.retention
+            metadata = archive.metadata
             pruneExpired()
         } catch { self.error = "Could not open the local file shelf: \(error.localizedDescription)" }
     }
@@ -50,7 +53,9 @@ final class FileShelfToolStore: ObservableObject {
     private func save() {
         guard persistState else { scheduleExpiration(); return }
         do {
-            try LocalToolStorage.save(FileShelfState(items: items, autoSave: autoSave, retention: retention), file: "file-shelf.json")
+            try LocalToolStorage.save(ShelfLibraryArchive(
+                state: FileShelfState(items: items, autoSave: autoSave, retention: retention), metadata: metadata
+            ), file: "file-shelf.json")
             scheduleExpiration()
         } catch { self.error = "Could not save the shelf index: \(error.localizedDescription)" }
     }
@@ -171,6 +176,36 @@ final class FileShelfToolStore: ObservableObject {
         guard let url = resolve(item) else { return }
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
+    func info(for item: FileShelfItem) -> ShelfFileMetadata { metadata[item.id.uuidString] ?? .init() }
+    func toggleFavourite(_ item: FileShelfItem) {
+        guard items.contains(where: { $0.id == item.id }) else { return }
+        var info = info(for: item)
+        info.favourite.toggle()
+        metadata[item.id.uuidString] = info
+        error = nil
+        save()
+    }
+    @discardableResult
+    func setTags(_ value: String, for item: FileShelfItem) -> Bool {
+        guard items.contains(where: { $0.id == item.id }) else { error = "This shelf entry is no longer available."; return false }
+        let tags = value.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        guard tags.count <= 20, tags.allSatisfy({ $0.count <= 40 && $0.utf8.count <= 512 }) else {
+            error = "Use up to 20 short tags, each at most 40 characters."
+            return false
+        }
+        metadata[item.id.uuidString] = ShelfFileMetadata(tags: tags, favourite: info(for: item).favourite)
+        error = nil
+        save()
+        return error == nil
+    }
+    func preview(_ item: FileShelfItem) {
+        guard let url = resolve(item) else { return }
+        do {
+            try previews.show(url: url, itemID: item.id)
+            error = nil
+            status = "Opened Quick Look for \(url.lastPathComponent)."
+        } catch { self.error = "Could not preview this file: \(error.localizedDescription)" }
+    }
     func airDrop(_ item: FileShelfItem) {
         guard let url = resolve(item) else { return }
         guard let service = NSSharingService(named: .sendViaAirDrop), service.canPerform(withItems: [url]) else {
@@ -182,6 +217,7 @@ final class FileShelfToolStore: ObservableObject {
     }
 
     private func deleteManagedCopy(_ item: FileShelfItem) throws {
+        previews.close(ifShowing: item.id)
         guard let managed = item.managedURL else { return }
         guard let directory = managedDirectory else { throw CocoaError(.fileWriteUnknown) }
         let folder = directory.appendingPathComponent(item.id.uuidString, isDirectory: true).standardizedFileURL
@@ -200,6 +236,7 @@ final class FileShelfToolStore: ObservableObject {
             try deleteManagedCopy(item)
             if let url = scopedURLs.removeValue(forKey: item.id) { url.stopAccessingSecurityScopedResource() }
             items.removeAll { $0.id == item.id }
+            metadata.removeValue(forKey: item.id.uuidString)
             error = nil; status = "Removed shelf entry; its original file is unchanged."
             save()
         } catch { self.error = "Could not remove shelf entry: \(error.localizedDescription)" }
@@ -213,6 +250,7 @@ final class FileShelfToolStore: ObservableObject {
                 try deleteManagedCopy(item)
                 if let url = scopedURLs.removeValue(forKey: item.id) { url.stopAccessingSecurityScopedResource() }
                 items.removeAll { $0.id == item.id }
+                metadata.removeValue(forKey: item.id.uuidString)
             } catch { failures.append("\(item.originalURL.lastPathComponent): \(error.localizedDescription)") }
         }
         if !expired.isEmpty { save() } else { scheduleExpiration() }
@@ -233,6 +271,7 @@ final class FileShelfToolStore: ObservableObject {
     }
     func shutdown() {
         expiration?.cancel(); expiration = nil
+        previews.close()
         for url in scopedURLs.values { url.stopAccessingSecurityScopedResource() }
         scopedURLs.removeAll()
     }
@@ -263,6 +302,13 @@ private struct ShelfShareButton: NSViewRepresentable {
 struct FileShelfToolView: View {
     @ObservedObject private var store = FileShelfToolStore.shared
     @State private var targeted = false
+    @State private var search = ""
+    @State private var favouritesOnly = false
+    @State private var editingTags: FileShelfItem?
+    @State private var draftTags = ""
+    private var visible: [FileShelfItem] {
+        ShelfLibrarySearch.filter(store.items, metadata: store.metadata, query: search, favouritesOnly: favouritesOnly)
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -275,15 +321,34 @@ struct FileShelfToolView: View {
             }
             Text("Drag files into this shelf, then drag them out or share. Retention removes entries and managed copies; originals are never deleted.")
                 .font(.caption).foregroundStyle(.secondary)
+            HStack {
+                TextField("Search filenames or tags", text: $search).textFieldStyle(.roundedBorder)
+                Toggle("Favourites Only", isOn: $favouritesOnly)
+            }
             LocalToolError(message: store.error)
-            List(store.items) { item in
+            List(visible) { item in
                 HStack {
-                    Label(item.originalURL.lastPathComponent, systemImage: item.managedURL == nil ? "doc" : "doc.on.doc")
+                    Button { store.toggleFavourite(item) } label: {
+                        Image(systemName: store.info(for: item).favourite ? "star.fill" : "star")
+                    }.buttonStyle(.borderless).accessibilityLabel("Toggle favourite for \(item.originalURL.lastPathComponent)")
+                    VStack(alignment: .leading, spacing: 2) {
+                        Label(item.originalURL.lastPathComponent, systemImage: item.managedURL == nil ? "doc" : "doc.on.doc")
+                        if !store.info(for: item).tags.isEmpty {
+                            Text(store.info(for: item).tags.joined(separator: " · ")).font(.caption2).foregroundStyle(.secondary)
+                        }
+                    }
                         .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
                         .onDrag {
                             guard let url = store.resolve(item) else { return NSItemProvider() }
                             return NSItemProvider(object: url as NSURL)
                         }
+                    Button {
+                        draftTags = store.info(for: item).tags.joined(separator: ", ")
+                        editingTags = item
+                    } label: { Image(systemName: "tag") }
+                        .buttonStyle(.borderless).help("Edit shelf tags").accessibilityLabel("Edit tags for \(item.originalURL.lastPathComponent)")
+                    Button { store.preview(item) } label: { Image(systemName: "eye") }
+                        .buttonStyle(.borderless).help("Quick Look").accessibilityLabel("Quick Look \(item.originalURL.lastPathComponent)")
                     Button("Reveal") { store.reveal(item) }.buttonStyle(.borderless)
                     ShelfShareButton(resolve: { store.resolve(item) }).frame(width: 55, height: 24)
                     Button("AirDrop") { store.airDrop(item) }.buttonStyle(.borderless)
@@ -300,6 +365,8 @@ struct FileShelfToolView: View {
                         }.foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .allowsHitTesting(false)
+                    } else if visible.isEmpty {
+                        Text("No matching shelf entries").foregroundStyle(.secondary).allowsHitTesting(false)
                     }
                 }
                 .overlay(RoundedRectangle(cornerRadius: 6)
@@ -310,8 +377,23 @@ struct FileShelfToolView: View {
                 if store.importing > 0 { ProgressView().controlSize(.small); Text("Adding \(store.importing) file(s)…") }
                 else { Text(store.status) }
                 Spacer()
-                Text("\(store.items.count)/200")
+                Text("\(visible.count) shown · \(store.items.count)/200")
             }.font(.caption).foregroundStyle(.secondary)
         }.padding().onAppear { store.pruneExpired() }
+            .sheet(item: $editingTags) { item in
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Tags for \(item.originalURL.lastPathComponent)").font(.headline)
+                    TextField("Work, Photos, Personal", text: $draftTags).textFieldStyle(.roundedBorder)
+                    Text("Comma-separated tags stay in this shelf and do not change Finder tags.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    LocalToolError(message: store.error)
+                    HStack {
+                        Button("Cancel") { editingTags = nil }
+                        Spacer()
+                        Button("Save Tags") { if store.setTags(draftTags, for: item) { editingTags = nil } }
+                            .keyboardShortcut(.defaultAction)
+                    }
+                }.padding().frame(width: 360)
+            }
     }
 }

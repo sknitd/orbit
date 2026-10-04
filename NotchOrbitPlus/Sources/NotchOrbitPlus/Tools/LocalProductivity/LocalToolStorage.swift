@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import NotchCore
 
 enum LocalToolStorage {
     static func directory() throws -> URL {
@@ -36,6 +37,59 @@ enum LocalToolStorage {
         }
         try JSONEncoder().encode(value).write(to: url, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+    }
+    /// Prepare and validate all legacy files before applying a sync snapshot; keep rollback copies until the set is durable.
+    @MainActor
+    static func applySyncState(_ snapshot: SyncSnapshot, in storageDirectory: URL? = nil) throws {
+        let root = try storageDirectory ?? directory()
+        var replacements: [(name: String, bytes: Data, previous: Data?)] = []
+        if let text = snapshot.note.preferred(on: snapshot.deviceID) {
+            let url = root.appendingPathComponent("quick-note.txt")
+            let old = try PlusSyncFolderIO.hasNode(url) ? try PlusSyncFolderIO.boundedData(url, limit: 200_000) : nil
+            if let old, String(data: old, encoding: .utf8) == nil { throw SyncFailure.invalid("The original note is not valid UTF-8; nothing was replaced.") }
+            replacements.append(("quick-note.txt", Data(text.utf8), old))
+        }
+        let taskURL = root.appendingPathComponent("todos.json")
+        let oldTasks = try PlusSyncFolderIO.hasNode(taskURL) ? try PlusSyncFolderIO.boundedData(taskURL, limit: 4 * 1024 * 1024) : nil
+        if let oldTasks {
+            let values = try JSONDecoder().decode([ToDoItem].self, from: oldTasks)
+            var validating = SyncSnapshot(deviceID: snapshot.deviceID); try validating.captureTasks(values)
+        }
+        replacements.append(("todos.json", try JSONEncoder().encode(snapshot.visibleTasks()), oldTasks))
+        let ledgerURL = root.appendingPathComponent("sync-state-v1.json")
+        let oldLedger = try PlusSyncFolderIO.hasNode(ledgerURL) ? try PlusSyncFolderIO.boundedData(ledgerURL, limit: SyncSnapshot.maximumBytes) : nil
+        if let oldLedger { _ = try SyncSnapshot.decode(oldLedger) }
+        replacements.append(("sync-state-v1.json", try snapshot.encoded(), oldLedger))
+        let recovery = root.appendingPathComponent("SyncLocalRecovery-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: recovery, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        for replacement in replacements {
+            if let previous = replacement.previous {
+                let backup = recovery.appendingPathComponent(replacement.name)
+                try previous.write(to: backup, options: .atomic)
+                try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: backup.path)
+            }
+        }
+        var committed: [Int] = []
+        do {
+            for index in replacements.indices {
+                let target = root.appendingPathComponent(replacements[index].name)
+                try replacements[index].bytes.write(to: target, options: .atomic)
+                committed.append(index)
+                try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: target.path)
+            }
+            try FileManager.default.removeItem(at: recovery)
+        } catch {
+            var restored = true
+            for index in committed.reversed() {
+                let target = root.appendingPathComponent(replacements[index].name)
+                do {
+                    if let previous = replacements[index].previous { try previous.write(to: target, options: .atomic) }
+                    else { try FileManager.default.removeItem(at: target) }
+                } catch { restored = false }
+            }
+            if restored { try? FileManager.default.removeItem(at: recovery); throw error }
+            throw SyncFailure.invalid("Local sync application failed. Original recovery copies remain in \(recovery.lastPathComponent).")
+        }
     }
 }
 

@@ -5,6 +5,7 @@ import SwiftUI
 private final class QuickNoteToolStore: ObservableObject {
     @Published var text = "" {
         didSet {
+            guard !loading else { return }
             if text.utf8.count > byteLimit {
                 text = Self.bounded(text, bytes: byteLimit)
                 error = "Notes are limited to 200 KB; the pasted text was shortened."
@@ -19,6 +20,7 @@ private final class QuickNoteToolStore: ObservableObject {
     @Published private(set) var requiresReplacement = false
     @Published private(set) var backupNotice: String?
     private var dirty = false
+    private var loading = false
     private let byteLimit = 200_000
     private var pendingSave: Task<Void, Never>?
     private var fileURL: URL?
@@ -33,7 +35,7 @@ private final class QuickNoteToolStore: ObservableObject {
                 guard let value = String(data: data, encoding: .utf8) else {
                     throw CocoaError(.fileReadInapplicableStringEncoding)
                 }
-                text = Self.bounded(value, bytes: byteLimit)
+                loading = true; text = Self.bounded(value, bytes: byteLimit); loading = false
                 if data.count > byteLimit {
                     requiresReplacement = true
                     error = "Stored note exceeds 200 KB. It is preserved until you explicitly replace it with a backup."
@@ -67,18 +69,43 @@ private final class QuickNoteToolStore: ObservableObject {
         guard !requiresReplacement else {
             pending = false
             error = "The original stored note is preserved. Choose Replace Stored Note to back it up and save these edits."
+            PlusSyncService.shared.reportUnsavedLocalChanges()
             return
         }
-        guard let fileURL else { error = "The local note location is unavailable."; return }
+        guard let fileURL else { error = "The local note location is unavailable."; PlusSyncService.shared.reportUnsavedLocalChanges(); return }
+        do {
+            if try PlusSyncFolderIO.hasNode(fileURL) {
+                let original = try PlusSyncFolderIO.boundedData(fileURL, limit: byteLimit)
+                guard String(data: original, encoding: .utf8) != nil else { throw CocoaError(.fileReadInapplicableStringEncoding) }
+            }
+        } catch {
+            requiresReplacement = true; pending = false
+            self.error = "The stored note became unreadable. Its original and these edits are retained; use Replace Stored Note to keep a backup before saving."
+            PlusSyncService.shared.reportUnsavedLocalChanges()
+            return
+        }
         do {
             try Data(text.utf8).write(to: fileURL, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: fileURL.path)
             savedAt = Date(); pending = false; dirty = false; error = nil
-        } catch { self.error = "Could not save the note: \(error.localizedDescription)" }
+            PlusSyncService.shared.noteDidSave(text)
+        } catch { self.error = "Could not save the note: \(error.localizedDescription)"; PlusSyncService.shared.reportUnsavedLocalChanges() }
+    }
+    func reloadAfterSync() {
+        guard !dirty, !requiresReplacement, let fileURL else { return }
+        do {
+            guard let value = String(data: try PlusSyncFolderIO.boundedData(fileURL, limit: byteLimit), encoding: .utf8) else { throw CocoaError(.fileReadInapplicableStringEncoding) }
+            pendingSave?.cancel(); pendingSave = nil
+            loading = true; text = value; loading = false; pending = false; savedAt = Date(); error = nil
+        } catch { self.error = "Could not reload synced note; current editor text retained: \(error.localizedDescription)" }
     }
     func replaceStoredNote() {
         guard requiresReplacement, let fileURL else { return }
         do {
+            let attributes = try FileManager.default.attributesOfItem(atPath: fileURL.path)
+            guard attributes[.type] as? FileAttributeType == .typeRegular else {
+                throw CocoaError(.fileReadUnsupportedScheme)
+            }
             let backup = fileURL.deletingLastPathComponent()
                 .appendingPathComponent("quick-note-\(UUID().uuidString).backup.txt")
             try FileManager.default.copyItem(at: fileURL, to: backup)
@@ -98,10 +125,11 @@ private final class QuickNoteToolStore: ObservableObject {
 @MainActor
 struct QuickNoteToolView: View {
     @StateObject private var store = QuickNoteToolStore()
+    @ObservedObject private var sync = PlusSyncService.shared
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Private local note").font(.headline)
+                Text(sync.enabled ? "Quick Note · shared folder sync" : "Private local note").font(.headline)
                 Spacer()
                 Button("Copy", action: store.copy).disabled(store.text.isEmpty)
                 Button("Clear") { store.text = "" }.disabled(store.text.isEmpty)
@@ -118,10 +146,12 @@ struct QuickNoteToolView: View {
             HStack {
                 if store.pending { Text("Saving…") }
                 else if let date = store.savedAt { Text("Saved \(date.formatted(date: .omitted, time: .shortened))") }
-                else { Text("Saves automatically on this Mac") }
+                else { Text(sync.enabled ? "Saved locally; sync checks every minute" : "Saves automatically on this Mac") }
                 Spacer()
                 Text("\(store.text.utf8.count.formatted()) / 200,000 bytes")
             }.font(.caption).foregroundStyle(.secondary)
         }.padding().onDisappear { store.saveNow() }
+            .onReceive(NotificationCenter.default.publisher(for: .plusSyncWillReadLocal)) { _ in store.saveNow() }
+            .onReceive(NotificationCenter.default.publisher(for: .plusSyncLocalDidChange)) { _ in store.reloadAfterSync() }
     }
 }

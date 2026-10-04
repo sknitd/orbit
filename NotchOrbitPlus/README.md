@@ -2,7 +2,7 @@
 
 A separate native Mac app copied from NotchOrbit, with an expanded notch dashboard and the original key-free file-action semicircle. Hover or click the compact strip to open tools; pin the dashboard while working. On a Mac without a notch, it uses the display's top center.
 
-The [OmniNotch reference page](https://omninotch.app/) inspected on October 4, 2026 advertises twenty tools but explicitly names nineteen. This app implements those nineteen named tool areas under its own Orbit identity, plus NotchOrbit's existing File Actions. It has its own `com.sknitd.NotchOrbitPlus` bundle identifier, preferences, storage, project and build output. NotchOrbit and OrbitDrop remain separate apps.
+The dashboard now has **22 tools**, including Quick Launcher and saved Workflows. It also adds live closed-notch status, meeting controls, shelf organization, clipboard OCR, optional sync and distribution settings. The [OmniNotch reference page](https://omninotch.app/) inspected on October 4, 2026 advertises twenty tools but explicitly names nineteen; this app implements those nineteen named areas under its own Orbit identity, plus NotchOrbit's File Actions and the two new tools. It has its own `com.sknitd.NotchOrbitPlus` bundle identifier, preferences, storage, project and build output. NotchOrbit and OrbitDrop remain separate apps.
 
 ## Install and open
 
@@ -33,12 +33,12 @@ e478befe9db4cc4bd4d171c3378015c204a4c62acd19366945a96e6f9fb05e4a
 | Ask Orbit | On-device chat, rewrite and summarize using Apple Foundation Models | **macOS 26+**, compatible Apple Silicon, enabled Apple Intelligence and downloaded model; no cloud fallback |
 | AI Usage | Live Codex quota through a selected installed Codex CLI; imported session/weekly reports for Claude, Codex, Cursor, Copilot and Grok | Live read uses Codex's documented account-only protocol; other providers use imported snapshots, with actual timestamps/limits |
 | Sales | Read-only adapters for Stripe, Shopify, Lemon Squeezy, Gumroad, Dodo, Polar and Paddle; recent paid orders, grouped-currency amounts and dated USD conversion | User credentials in this app's Keychain; current UTC creation-day gross paid amounts, available order-attached refunds and ten-page cap are labeled; real-account verification required |
-| Clipboard | Search/filter text, links, images and files; re-copy, delete and clear retained clips | Explicit opt-in, bounded local history; skips recognized confidential/transient markers, which cannot identify every secret |
+| Clipboard | Search/filter retained clips; recognize, search and copy text inside images with local Vision OCR | History is opt-in; choose Recognize Text on an image, then Copy Text; confidential/transient markers are skipped, which cannot identify every secret |
 | Teleprompter | Auto-saved script with import, play/pause, restart, speed and text-size controls | Keep the dashboard open/pinned while reading |
 | Timers | Focus/break countdowns, pause/resume, completed sessions, optional automatic breaks and soft focus sound | Deadline survives hiding/sleep; remaining time appears in the closed dashboard |
-| File Shelf | Drop/reveal/drag/share files, native AirDrop, optional managed copies and retention | Open File Shelf before dropping; retention removes managed copies, never original sources; AirDrop uses Apple's recipient picker |
+| File Shelf | Drop/reveal/drag/share, native AirDrop, tags, favourites, filename/tag search and Quick Look | Tags stay in the shelf; retention removes managed copies, never original sources; Quick Look previews the actual selected file |
 | Mirror | Live camera preview | Explicit Start and camera consent; video only; stops when hidden |
-| Calendar | Month/day navigation and real Apple Calendar events | Explicit full-access Calendar consent |
+| Calendar | Real events, next-meeting countdown and one-click Join from supported event links | Explicit Calendar consent; enable closed-notch meeting status; canceled, ended and all-day events do not appear as upcoming meetings |
 | Reminders | View and complete real Apple Reminders | Explicit full-access Reminders consent |
 | To-Dos | Persistent local tasks, completion and stars | Independent of Apple Reminders |
 | Weather | City search, current conditions and seven-day forecast | Open-Meteo network connection; user-chosen city, no location permission |
@@ -47,15 +47,29 @@ e478befe9db4cc4bd4d171c3378015c204a4c62acd19366945a96e6f9fb05e4a
 | Converter | Live length, mass, temperature, volume and speed conversion | Works locally, including temperature offsets and absolute-zero validation |
 | System | Real CPU, memory, disk, network and battery statistics | Samples while visible; desktop Macs may have no battery |
 | Quick Note | Auto-saved local note | Oversized/unreadable existing notes are preserved; replacement creates a backup |
-| Now Playing | Supported-player metadata/artwork and playback controls; synced lyrics from local LRC files | Music or Spotify connection with Automation consent; no universal browser/player capture or automatic lyrics service |
+| Now Playing | Music/Spotify metadata, artwork, controls, local LRC lyrics and optional closed-notch status | Explicit Connect and Automation consent; enable background monitoring to continue after hiding; reconnect each session |
 | Shortcuts | List and run installed macOS Shortcuts | Explicit chosen shortcut; macOS may request the shortcut's own permissions |
+| Quick Launcher | Pin, search, rename and reorder apps, folders and favourite Shortcuts | Choose local targets or explicitly refresh installed Shortcuts; launch only on click; missing pins remain editable |
+| Workflows | Saved one-drop resize → convert → compress → ZIP presets with progress and cancellation | Choose a preset, drag toward the notch with Workflows selected, then drop on its target; the image pipeline preserves originals and rolls back incomplete output |
 | File Actions | Original NotchOrbit contextual image/PDF/media/archive/text transformations | Drag a local file toward the notch without keys; a real drop on a labeled action authorizes processing |
 
 The feature comparison describes implemented tools and their setup, not verified access to a user's camera, calendars, merchant accounts or AI subscription. Interactive and connected-account acceptance is recorded separately in [EVALUATION.md](EVALUATION.md).
 
 ## Data and privacy
 
-Notes, tasks, retained clipboard, shelf data, teleprompter scripts and imported usage reports stay in this app's local storage. Clipboard is opt-in; clear retained history when appropriate. Managed shelf copies can be removed by the selected retention rule; originals are preserved. Camera capture and system/player sampling stop when their tool is hidden.
+Notes, tasks, retained clipboard, shelf data, teleprompter scripts and imported usage reports use this app's local storage. Clipboard is opt-in; image OCR runs locally on request. Managed shelf copies can be removed by the selected retention rule; originals are preserved. Camera capture and system sampling stop when hidden. Music background monitoring and closed-notch meeting status have their own opt-in controls.
+
+## Using the additions
+
+The closed notch prioritizes processing progress, then imminent/ongoing meetings, focus timers and music. Smaller icons show concurrent activities. Click or hover to open the relevant visible tool. Connect Music or Spotify in Now Playing and enable background monitoring; connect Calendar and enable closed-notch meetings to show events within 15 minutes of starting. Calendar's Join button opens a recognized conferencing link from the event URL, location or notes.
+
+In **Quick Launcher**, add an app or folder, or refresh Shortcuts and pin a favourite. In **Workflows**, create or select a preset, set its resize, conversion, quality and ZIP stages, and drop files on the native target. Selecting Workflows before dragging reveals its drop target directly without a key press. Outputs use unique names alongside the source, or Downloads when configured; originals stay intact. One ZIP contains the entire batch.
+
+In **File Shelf**, search names/tags, filter favourites, edit comma-separated tags and use Quick Look. In **Clipboard**, enable history, copy an image, choose Recognize Text, then search its recognized text or click Copy Text. Removing a clip cancels its pending recognition.
+
+**Settings → Sync** lets you choose the same iCloud Drive, Dropbox or network folder on each Mac and enable sharing. It syncs Quick Note, To-Dos, tool order/visibility and hover/click preferences. Each device keeps its own snapshot; concurrent edits remain available for explicit resolution and deleted tasks stay deleted. Sync is off by default. Clipboard, shelf files, launcher bookmarks, display settings and integration credentials stay local. Folder contents are readable to whoever can access that folder; delivery depends on your folder provider.
+
+**Settings → Updates** provides launch-at-login and update controls. First-run setup walks through choosing tools and optional drag permissions. Signing, notarization and update trust requirements are documented with the verified package below.
 
 Weather, stocks, merchant integrations and foreign-exchange lookup contact their respective providers when you request data. Provider credentials are stored in this app's macOS Keychain namespace, not in preferences or source. Use keys with read-only permissions where the provider supports them. There is no telemetry or remote AI fallback. AI Usage does not inspect sign-in caches or extract credentials: its explicit live Codex read lets your selected, already signed-in CLI handle its own authentication. It performs no model, thread, turn or tool call and records only reported quota windows.
 

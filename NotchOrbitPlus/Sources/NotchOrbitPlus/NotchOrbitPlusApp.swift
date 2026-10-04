@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import Combine
 import OrbitCore
 import NotchCore
 
@@ -21,8 +22,11 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
     let model = AppModel()
     let dashboardPreferences = DashboardPreferences()
     private lazy var dashboard = NotchDashboardController(
-        modules: Self.dashboardModules(chooseFiles: { [weak self] in self?.chooseFiles() }),
-        preferences: dashboardPreferences, compactContent: { AnyView(PlusCompactView()) })
+        modules: Self.dashboardModules(chooseFiles: { [weak self] in self?.chooseFiles() }, model: model),
+        preferences: dashboardPreferences, compactContent: { [weak self] in
+            guard let self else { return AnyView(Text("NotchOrbitPlus")) }
+            return AnyView(PlusCompactView(model: self.model))
+        })
     private let shortcut = GlobalNotchShortcut()
     private let panel = NotchPanelController()
     private var drag: NotchDragMonitor?
@@ -32,10 +36,14 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
     private var welcomeWindow: NSWindow?
     private var inspectionTask: Task<Void, Never>?
     private var presentationID: UUID?
+    private var settingsSubscription: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         LocalProductivityLifecycle.start()
+        PlusMeetingService.shared.start()
+        configureSync()
+        PlusUpdateService.shared.start()
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = NSImage(systemSymbolName: "rectangle.topthird.inset.filled",
                                     accessibilityDescription: "NotchOrbitPlus")
@@ -55,15 +63,23 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
         item.menu = menu
         statusItem = item
         dashboard.onOpenSettings = { [weak self] in self?.showSettings() }
+        dashboard.onOpenCompact = { [weak self] in
+            guard let self, let status = PlusLiveStatus.statuses(model: self.model, at: Date()).first else { return }
+            _ = self.dashboard.selectTool(id: status.toolID)
+        }
         dashboard.start()
         shortcut.configure(enabled: dashboardPreferences.keyboardShortcutEnabled) { [weak self] in self?.dashboard.toggleExpanded() }
 
         model.onResults = { [weak self] in self?.showResults() }
         drag = NotchDragMonitor(onActivate: { [weak self] urls, layout in
-            guard let self, let generation = self.drag?.activationGeneration else { return }
-            // An open shelf is already a genuine file destination; preserve it
-            // so its own drop handler can retain/share files instead of transforming them.
-            if self.dashboard.isExpanded && self.dashboard.selectedToolID == PlusTool.fileShelf.rawValue { return }
+            guard let self, !self.model.preferences.paused, let generation = self.drag?.activationGeneration else { return }
+            // These tools own actual drop destinations. Drag activation only
+            // reveals them; only their NSDraggingInfo callback performs work.
+            let ownsDrop = [PlusTool.fileShelf.rawValue, PlusTool.workflows.rawValue].contains(self.dashboard.selectedToolID ?? "")
+            if ownsDrop {
+                self.dashboard.show(on: NotchScreenLayout.screen(at: NSEvent.mouseLocation), expanded: true)
+                return
+            }
             self.presentActions(urls, layout: layout, dragGeneration: generation)
         }, onCancel: { [weak self] in self?.cancelPresentation() })
         applyPreferences()
@@ -71,7 +87,7 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
         updateMonitoringStatus()
         NotificationCenter.default.addObserver(self, selector: #selector(screensChanged),
             name: NSApplication.didChangeScreenParametersNotification, object: nil)
-        if !UserDefaults.standard.bool(forKey: "welcomeSeen") { showWelcome() }
+        if UserDefaults.standard.integer(forKey: "plus.onboarding.version") < 2 { showWelcome() }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -81,6 +97,12 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
         dashboard.stop()
         shortcut.stop()
         FocusTimerService.shared.shutdown()
+        PlusMeetingService.shared.shutdown()
+        PlusNowPlayingStore.shared.shutdown()
+        PlusSyncService.shared.shutdown()
+        PlusUpdateService.shared.shutdown()
+        WorkflowStore.shared.cancel()
+        settingsSubscription?.cancel()
         LocalProductivityLifecycle.shutdown()
         model.cancel()
     }
@@ -183,8 +205,30 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
         // NotchOrbitPlus activation is driven entirely by the file-drag location.
         drag?.paused = model.preferences.paused
         dashboard.setSuspended(model.preferences.paused)
+        WorkflowStore.shared.outputDirectory = model.preferences.outputDownloads
+            ? FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first : nil
         shortcut.configure(enabled: dashboardPreferences.keyboardShortcutEnabled) { [weak self] in self?.dashboard.toggleExpanded() }
         updateMonitoringStatus()
+    }
+
+    private func configureSync() {
+        PlusSyncService.shared.configureSettings(read: { [weak self] in
+            guard let preferences = self?.dashboardPreferences else { return SyncSharedSettings() }
+            return SyncSharedSettings(toolOrder: preferences.toolOrder,
+                hiddenToolIDs: preferences.hiddenToolIDs.sorted(), openMode: preferences.openMode.rawValue,
+                hoverDelay: preferences.hoverDelay)
+        }, apply: { [weak self] shared in
+            guard let self, (try? shared.validate()) != nil,
+                  let mode = DashboardOpenMode(rawValue: shared.openMode) else { return }
+            self.dashboardPreferences.toolOrder = shared.toolOrder
+            self.dashboardPreferences.hiddenToolIDs = Set(shared.hiddenToolIDs)
+            self.dashboardPreferences.openMode = mode
+            self.dashboardPreferences.hoverDelay = shared.hoverDelay
+        })
+        settingsSubscription = dashboardPreferences.objectWillChange.sink { _ in
+            PlusSyncService.shared.settingsDidChange()
+        }
+        PlusSyncService.shared.start()
     }
 
     private func updateMonitoringStatus() {
@@ -251,17 +295,28 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
 
     @objc private func showWelcome() {
         if welcomeWindow == nil {
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 510),
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 560),
                 styleMask: [.titled, .closable], backing: .buffered, defer: false)
             window.title = "Welcome to NotchOrbitPlus"
             window.isReleasedWhenClosed = false
-            window.contentView = NSHostingView(rootView: PlusWelcomeView(requestAccess: requestAccess))
+            window.contentView = NSHostingView(rootView: PlusOnboardingView(requestAccess: { [weak self] in
+                self?.requestAccess()
+            }, onFinish: { [weak self] selected in
+                guard let self else { return }
+                let known = Set(PlusTool.allCases.map(\.rawValue))
+                let visible = Set(selected).intersection(known)
+                self.dashboardPreferences.hiddenToolIDs = known.subtracting(visible)
+                UserDefaults.standard.set(2, forKey: "plus.onboarding.version")
+                UserDefaults.standard.set(true, forKey: "welcomeSeen")
+                self.welcomeWindow?.close()
+                if let first = selected.first { _ = self.dashboard.selectTool(id: first) }
+                self.dashboard.show(expanded: true)
+            }))
             window.center()
             welcomeWindow = window
         }
         NSApp.activate(ignoringOtherApps: true)
         welcomeWindow?.makeKeyAndOrderFront(nil)
-        UserDefaults.standard.set(true, forKey: "welcomeSeen")
     }
 
     @objc private func showResults() {

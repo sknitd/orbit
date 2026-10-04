@@ -4,7 +4,7 @@ import NotchCore
 
 @MainActor
 extension NotchAppDelegate {
-    static func dashboardModules(chooseFiles: @escaping @MainActor () -> Void) -> [NotchDashboardModule] {
+    static func dashboardModules(chooseFiles: @escaping @MainActor () -> Void, model: AppModel? = nil) -> [NotchDashboardModule] {
         PlusTool.defaultOrder.map { tool in
             NotchDashboardModule(id: tool.rawValue, title: tool == .assistant ? "Ask Orbit" : tool.title,
                                  symbol: tool.symbol) {
@@ -28,7 +28,9 @@ extension NotchAppDelegate {
                 case .quickNote: AnyView(QuickNoteToolView())
                 case .nowPlaying: AnyView(NowPlayingToolView())
                 case .shortcuts: AnyView(ShortcutsToolView())
-                case .fileActions: AnyView(FileActionsToolView(chooseFiles: chooseFiles))
+                case .launcher: AnyView(QuickLauncherToolView())
+                case .workflows: AnyView(WorkflowsToolView())
+                case .fileActions: AnyView(FileActionsToolView(chooseFiles: chooseFiles, model: model))
                 }
             }
         }
@@ -36,25 +38,9 @@ extension NotchAppDelegate {
 }
 
 @MainActor
-struct PlusCompactView: View {
-    @ObservedObject private var timer = FocusTimerService.shared
-    var body: some View {
-        HStack(spacing: 8) {
-            if let countdown = timer.compactText {
-                Image(systemName: timer.timer.phase == .rest ? "cup.and.saucer" : "timer")
-                Text(countdown).monospacedDigit()
-                if timer.timer.isPaused { Image(systemName: "pause.fill").font(.system(size: 9)) }
-            } else {
-                Image(systemName: "rectangle.topthird.inset.filled")
-                Text("NotchOrbitPlus")
-            }
-        }.font(.system(size: 11, weight: .medium))
-    }
-}
-
-@MainActor
 private struct FileActionsToolView: View {
     let chooseFiles: @MainActor () -> Void
+    let model: AppModel?
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Label("File actions", systemImage: "wand.and.stars").font(.headline)
@@ -62,6 +48,17 @@ private struct FileActionsToolView: View {
             Text("Convert, compress and resize images; work with PDFs, audio and video; create ZIPs, duplicate files, generate checksums and format JSON.")
                 .foregroundStyle(.secondary)
             Button("Choose Files…", action: chooseFiles).buttonStyle(.borderedProminent)
+            if let model {
+                if model.busy {
+                    ProgressView(model.progressLabel, value: model.progress)
+                    Button("Cancel File Operation") { model.cancel() }
+                }
+                if let error = model.errorMessage { Text(error).foregroundStyle(.red).font(.caption) }
+                if let latest = model.recent.first {
+                    Text("\(latest.title) · \(latest.result.outputs.count) output(s)").font(.callout)
+                    Button("Reveal Latest Results") { model.reveal(latest.result.outputs) }
+                }
+            }
             Text("Choosing files reveals them in Finder. Drag those same files onto an action to run it. Outputs are separate from the originals.")
                 .font(.caption).foregroundStyle(.secondary)
             Spacer(minLength: 0)
@@ -81,11 +78,13 @@ struct PlusSettingsView: View {
                 .tabItem { Label("Dashboard", systemImage: "rectangle.topthird.inset.filled") }
             NotchSettingsView(model: model, requestAccess: requestAccess, applyPreferences: applyPreferences)
                 .tabItem { Label("File actions", systemImage: "wand.and.stars") }
+            SyncSettingsView().tabItem { Label("Sync", systemImage: "arrow.triangle.2.circlepath") }
+            PlusDistributionSettingsView().tabItem { Label("Updates", systemImage: "arrow.down.circle") }
             VStack(spacing: 16) {
                 Image(systemName: "rectangle.topthird.inset.filled").font(.system(size: 56)).foregroundStyle(.blue)
                 Text("NotchOrbitPlus").font(.title.weight(.semibold))
-                Text("Twenty tools, below your notch.").font(.title3)
-                Text("Version \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0") · macOS 14+")
+                Text("Twenty-two tools, below your notch.").font(.title3)
+                Text("Version \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.0") · macOS 14+")
                     .foregroundStyle(.secondary)
                 Text("Ask Orbit requires macOS 26 and Apple Intelligence. Connected services need their own setup.")
                     .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)

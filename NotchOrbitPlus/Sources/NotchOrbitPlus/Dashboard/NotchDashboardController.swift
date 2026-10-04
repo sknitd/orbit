@@ -36,6 +36,7 @@ private final class DashboardTrackingView: NSView {
 public final class NotchDashboardController {
     public let preferences: DashboardPreferences
     public var onOpenSettings: (@MainActor () -> Void)?
+    public var onOpenCompact: (@MainActor () -> Void)?
     private let modules: [NotchDashboardModule]
     private let compactContent: @MainActor () -> AnyView
     private let presentation = DashboardPresentation()
@@ -197,7 +198,9 @@ public final class NotchDashboardController {
         tracking.entered = { [weak self] in self?.pointerEntered() }
         tracking.exited = { [weak self] in self?.pointerExited() }
         let view = NotchDashboardView(presentation: presentation, preferences: preferences, modules: modules,
-                                     compactContent: compactContent, toggleExpanded: { [weak self] in self?.toggleExpanded() },
+                                     compactContent: compactContent, toggleExpanded: { [weak self] in
+                                         self?.onOpenCompact?(); self?.toggleExpanded()
+                                     },
                                      collapse: { [weak self] in self?.collapse() }, openSettings: { [weak self] in self?.onOpenSettings?() })
         let hosting = NSHostingView(rootView: view)
         hosting.autoresizingMask = [.width, .height]; hosting.wantsLayer = true
@@ -248,6 +251,7 @@ public final class NotchDashboardController {
             guard let self, !self.suspended, self.panel?.isVisible == true,
                   self.preferences.openMode == .hoverAndClick else { return }
             self.hoverOpenTask = nil
+            self.onOpenCompact?()
             self.expand(manually: false)
         }
     }

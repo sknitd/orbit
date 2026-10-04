@@ -18,6 +18,8 @@ struct LocalClip: Identifiable, Codable, Equatable, Sendable {
     var image: Data?
     var imageType: String?
     var files: [URL] = []
+    var recognizedText: String?
+    var recognizedAt: Date?
     var title: String {
         switch kind {
         case .text, .link: String((text ?? "").prefix(140))
@@ -25,7 +27,15 @@ struct LocalClip: Identifiable, Codable, Equatable, Sendable {
         case .files: files.map(\.lastPathComponent).joined(separator: ", ")
         }
     }
-    var byteCount: Int { (image?.count ?? 0) + (text?.utf8.count ?? 0) + files.reduce(0) { $0 + $1.path.utf8.count } }
+    var byteCount: Int {
+        (image?.count ?? 0) + (text?.utf8.count ?? 0) + (recognizedText?.utf8.count ?? 0) +
+            files.reduce(0) { $0 + $1.path.utf8.count }
+    }
+    func matchesSearch(_ query: String) -> Bool {
+        query.isEmpty || title.localizedCaseInsensitiveContains(query) ||
+            (text?.localizedCaseInsensitiveContains(query) ?? false) ||
+            (recognizedText?.localizedCaseInsensitiveContains(query) ?? false)
+    }
     func sameContent(as other: LocalClip) -> Bool {
         kind == other.kind && text == other.text && image == other.image && files == other.files
     }
@@ -40,12 +50,15 @@ final class ClipboardToolStore: ObservableObject {
         instance = store
         return store
     }
-    static func shutdownIfInitialized() { instance?.setObserving(false) }
+    static func shutdownIfInitialized() { instance?.shutdown() }
 
     @Published private(set) var clips: [LocalClip] = []
     @Published private(set) var observing = false
     @Published var error: String?
     @Published var status = "Observation is off."
+    @Published private(set) var ocrRunning = Set<UUID>()
+    private var ocrTasks: [UUID: Task<Void, Never>] = [:]
+    private var ocrTokens: [UUID: UUID] = [:]
     private var observation: Task<Void, Never>?
     private var lastCount = 0
     private let limit = 100
@@ -62,7 +75,10 @@ final class ClipboardToolStore: ObservableObject {
             boundHistory()
         } catch { self.error = "Could not load clipboard history: \(error.localizedDescription)" }
     }
-    deinit { observation?.cancel() }
+    deinit {
+        observation?.cancel()
+        for task in ocrTasks.values { task.cancel() }
+    }
 
     func setObserving(_ enabled: Bool) {
         observation?.cancel()
@@ -125,17 +141,87 @@ final class ClipboardToolStore: ObservableObject {
         status = "Saved \(clip.kind.title.lowercased()) locally."
     }
 
-    private func boundHistory() {
+    private func boundHistory(protecting id: UUID? = nil) {
         clips = Array(clips.prefix(limit))
-        while clips.reduce(0, { $0 + $1.byteCount }) > totalByteLimit { clips.removeLast() }
+        while clips.reduce(0, { $0 + $1.byteCount }) > totalByteLimit {
+            guard let index = clips.lastIndex(where: { $0.id != id }) else { break }
+            clips.remove(at: index)
+        }
+        let retained = Set(clips.map(\.id))
+        for (id, task) in ocrTasks where !retained.contains(id) { task.cancel() }
     }
     private func save() {
         guard persistHistory else { return }
         do { try LocalToolStorage.save(clips, file: "clipboard.json"); error = nil }
         catch { self.error = "Could not save clipboard history: \(error.localizedDescription)" }
     }
-    func clear() { clips.removeAll(); save(); status = "History cleared." }
-    func remove(_ clip: LocalClip) { clips.removeAll { $0.id == clip.id }; save() }
+    func clear() {
+        for task in ocrTasks.values { task.cancel() }
+        clips.removeAll(); save(); status = "History cleared."
+    }
+    func remove(_ clip: LocalClip) {
+        ocrTasks[clip.id]?.cancel()
+        clips.removeAll { $0.id == clip.id }; save()
+    }
+    func recognizeText(in clip: LocalClip) {
+        guard clip.kind == .image, let data = clip.image, clips.contains(where: { $0.id == clip.id }) else {
+            error = "This clip has no retained image to recognize."
+            return
+        }
+        guard !ocrRunning.contains(clip.id) else { return }
+        guard ocrRunning.count < 2 else { error = "Text recognition is working on two images. Wait for one to finish."; return }
+        let id = clip.id
+        let token = UUID()
+        ocrTokens[id] = token
+        ocrRunning.insert(id)
+        error = nil
+        status = "Recognizing image text locally with Apple Vision…"
+        ocrTasks[id] = Task { @MainActor [weak self] in
+            do {
+                let recognized = try await ClipboardImageOCR.recognize(data)
+                guard let self, self.ocrTokens[id] == token else { return }
+                defer { self.finishOCR(id: id, token: token) }
+                guard !Task.isCancelled, let index = self.clips.firstIndex(where: { $0.id == id }),
+                      self.clips[index].image == data else { return }
+                self.clips[index].recognizedText = recognized
+                self.clips[index].recognizedAt = Date()
+                self.boundHistory(protecting: id)
+                self.save()
+                self.status = "Text recognized locally; search it or choose Copy Text."
+            } catch {
+                guard let self, self.ocrTokens[id] == token else { return }
+                self.finishOCR(id: id, token: token)
+                guard !Task.isCancelled else { return }
+                self.error = "Could not recognize image text: \(error.localizedDescription)"
+            }
+        }
+    }
+    private func finishOCR(id: UUID, token: UUID) {
+        guard ocrTokens[id] == token else { return }
+        ocrTokens.removeValue(forKey: id)
+        ocrTasks.removeValue(forKey: id)
+        ocrRunning.remove(id)
+        if Task.isCancelled { status = "Text recognition cancelled." }
+    }
+    func cancelRecognition(for id: UUID) {
+        ocrTasks[id]?.cancel()
+        status = "Cancelling local text recognition…"
+    }
+    func copyRecognizedText(_ clip: LocalClip) {
+        guard let text = clips.first(where: { $0.id == clip.id })?.recognizedText, !text.isEmpty else {
+            error = "This image has no recognized text yet."
+            return
+        }
+        pasteboard.clearContents()
+        let success = pasteboard.setString(text, forType: .string)
+        lastCount = pasteboard.changeCount
+        if success { error = nil; status = "Copied recognized text." }
+        else { error = "macOS could not copy the recognized text." }
+    }
+    func shutdown() {
+        setObserving(false)
+        for task in ocrTasks.values { task.cancel() }
+    }
     func copy(_ clip: LocalClip) {
         let board = pasteboard
         board.clearContents()
@@ -165,9 +251,10 @@ struct ClipboardToolView: View {
     @State private var search = ""
     @State private var filter = "all"
     private var visible: [LocalClip] {
-        store.clips.filter { (filter == "all" || $0.kind.rawValue == filter) &&
-            (search.isEmpty || $0.title.localizedCaseInsensitiveContains(search) ||
-             ($0.text?.localizedCaseInsensitiveContains(search) ?? false)) }
+        store.clips.filter {
+            (filter == "all" || $0.kind.rawValue == filter ||
+             (filter == "ocr" && !($0.recognizedText?.isEmpty ?? true))) && $0.matchesSearch(search)
+        }
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -178,14 +265,15 @@ struct ClipboardToolView: View {
                 Spacer()
                 Button("Clear History", action: store.clear).disabled(store.clips.isEmpty)
             }
-            Text("Off at every launch; once enabled, keeps observing while hidden. Known concealed, transient, and password-manager clips are skipped.")
+            Text("Off at every launch; once enabled, keeps observing while hidden. Private clips are skipped. Image OCR runs only when you choose Recognize Text.")
                 .font(.caption).foregroundStyle(.secondary)
             HStack {
                 TextField("Search history", text: $search).textFieldStyle(.roundedBorder)
                 Picker("Kind", selection: $filter) {
                     Text("All").tag("all")
                     ForEach(ClipKind.allCases, id: \.rawValue) { Text($0.title).tag($0.rawValue) }
-                }.frame(width: 120)
+                    Text("Recognized Text").tag("ocr")
+                }.frame(width: 150)
             }
             LocalToolError(message: store.error)
             List(visible) { clip in
@@ -200,14 +288,38 @@ struct ClipboardToolView: View {
                             } else { Image(systemName: clip.kind.symbol).frame(width: 24) }
                             VStack(alignment: .leading) {
                                 Text(clip.title).lineLimit(2).frame(maxWidth: .infinity, alignment: .leading)
+                                if let text = clip.recognizedText {
+                                    Text(text).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                                }
                                 Text(clip.createdAt, style: .relative).font(.caption2).foregroundStyle(.secondary)
                             }
                         }
                     }.buttonStyle(.plain).accessibilityLabel("Copy \(clip.kind.title): \(clip.title)")
+                    if clip.kind == .image {
+                        if store.ocrRunning.contains(clip.id) {
+                            ProgressView().controlSize(.small).accessibilityLabel("Recognizing image text")
+                        } else {
+                            Button { store.recognizeText(in: clip) } label: { Image(systemName: "doc.text.viewfinder") }
+                                .buttonStyle(.borderless).help("Recognize text locally")
+                                .accessibilityLabel("Recognize text in this clipboard image locally")
+                                .disabled(store.ocrRunning.count >= 2)
+                        }
+                        if clip.recognizedText != nil {
+                            Button("Copy Text") { store.copyRecognizedText(clip) }.buttonStyle(.borderless)
+                        }
+                    }
                     Button { store.remove(clip) } label: { Image(systemName: "trash") }
                         .buttonStyle(.borderless).help("Delete clip").accessibilityLabel("Delete clip")
                 }.contextMenu {
                     Button("Copy Again") { store.copy(clip) }
+                    if clip.kind == .image {
+                        Button("Recognize Text Locally") { store.recognizeText(in: clip) }
+                            .disabled(store.ocrRunning.contains(clip.id) || store.ocrRunning.count >= 2)
+                        if store.ocrRunning.contains(clip.id) {
+                            Button("Cancel Recognition") { store.cancelRecognition(for: clip.id) }
+                        }
+                        if clip.recognizedText != nil { Button("Copy Recognized Text") { store.copyRecognizedText(clip) } }
+                    }
                     Button("Delete", role: .destructive) { store.remove(clip) }
                 }
             }.frame(height: 200)

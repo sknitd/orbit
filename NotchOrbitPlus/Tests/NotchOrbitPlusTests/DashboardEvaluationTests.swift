@@ -8,7 +8,7 @@ final class DashboardEvaluationTests: XCTestCase {
     private let advertisedIDs = [
         "assistant", "aiUsage", "sales", "clipboard", "teleprompter", "timers", "fileShelf", "mirror",
         "calendar", "reminders", "todos", "weather", "stocks", "emoji", "converter", "system",
-        "quickNote", "nowPlaying", "shortcuts", "fileActions"
+        "quickNote", "nowPlaying", "shortcuts", "launcher", "workflows", "fileActions"
     ]
 
     @MainActor
@@ -20,12 +20,12 @@ final class DashboardEvaluationTests: XCTestCase {
         let modules = NotchAppDelegate.dashboardModules(chooseFiles: {
             XCTFail("Registering or selecting a tab must not choose or transform files")
         })
-        XCTAssertEqual(modules.count, 20)
+        XCTAssertEqual(modules.count, 22)
         XCTAssertEqual(Set(modules.map(\.id)).count, modules.count)
         XCTAssertEqual(Set(modules.map(\.id)), Set(advertisedIDs))
         let controller = NotchDashboardController(modules: modules, preferences: preferences)
         defer { controller.stop() }
-        XCTAssertEqual(preferences.registeredTools.count, 20)
+        XCTAssertEqual(preferences.registeredTools.count, 22)
         for id in advertisedIDs {
             XCTAssertTrue(controller.selectTool(id: id), id)
             XCTAssertEqual(controller.selectedToolID, id)
@@ -53,8 +53,8 @@ final class DashboardEvaluationTests: XCTestCase {
         let controller = NotchDashboardController(modules: modules, preferences: preferences)
         defer { controller.stop() }
         XCTAssertEqual(Array(preferences.toolOrder.prefix(2)), ["quickNote", "converter"])
-        XCTAssertEqual(preferences.toolOrder.count, 20)
-        XCTAssertEqual(Set(preferences.toolOrder).count, 20)
+        XCTAssertEqual(preferences.toolOrder.count, 22)
+        XCTAssertEqual(Set(preferences.toolOrder).count, 22)
         XCTAssertFalse(preferences.toolOrder.contains("retired-tool"))
         preferences.move("converter", by: -1)
         XCTAssertEqual(Array(preferences.toolOrder.prefix(2)), ["converter", "quickNote"])

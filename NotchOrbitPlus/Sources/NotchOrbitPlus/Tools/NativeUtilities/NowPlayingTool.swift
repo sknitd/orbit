@@ -3,14 +3,14 @@ import AppKit
 import UniformTypeIdentifiers
 import NotchCore
 
-private enum OrbitSupportedPlayer: String, Sendable, CaseIterable, Identifiable {
+enum PlusSupportedPlayer: String, Sendable, CaseIterable, Identifiable {
     case music, spotify
     var id: String { rawValue }
     var title: String { self == .music ? "Music" : "Spotify" }
     var bundleID: String { self == .music ? "com.apple.Music" : "com.spotify.client" }
 }
 
-private struct OrbitPlayerSnapshot: Sendable {
+struct PlusPlayerSnapshot: Sendable {
     let title: String
     let artist: String
     let album: String
@@ -22,7 +22,8 @@ private struct OrbitPlayerSnapshot: Sendable {
 }
 
 private actor OrbitPlayerScripting {
-    func read(_ player: OrbitSupportedPlayer) throws -> OrbitPlayerSnapshot {
+    func read(_ player: PlusSupportedPlayer) throws -> PlusPlayerSnapshot {
+        try Task.checkCancellation()
         let artwork = player == .music
             ? "set cover to missing value\ntry\nset cover to raw data of artwork 1 of current track\nend try"
             : "set cover to artwork url of current track"
@@ -36,19 +37,24 @@ private actor OrbitPlayerScripting {
         end timeout
         """
         let result = try execute(script)
-        let duration = result.atIndex(4)?.doubleValue ?? 0
+        let rawDuration = result.atIndex(4)?.doubleValue ?? 0
+        let seconds = player == .spotify ? rawDuration / 1_000 : rawDuration
+        let duration = seconds.isFinite ? max(0, seconds) : 0
+        let rawPosition = result.atIndex(5)?.doubleValue ?? 0
+        let position = rawPosition.isFinite ? max(0, rawPosition) : 0
         let cover = result.atIndex(7)
-        return OrbitPlayerSnapshot(
+        return PlusPlayerSnapshot(
             title: result.atIndex(1)?.stringValue ?? "", artist: result.atIndex(2)?.stringValue ?? "",
-            album: result.atIndex(3)?.stringValue ?? "", duration: player == .spotify ? duration / 1_000 : duration,
-            position: result.atIndex(5)?.doubleValue ?? 0,
+            album: result.atIndex(3)?.stringValue ?? "", duration: duration,
+            position: duration > 0 ? min(duration, position) : position,
             playing: result.atIndex(6)?.stringValue == "playing",
             artwork: player == .music ? cover?.data : nil,
             artworkURL: player == .spotify ? cover?.stringValue.flatMap(URL.init(string:)) : nil
         )
     }
 
-    func command(_ command: String, player: OrbitSupportedPlayer) throws {
+    func command(_ command: String, player: PlusSupportedPlayer) throws {
+        try Task.checkCancellation()
         guard ["playpause", "previous track", "next track"].contains(command) else { return }
         _ = try execute("with timeout of 3 seconds\ntell application id \"\(player.bundleID)\" to \(command)\nend timeout")
     }
@@ -67,36 +73,89 @@ private actor OrbitPlayerScripting {
 }
 
 @MainActor
-private final class OrbitNowPlayingModel: ObservableObject {
-    @Published var player: OrbitSupportedPlayer = .music
-    @Published var snapshot: OrbitPlayerSnapshot?
-    @Published var artwork: NSImage?
+final class PlusNowPlayingStore: NSObject, ObservableObject {
+    static let shared = PlusNowPlayingStore()
+    static let backgroundDefaultsKey = "plus.music.background"
+    @Published var player: PlusSupportedPlayer = .music {
+        didSet { if oldValue != player { disconnect() } }
+    }
+    @Published private(set) var snapshot: PlusPlayerSnapshot?
+    @Published private(set) var artwork: NSImage?
     @Published var artworkMessage: String?
     @Published var error: String?
-    @Published var connected = false
+    @Published private(set) var connected = false
+    @Published private(set) var connecting = false
+    @Published private(set) var monitoring = false
+    @Published var backgroundMonitoring = false {
+        didSet {
+            UserDefaults.standard.set(backgroundMonitoring, forKey: Self.backgroundDefaultsKey)
+            reconcileMonitoring()
+        }
+    }
     @Published var lyrics: [OrbitLRCLine] = []
     @Published var lyricsName: String?
     private let scripting = OrbitPlayerScripting()
     private var polling: Task<Void, Never>?
     private var artworkTask: Task<Void, Never>?
+    private var connectionTask: Task<Void, Never>?
+    private var connectionID: UUID?
+    private var toolVisible = false
+    private var terminated = false
     private var generation = UUID()
+    private var sessionID = UUID()
+    private var commands: [UUID: Task<Void, Never>] = [:]
     private var artworkKey = ""
 
+    private override init() {
+        _backgroundMonitoring = Published(initialValue: UserDefaults.standard.bool(forKey: PlusNowPlayingStore.backgroundDefaultsKey))
+        super.init()
+        NotificationCenter.default.addObserver(self, selector: #selector(applicationWillTerminate),
+            name: NSApplication.willTerminateNotification, object: nil)
+        // Loading a preference never sends Apple Events or launches a player.
+        // A successful Connect is required for this app session.
+    }
+    @objc private func applicationWillTerminate() { shutdown() }
+
     func connect() {
-        stop()
+        guard !terminated else { return }
+        disconnect()
         guard NSWorkspace.shared.runningApplications.contains(where: { $0.bundleIdentifier == player.bundleID }) else {
             error = "Open \(player.title) first, then connect."
             return
         }
         // The first scripting request, and its Automation grant, occur only
         // after this explicit user control. Polling stops after any denial.
-        connected = true; error = nil; snapshot = nil; artwork = nil; artworkMessage = nil; artworkKey = ""
-        resume()
+        let id = UUID(); connectionID = id; connecting = true; error = nil
+        let chosen = player
+        connectionTask = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                if self.connectionID == id {
+                    self.connecting = false; self.connectionTask = nil; self.connectionID = nil
+                }
+            }
+            do {
+                let value = try await self.scripting.read(chosen)
+                try Task.checkCancellation()
+                guard self.connectionID == id, !self.terminated, self.player == chosen else { return }
+                self.connected = true; self.snapshot = value
+                if let data = value.artwork { self.artwork = NSImage(data: data) }
+                self.artworkKey = ""
+                self.reconcileMonitoring()
+            } catch is CancellationError { return }
+            catch { if self.connectionID == id { self.error = error.localizedDescription } }
+        }
     }
 
-    func resume() {
-        guard connected, polling == nil else { return }
+    func setToolVisible(_ visible: Bool) { toolVisible = visible; reconcileMonitoring() }
+    private func reconcileMonitoring() {
+        if !terminated, connected, toolVisible || backgroundMonitoring { resume() }
+        else { stopPolling() }
+    }
+    private func resume() {
+        guard !terminated, connected, polling == nil else { return }
         let id = UUID(); generation = id
+        monitoring = true
         polling = Task { [weak self] in
             guard let self else { return }
             defer { if self.generation == id { self.polling = nil } }
@@ -152,18 +211,32 @@ private final class OrbitNowPlayingModel: ObservableObject {
         }
     }
     func retryArtwork() { artworkKey = ""; artworkMessage = nil }
-    func stop() {
+    private func stopPolling() {
         generation = UUID(); polling?.cancel(); polling = nil
+        monitoring = false
         if artworkTask != nil, artwork == nil { artworkKey = "" }
         artworkTask?.cancel(); artworkTask = nil
     }
-    func disconnect() { stop(); connected = false; snapshot = nil; artwork = nil; artworkMessage = nil }
+    func disconnect() {
+        sessionID = UUID()
+        for command in commands.values { command.cancel() }
+        commands.removeAll()
+        connectionID = nil; connectionTask?.cancel(); connectionTask = nil; connecting = false
+        stopPolling(); connected = false; snapshot = nil; artwork = nil; artworkMessage = nil; artworkKey = ""
+    }
+    func shutdown() { terminated = true; disconnect() }
     func command(_ command: String) {
-        guard connected else { return }
+        guard !terminated, connected, ["playpause", "previous track", "next track"].contains(command) else { return }
         let chosen = player
-        Task {
+        let session = sessionID; let id = UUID()
+        commands[id] = Task {
+            defer { self.commands[id] = nil }
             do { try await scripting.command(command, player: chosen) }
-            catch { self.error = error.localizedDescription; disconnect() }
+            catch is CancellationError { return }
+            catch {
+                guard self.sessionID == session, self.player == chosen, self.connected else { return }
+                self.error = error.localizedDescription; disconnect()
+            }
         }
     }
 
@@ -190,17 +263,20 @@ private final class OrbitNowPlayingModel: ObservableObject {
 
 @MainActor
 struct NowPlayingToolView: View {
-    @StateObject private var model = OrbitNowPlayingModel()
+    @StateObject private var model = PlusNowPlayingStore.shared
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Now Playing").font(.headline)
             Picker("Player", selection: $model.player) {
-                ForEach(OrbitSupportedPlayer.allCases) { Text($0.title).tag($0) }
-            }.pickerStyle(.segmented).onChange(of: model.player) { _, _ in model.disconnect() }
+                ForEach(PlusSupportedPlayer.allCases) { Text($0.title).tag($0) }
+            }.pickerStyle(.segmented).disabled(model.connecting)
             HStack {
-                Button(model.connected ? "Reconnect" : "Connect \(model.player.title)", action: model.connect)
+                Button(model.connecting ? "Connecting…" : model.connected ? "Reconnect" : "Connect \(model.player.title)", action: model.connect).disabled(model.connecting)
                 if model.connected { Button("Disconnect", action: model.disconnect) }
             }
+            Toggle("Keep music live while the notch is closed", isOn: $model.backgroundMonitoring)
+            Text("Connect a supported player for this app session, then opt in to monitoring outside this tool. Turning this off stops background polling.")
+                .font(.caption).foregroundStyle(.secondary)
             if let value = model.snapshot, !value.title.isEmpty {
                 HStack(spacing: 12) {
                     if let cover = model.artwork { Image(nsImage: cover).resizable().scaledToFit().frame(width: 64, height: 64) }
@@ -241,7 +317,7 @@ struct NowPlayingToolView: View {
             }
             Text("Public scripting supports Music and Spotify. Other players and automatic lyric fetching are unavailable. Spotify artwork may load from the player's image URL.")
                 .font(.caption).foregroundStyle(.secondary)
-        }.onAppear { model.resume() }.onDisappear { model.stop() }
-            .background(OrbitNativeToolVisibility(onVisible: model.resume, onHidden: model.stop).frame(width: 0, height: 0))
+        }.onAppear { model.setToolVisible(true) }.onDisappear { model.setToolVisible(false) }
+            .background(OrbitNativeToolVisibility(onVisible: { model.setToolVisible(true) }, onHidden: { model.setToolVisible(false) }).frame(width: 0, height: 0))
     }
 }

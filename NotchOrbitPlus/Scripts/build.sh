@@ -33,8 +33,7 @@ lipo "$executable" -verify_arch arm64 x86_64
 mkdir -p "$app_path/Contents/Resources/ThirdParty" dist
 cp "$repository_root/build/ThirdParty/libwebp-COPYING.txt" "$app_path/Contents/Resources/ThirdParty/"
 cp "$repository_root/build/ThirdParty/libwebp-PATENTS.txt" "$app_path/Contents/Resources/ThirdParty/"
-codesign --force --deep --sign - "$app_path"
-codesign --verify --deep --strict "$app_path"
+bash Scripts/sign-and-notarize.sh "$app_path"
 file "$executable"
 bash Scripts/smoke-launch.sh "$app_path"
 python3 - "$app_path" <<'PY'
@@ -44,6 +43,7 @@ info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
 if info.get('CFBundleIdentifier') != 'com.sknitd.NotchOrbitPlus' or info.get('CFBundleExecutable') != 'NotchOrbitPlus':
     raise SystemExit('The built application has the wrong product identity.')
 architectures = subprocess.check_output(['lipo', '-archs', str(app / 'Contents/MacOS/NotchOrbitPlus')], text=True).split()
+signing = json.loads(pathlib.Path('build/distribution-signing.json').read_text())
 if set(architectures) != {'arm64', 'x86_64'}:
     raise SystemExit('The built application is not the required universal binary.')
 for architecture in architectures:
@@ -54,7 +54,9 @@ for architecture in architectures:
 pathlib.Path('build/package-verification.json').write_text(json.dumps({
     'product': 'NotchOrbitPlus', 'bundle_identifier': info['CFBundleIdentifier'],
     'version': info.get('CFBundleShortVersionString'), 'architectures': sorted(architectures),
-    'signature': 'ad hoc', 'codesign_verified': True, 'startup_smoke_seconds': 3,
+    'signature': 'Developer ID' if signing['kind'] == 'developer-id' else 'ad hoc',
+    'signing_team_identifier': signing['team_identifier'], 'notarized': signing['notarized'],
+    'notarization_status': signing['notarization_status'], 'codesign_verified': True, 'startup_smoke_seconds': 3,
     'foundation_models_weak_linked': True, 'minimum_macos': info.get('LSMinimumSystemVersion')
 }, indent=2) + '\n')
 PY
