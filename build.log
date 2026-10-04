@@ -1,0 +1,31 @@
+Xcode 16.4
+Build version 16F6
+swift-driver version: 1.120.5 build/DrawCornerIcon.swift:41:9: error: call to main actor-isolated global function 'drawIcon(side:destination:)' in a synchronous nonisolated context
+ 3 | 
+ 4 | @MainActor
+ 5 | func drawIcon(side: Int, destination: URL) throws {
+   |      `- note: calls to global function 'drawIcon(side:destination:)' from outside of its actor context are implicitly asynchronous
+ 6 |     guard let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: side, pixelsHigh: side,
+ 7 |         bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+   :
+39 | let output = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
+40 | for points in [16, 32, 128, 256, 512] {
+41 |     try drawIcon(side: points, destination: output.appendingPathComponent("icon_\(points)x\(points).png"))
+   |         `- error: call to main actor-isolated global function 'drawIcon(side:destination:)' in a synchronous nonisolated context
+42 |     try drawIcon(side: points * 2, destination: output.appendingPathComponent("icon_\(points)x\(points)@2x.png"))
+43 | }
+
+build/DrawCornerIcon.swift:42:9: error: call to main actor-isolated global function 'drawIcon(side:destination:)' in a synchronous nonisolated context
+ 3 | 
+ 4 | @MainActor
+ 5 | func drawIcon(side: Int, destination: URL) throws {
+   |      `- note: calls to global function 'drawIcon(side:destination:)' from outside of its actor context are implicitly asynchronous
+ 6 |     guard let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: side, pixelsHigh: side,
+ 7 |         bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+   :
+40 | for points in [16, 32, 128, 256, 512] {
+41 |     try drawIcon(side: points, destination: output.appendingPathComponent("icon_\(points)x\(points).png"))
+42 |     try drawIcon(side: points * 2, destination: output.appendingPathComponent("icon_\(points)x\(points)@2x.png"))
+   |         `- error: call to main actor-isolated global function 'drawIcon(side:destination:)' in a synchronous nonisolated context
+43 | }
+44 | 
