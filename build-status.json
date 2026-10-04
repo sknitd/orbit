@@ -1,0 +1,14 @@
+{
+  "product": "CornerOrbit",
+  "source_layout": "standalone CornerOrbit subtree",
+  "source_commit": "24299dc6c4957eae9b3cec8ad632f8b9cf4de923",
+  "outcome": "failure",
+  "run_id": "37238316734",
+  "run_attempt": "1",
+  "runner": "macos-15",
+  "recorded_at": "2026-10-04T22:01:49.594095+00:00",
+  "native_preview_count": 0,
+  "archive_available": false,
+  "notarized": false,
+  "physical_mac_acceptance": "Corner clicks/drags, permission prompts, live Chrome history profile, installed target apps, displays/Spaces and screen locking require interactive Mac validation."
+}
