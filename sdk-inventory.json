@@ -1,0 +1,11 @@
+{
+  "xcode": "Xcode 16.4\nBuild version 16F6",
+  "macos_sdk": "15.5",
+  "swift": "Apple Swift version 6.1.2 (swiftlang-6.1.2.1.2 clang-1700.0.13.5)\nTarget: arm64-apple-macosx15.0",
+  "deployment_target": "14.0",
+  "probe_architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "public_appkit_swiftui_automation_apis_typechecked": true
+}
