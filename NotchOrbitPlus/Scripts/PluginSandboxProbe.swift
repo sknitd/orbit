@@ -26,7 +26,8 @@ enum PluginSandboxProbe {
             results.append(["test": "builtin-json", "outcome": "passed", "output": String(decoding: output, as: UTF8.self)])
             let outside = fixture.appendingPathComponent("outside.txt"), original = Data("preserve exact original\n".utf8)
             try original.write(to: outside)
-            let escaped = outside.path.replacingOccurrences(of: "'", with: "'\\''")
+            let outsidePath = try PlusPluginFolderIO.physicalDirectoryPath(fixture) + "/outside.txt"
+            let escaped = outsidePath.replacingOccurrences(of: "'", with: "'\\''")
             let denied = try await run("if printf changed > '\(escaped)'; then printf ALLOWED; else printf BLOCKED; fi")
             guard String(decoding: denied, as: UTF8.self).contains("BLOCKED"), try Data(contentsOf: outside) == original else {
                 throw CorePluginError.invalid("Sandbox outside-write assertion failed.")

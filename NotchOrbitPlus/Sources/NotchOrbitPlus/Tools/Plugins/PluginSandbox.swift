@@ -18,6 +18,18 @@ struct PlusPluginProcessFailure: LocalizedError, Sendable {
     }
 }
 enum PlusPluginFolderIO {
+    static func physicalPath(_ path: String) -> String? {
+        guard let pointer = path.withCString({ Darwin.realpath($0, nil) }) else { return nil }
+        defer { Darwin.free(pointer) }
+        return String(cString: pointer)
+    }
+    static func physicalDirectoryPath(_ folder: URL) throws -> String {
+        guard folder.isFileURL, let path = physicalPath(folder.path) else { throw CorePluginError.invalid("The chosen plugin folder is unavailable.") }
+        let descriptor = Darwin.open(path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+        guard descriptor >= 0 else { throw CorePluginError.invalid("Plugin grants must refer to existing directories.") }
+        Darwin.close(descriptor)
+        return path
+    }
     static func readRegistry(_ folder: URL) throws -> Data {
         let descriptor = open(folder.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
         guard descriptor >= 0 else { throw CorePluginError.invalid("Plugin storage is unavailable or is a symbolic link.") }
@@ -28,8 +40,8 @@ enum PlusPluginFolderIO {
         guard folder.isFileURL else { throw CorePluginError.invalid("Choose a local plugin folder.") }
         let accessing = folder.startAccessingSecurityScopedResource()
         defer { if accessing { folder.stopAccessingSecurityScopedResource() } }
-        let canonical = folder.resolvingSymlinksInPath().standardizedFileURL
-        let descriptor = open(canonical.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+        let canonical = try physicalDirectoryPath(folder)
+        let descriptor = open(canonical, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
         guard descriptor >= 0 else { throw CorePluginError.invalid("The chosen plugin folder is unavailable.") }
         defer { close(descriptor) }
         let manifest = try CorePluginManifest.decode(readFile("manifest.json", directory: descriptor))
@@ -73,24 +85,37 @@ enum PlusPluginSandbox {
             guard !path.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) else { throw CorePluginError.invalid("Folder path contains unsupported control characters.") }
             return "\"" + path.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
         }
-        let root = try literal(folder.resolvingSymlinksInPath().path)
+        let folderPath = try PlusPluginFolderIO.physicalDirectoryPath(folder)
+        let readPaths = try readFolders.map(PlusPluginFolderIO.physicalDirectoryPath)
+        let root = try literal(folderPath)
         // Newer dyld loads the shared cache from the sealed OS cryptex.
         // Seatbelt checks the resolved Preboot path as well as its OS alias.
         let runtimeAliases = ["/System/Library", "/usr/lib", "/System/Cryptexes/OS/System/Library", "/System/Cryptexes/OS/usr/lib"]
         let runtimePaths = Set(runtimeAliases.flatMap { path in
-            [path, URL(fileURLWithPath: path, isDirectory: true).resolvingSymlinksInPath().path]
+            [path] + (PlusPluginFolderIO.physicalPath(path).map { [$0] } ?? [])
         }).sorted()
         let runtimeFilters = try runtimePaths.map { "(subpath \(try literal($0)))" }.joined(separator: " ")
+        var metadataPaths: Set<String> = ["/", "/System/Cryptexes/OS"]
+        for path in [folderPath] + readPaths + runtimePaths {
+            var parent = (path as NSString).deletingLastPathComponent
+            while !parent.isEmpty {
+                metadataPaths.insert(parent)
+                if parent == "/" { break }
+                parent = (parent as NSString).deletingLastPathComponent
+            }
+        }
+        let metadataFilters = try metadataPaths.sorted().map { "(literal \(try literal($0)))" }.joined(separator: " ")
         var profile = """
         (version 1)
         (deny default)
         (allow process-exec (literal "/bin/bash"))
         (allow sysctl-read)
         (allow file-read-data (literal "/"))
+        (allow file-read-metadata \(metadataFilters))
         (allow file-read* \(runtimeFilters) (literal "/bin/bash") (subpath \(root)))
         (allow file-map-executable \(runtimeFilters) (literal "/bin/bash"))
         """
-        for folder in readFolders { profile += "\n(allow file-read* (subpath \(try literal(folder.resolvingSymlinksInPath().path))))" }
+        for path in readPaths { profile += "\n(allow file-read* (subpath \(try literal(path))))" }
         if writable { profile += "\n(allow file-write* (subpath \(root)))" }
         // No network, mach/Apple Events, device/clipboard access, process-fork,
         // or arbitrary runtime execution is granted. v1 uses shell builtins.
@@ -105,19 +130,21 @@ final class PlusPluginProcess: @unchecked Sendable {
     private var timedOut = false
     func run(folder: URL, command: CorePluginCommand, grants: Set<CorePluginPermission>, readFolders: [URL], clipboard: String?) async throws -> Data {
         guard PlusPluginSandbox.available else { throw CorePluginError.invalid("The macOS sandbox runner is unavailable. Plugin scripts are disabled on this Mac.") }
-        let profile = try PlusPluginSandbox.profile(folder: folder, writable: grants.contains(.ownFolderWrite), readFolders: readFolders)
-        let work = Task.detached(priority: .userInitiated) { try self.execute(folder: folder, command: command, profile: profile, clipboard: clipboard, readFolders: readFolders) }
+        let folderPath = try PlusPluginFolderIO.physicalDirectoryPath(folder)
+        let readPaths = try readFolders.map(PlusPluginFolderIO.physicalDirectoryPath)
+        let profile = try PlusPluginSandbox.profile(folder: URL(fileURLWithPath: folderPath, isDirectory: true), writable: grants.contains(.ownFolderWrite), readFolders: readPaths.map { URL(fileURLWithPath: $0, isDirectory: true) })
+        let work = Task.detached(priority: .userInitiated) { try self.execute(folderPath: folderPath, command: command, profile: profile, clipboard: clipboard, readPaths: readPaths) }
         return try await withTaskCancellationHandler { try await work.value } onCancel: { self.cancel(); work.cancel() }
     }
-    private func execute(folder: URL, command: CorePluginCommand, profile: String, clipboard: String?, readFolders: [URL]) throws -> Data {
+    private func execute(folderPath: String, command: CorePluginCommand, profile: String, clipboard: String?, readPaths: [String]) throws -> Data {
         try Task.checkCancellation()
         let child = Process(); let output = Pipe()
         child.executableURL = PlusPluginSandbox.executable
-        child.arguments = ["-p", profile, PlusPluginSandbox.interpreter.path, "--noprofile", "--norc", "--posix", folder.appendingPathComponent(command.script).path]
-        child.currentDirectoryURL = folder
-        var environment = ["PATH": "/nonexistent", "LC_ALL": "C", "ORBIT_PLUGIN_API": "1"]
+        child.arguments = ["-p", profile, PlusPluginSandbox.interpreter.path, "--noprofile", "--norc", "--posix", folderPath + "/" + command.script]
+        child.currentDirectoryURL = URL(fileURLWithPath: folderPath, isDirectory: true)
+        var environment = ["PATH": "/nonexistent", "LC_ALL": "C", "ORBIT_PLUGIN_API": "1", "PWD": folderPath]
         if let clipboard { environment["ORBIT_CLIPBOARD"] = clipboard }
-        for (index, folder) in readFolders.enumerated() { environment["ORBIT_READ_FOLDER_\(index)"] = folder.path }
+        for (index, path) in readPaths.enumerated() { environment["ORBIT_READ_FOLDER_\(index)"] = path }
         child.environment = environment
         child.standardInput = FileHandle.nullDevice; child.standardOutput = output; child.standardError = output
         lock.lock(); guard !cancelled else { lock.unlock(); throw CancellationError() }; process = child; lock.unlock()

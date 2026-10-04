@@ -92,6 +92,11 @@ final class FocusAppHidingStore: ObservableObject {
         active = true
         let candidates = FocusAppPolicy.hideCandidates(configuration: configuration, running: snapshots(), ownProcessID: ownProcessID)
         for candidate in candidates {
+            guard !owned.contains(where: { $0.processID == candidate.processID && $0.bundleID == candidate.bundleID && $0.launchDate == candidate.launchDate }) else { continue }
+            guard owned.count < 32 else {
+                error = "Focus hiding has 32 pending app restores. Restore Apps before hiding more applications."
+                break
+            }
             // Save ownership first so an unexpected exit does not lose Undo.
             owned.append(candidate); persistRecovery()
             if !hideApp(candidate.processID) {

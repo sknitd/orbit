@@ -107,12 +107,16 @@ struct ContextToolView: View {
                 ForEach(service.rules) { rule in
                     HStack(spacing: 8) {
                         Toggle("", isOn: Binding(get: { rule.enabled }, set: { flag in var copy = rule; copy.enabled = flag; _ = service.save(copy) })).labelsHidden()
+                            .accessibilityLabel("Enable rule \(rule.name)")
                         VStack(alignment: .leading) { Text(rule.name); Text("\(rule.trigger.title) → \(PlusTool(rawValue: rule.toolID)?.title ?? "Unavailable tool")").font(.caption).foregroundStyle(.secondary) }
                         Spacer()
                         Button { service.move(rule.id, by: -1) } label: { Image(systemName: "chevron.up") }.help("Earlier priority")
+                            .accessibilityLabel("Move \(rule.name) earlier")
                         Button { service.move(rule.id, by: 1) } label: { Image(systemName: "chevron.down") }.help("Later priority")
+                            .accessibilityLabel("Move \(rule.name) later")
                         Button("Edit") { service.setEditorOpen(true); editing = rule }
                         Button { service.remove(rule.id) } label: { Image(systemName: "trash") }.help("Delete rule")
+                            .accessibilityLabel("Delete rule \(rule.name)")
                     }
                 }
             }.frame(height: 200)
