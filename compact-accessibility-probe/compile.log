@@ -1,0 +1,7 @@
+/Users/runner/work/orbit/orbit/NotchOrbitPlus/Scripts/CompactAccessibilityProbe.swift:40:65: error: missing argument label 'of:' in call
+38 |             try? await Task.sleep(for: .milliseconds(200))
+39 |             host.layoutSubtreeIfNeeded(); host.displayIfNeeded()
+40 |             let unignored = NSAccessibility.unignoredDescendant(host)
+   |                                                                 `- error: missing argument label 'of:' in call
+41 |             var item: [String: Any] = ["identifier": identifier, "synthetic_fixture": true,
+42 |                 "host_tree": CompactAccessibilityFixture.tree(below: host),
