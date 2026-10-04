@@ -1,0 +1,25 @@
+{
+  "full_repository_source_commit": "2924103225aaa0de37ea45c8ba55a0b4e5c3f3ed",
+  "standalone_build_commit": "99ee9ed0123322a4785442afb1006a5eaca555ac",
+  "result_commit": "b43e13edb99503527d37639a792f7fa01bca6ae2",
+  "run_url": "https://github.com/sknitd/orbit/actions/runs/37239008254",
+  "portable_test_count": 36,
+  "native_test_count": 41,
+  "unique_test_count": 77,
+  "native_suites": {
+    "CornerOrbitTests.CornerActionTests": 8,
+    "CornerOrbitTests.CornerAppStoreTests": 7,
+    "CornerOrbitTests.CornerEvaluationTests": 6,
+    "CornerOrbitTests.CornerGestureNativeTests": 7,
+    "CornerOrbitTests.CornerHistoryTests": 13
+  },
+  "native_previews": 12,
+  "archive_sha256": "881613151aa1c1e366610d1c9fa78ac53cb22e7b5628cf8f4c8951c72574c390",
+  "zip_crc_passed": true,
+  "release_has_no_test_bundles": true,
+  "linux_portable_test_count": 36,
+  "linux_swift_version": "6.2",
+  "anonymous_download_sha256_verified": true,
+  "scope_baseline_commit": "3b8647749e770c85e6faa9cf34e65bfe4a2d6242",
+  "physical_mac_acceptance": "Pending; see EVALUATION.md and known-limitations.md"
+}

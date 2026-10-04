@@ -1,6 +1,6 @@
 # Known limitations
 
-- A genuine Mac runner build is required for the app; Linux can only execute portable logic tests. This build uses an ad hoc signature and is not notarized.
+- The genuine Mac runner build passed 77 unique tests and produced a universal app. Linux can only execute the portable logic tests. The build uses an ad hoc signature and is not notarized; physical macOS 14 and Intel launch acceptance remains open.
 - Input Monitoring prompts, live mouse/trackpad behavior, screen lock notification order, Spaces/fullscreen, scale changes and multi-display placement need interactive physical Mac acceptance. Public session notifications cancel known transitions; a fixture cannot prove every lock-screen ordering.
 - macOS Hot Corners and underlying applications still receive input. The app does not suppress their behavior. Single and double actions intentionally wait for click disambiguation.
 - Office apps, Chrome, ChatGPT, Claude and Spotify must be installed. Office licensing/first-run dialogs and real Automation prompts must be exercised on a Mac. No browser fallback is substituted for the ChatGPT or Claude desktop apps.

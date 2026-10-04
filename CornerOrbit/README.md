@@ -2,6 +2,14 @@
 
 A native menu bar app for **macOS 14 and later**, with a separate action for every gesture at every screen corner. The universal app supports Apple silicon and Intel Macs. This independent product lives entirely in `CornerOrbit/`; OrbitDrop, NotchOrbit and NotchOrbitPlus are unchanged.
 
+**[Download CornerOrbit.app v0.1.0 (ZIP)](https://raw.githubusercontent.com/sknitd/orbit/b43e13edb99503527d37639a792f7fa01bca6ae2/CornerOrbit.app.zip)** · [SHA-256 checksum](https://raw.githubusercontent.com/sknitd/orbit/b43e13edb99503527d37639a792f7fa01bca6ae2/CornerOrbit.app.zip.sha256) · [Successful macOS build](https://github.com/sknitd/orbit/actions/runs/37239008254)
+
+77 unique tests passed: 36 portable and 41 native. The download was built on a real macOS runner, verified for both CPU architectures, and independently checked against its checksum. It is ad hoc signed, **not notarized**.
+
+![Native CornerOrbit settings with a data-only starter preset](docs/CornerOrbit-Settings-four-corners-fixture.png)
+
+The screenshot is an actual native fixture capture. Production starts with all actions unassigned; the starter preset is optional.
+
 ## Install and use
 
 The downloadable ZIP contains `CornerOrbit.app`. Extract it, move the app to Applications, and open it. The build is ad hoc signed, not Developer ID signed or notarized. macOS may require **System Settings → Privacy & Security → Open Anyway** for this downloaded app.
@@ -61,5 +69,7 @@ bash Scripts/build.sh
 ```
 
 The Mac script runs portable and hosted native tests, captures actual native fixture views, builds both CPU slices with a macOS 14 minimum, verifies an ad hoc signature, measures idle launch CPU/RSS, and produces `dist/CornerOrbit.app.zip` plus its SHA-256 checksum. See [EVALUATION.md](EVALUATION.md) for executed evidence and [known-limitations.md](known-limitations.md) for physical Mac checks.
+
+The delivered ZIP is 1,239,876 bytes. Its SHA-256 is `881613151aa1c1e366610d1c9fa78ac53cb22e7b5628cf8f4c8951c72574c390`.
 
 The workflow is stored inside this subdirectory at [`.github/workflows/build.yml`](.github/workflows/build.yml). CI uses an isolated `codex/cornerorbit-build` subtree branch, where this directory becomes the repository root. That allows native CI without editing the existing repository workflows. Each run preserves its exact source identifier, logs, previews and successful package on a separate result branch.
