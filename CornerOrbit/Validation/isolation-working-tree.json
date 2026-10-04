@@ -1,0 +1,26 @@
+{
+  "outcome": "passed",
+  "base_commit": "3b8647749e770c85e6faa9cf34e65bfe4a2d6242",
+  "source_commit": "3b8647749e770c85e6faa9cf34e65bfe4a2d6242",
+  "working_tree_inspected": true,
+  "committed_changed_paths": [],
+  "working_tree_changed_paths": [],
+  "untracked_paths": [
+    "CornerOrbit/.gitignore",
+    "CornerOrbit/ARCHITECTURE.md",
+    "CornerOrbit/Package.swift",
+    "CornerOrbit/Resources/Info.plist",
+    "CornerOrbit/Scripts/check-sdk.sh",
+    "CornerOrbit/Scripts/cloud-core-tests.sh",
+    "CornerOrbit/Scripts/generate-project.py",
+    "CornerOrbit/Sources/CornerCore/CornerActions.swift",
+    "CornerOrbit/Sources/CornerCore/CornerSettings.swift"
+  ],
+  "outside_cornerorbit_paths": [],
+  "changed_path_count": 9,
+  "scope": "All changed tracked paths are compared to the immutable base; deletions/renames cannot conceal changes outside CornerOrbit/.",
+  "limitations": [
+    "Git content/path isolation does not prove that the running app avoids user-file effects.",
+    "Ignored build outputs are not tracked source changes and are inspected separately as package/runtime evidence."
+  ]
+}
