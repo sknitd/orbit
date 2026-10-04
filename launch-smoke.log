@@ -1,0 +1,2 @@
+NotchOrbitPlus stayed running for the 3-second startup smoke check.
+Idle launch: CPU 0.090% (limit 3.0%), sampled peak RSS 87.245 MB (limit 250.0 MB), 11 actual samples after 8s warmup: passed.

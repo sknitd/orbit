@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "product": "NotchOrbitPlus",
+  "bundle_identifier": "com.sknitd.NotchOrbitPlus",
+  "version": "0.3.0",
+  "minimum_macos": "14.0",
+  "source_commit": "7dc43a6aec2a4d14657d41186c193b850dcfa43e",
+  "archive_url": "https://raw.githubusercontent.com/sknitd/orbit/codex/notch-plus-updates/packages/0.3.0/7dc43a6aec2a4d14657d41186c193b850dcfa43e/NotchOrbitPlus.app.zip",
+  "archive_sha256": "f258c6fa17c303a088759cd87e6aa12035e451151aabb6cc7afef30c8f3b89fa",
+  "archive_bytes": 8414997,
+  "release_notes_url": "https://github.com/sknitd/orbit/tree/7dc43a6aec2a4d14657d41186c193b850dcfa43e/NotchOrbitPlus",
+  "published_at": "2026-10-04T17:34:21.386487+00:00",
+  "signing": {
+    "kind": "adhoc",
+    "team_identifier": null,
+    "notarized": false
+  }
+}
