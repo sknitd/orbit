@@ -31,8 +31,9 @@ final class DistributionEvaluationTests: NativeImageFixtureCase, @unchecked Send
         let executable = executableDirectory.appendingPathComponent("NotchOrbitPlus")
         try Data("#!/bin/sh\nexit 0\n".utf8).write(to: executable)
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: executable.path)
-        let archive = try XCTUnwrap((try await ArchiveEngine().perform(.zip, items: FileInspector.inspect([candidate]),
-                                                                        context: .init())).outputs.first)
+        let archiveResult = try await ArchiveEngine().perform(.zip, items: FileInspector.inspect([candidate]),
+                                                              context: .init())
+        let archive = try XCTUnwrap(archiveResult.outputs.first)
         let archiveBytes = try Data(contentsOf: archive)
         let feed = try updateFeed(archive: archiveBytes)
         let current = Bundle.main.bundleURL

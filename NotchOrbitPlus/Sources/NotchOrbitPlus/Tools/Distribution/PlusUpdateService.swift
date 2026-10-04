@@ -152,9 +152,9 @@ final class PlusUpdateService: ObservableObject {
                 guard try feed.isNewer(than: currentVersion) else { available = nil; downloadedArchive = nil; status = "You have the latest published version (\(currentVersion))."; return }
                 if available?.archiveSHA256 != feed.archiveSHA256 { downloadedArchive = nil }
                 available = feed; status = "Version \(feed.version) is available."
-                if automatic && automaticallyDownload {
+                if automatic && automaticallyCheck && automaticallyDownload {
                     let file = try await downloadFile(feed)
-                    if automaticallyInstall && trustedInstallationAvailable {
+                    if automaticallyCheck && automaticallyDownload && automaticallyInstall && trustedInstallationAvailable {
                         try await installFile(file, feed: feed, automatic: true)
                     }
                 }
