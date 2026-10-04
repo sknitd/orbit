@@ -15,7 +15,10 @@ final class ExpandedCompactEvaluationTests: XCTestCase {
             ("package", .init(id: "fixture-package", kind: .package, title: "Sample parcel", detail: "Provider fixture · In transit", toolID: "packageTracker")),
             ("travel", .init(id: "fixture-travel", kind: .travel, title: "Flight AB123", detail: "Calendar fixture · Departure in 2h", toolID: "travelStatus")),
             ("sports", .init(id: "fixture-sports", kind: .sports, title: "Sample team 2–1", detail: "Provider fixture · 72 minutes", toolID: "sportsScores")),
-            ("weather", .init(id: "fixture-weather", kind: .weather, title: "Heavy rain", detail: "Forecast fixture · 14:00–16:00", toolID: "weather"))
+            ("weather", .init(id: "fixture-weather", kind: .weather, title: "Heavy rain", detail: "Forecast fixture · 14:00–16:00", toolID: "weather")),
+            ("focus", .init(id: "fixture-focus", kind: .focus, title: "24:30", detail: "Focus timer fixture", toolID: "timers")),
+            ("devices", .init(id: "fixture-devices", kind: .devices, title: "Fixture headset", detail: "Fixture battery · 62%", toolID: "devices")),
+            ("status", .init(id: "fixture-status", kind: .status, title: "Fixture Focus", detail: "Fixture authorized sharing · Active", toolID: "status"))
         ]
         let processing = LiveNotchStatus(id: "fixture-processing", kind: .processing,
             title: "Resizing images", detail: "2 of 3", toolID: "workflows", progress: 2.0 / 3.0)

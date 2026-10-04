@@ -41,17 +41,42 @@ import SwiftUI
 import Translation
 import Speech
 
+struct TranslationSDKRequest: Sendable {
+    let id: UUID
+    let text: String
+}
+
+@MainActor
+final class TranslationSDKStore {
+    var request: TranslationSDKRequest? = .init(id: UUID(), text: "Hello")
+    func isCurrent(_ id: UUID) -> Bool { request?.id == id }
+    func prepared(_ id: UUID) { }
+    func complete(_ id: UUID, text: String) { }
+    func fail(_ id: UUID, message: String) { }
+}
+
 @available(macOS 15.0, *)
 @MainActor
 struct TranslationSDKProbe: View {
+    private let store = TranslationSDKStore()
     @State private var configuration: TranslationSession.Configuration? = .init(
         source: Locale.Language(identifier: "en"), target: Locale.Language(identifier: "es"))
     var body: some View {
-        Text("SDK probe").translationTask(configuration) { session in
+        Text("SDK probe").translationTask(configuration, action: Self.translationAction(store: store))
+    }
+    nonisolated static func translationAction(store: TranslationSDKStore) -> @Sendable (TranslationSession) async -> Void {
+        { session in
+            guard let request = await store.request, await store.isCurrent(request.id) else { return }
             do {
+                try Task.checkCancellation()
                 try await session.prepareTranslation()
-                _ = try await session.translate("Hello").targetText
-            } catch { }
+                try Task.checkCancellation()
+                guard await store.isCurrent(request.id) else { return }
+                await store.prepared(request.id)
+                let result = try await session.translate(request.text)
+                try Task.checkCancellation()
+                await store.complete(request.id, text: result.targetText)
+            } catch { await store.fail(request.id, message: error.localizedDescription) }
         }
     }
     func invalidate() { configuration?.invalidate() }
@@ -78,6 +103,7 @@ pathlib.Path('build/sdk-inventory.json').write_text(json.dumps({
     'swift': sys.argv[4], 'host_architecture': sys.argv[5],
     'deployment_target': '14.0', 'foundation_models_api_typechecked': True,
     'translation_api_typechecked': True, 'on_device_speech_api_typechecked': True,
+    'translation_nonisolated_session_action_typechecked': True,
     'translation_speech_probe_architectures': ['arm64', 'x86_64']
 }, indent=2) + '\n')
 PY

@@ -90,7 +90,15 @@ private struct OrbitNativeTranslationPanel: View {
                 configuration = .init(source: Locale.Language(identifier: request.source), target: Locale.Language(identifier: request.target))
                 configuration?.invalidate()
             } else { configuration = nil }
-        }.translationTask(configuration) { session in
+        }.translationTask(configuration, action: Self.translationAction(store: store))
+            .background(CaptureToolVisibility(onVisible: {}, onHidden: { store.cancel() }).frame(width: 0, height: 0))
+    }
+
+    // Creating the action outside the View's MainActor prevents its
+    // non-Sendable framework session from acquiring UI actor isolation.
+    // Only the Sendable request snapshot and result text cross to the store.
+    nonisolated static func translationAction(store: TranslationToolStore) -> @Sendable (TranslationSession) async -> Void {
+        { session in
             guard let request = await store.request, await store.isCurrent(request.id) else { return }
             do {
                 try Task.checkCancellation()
@@ -102,7 +110,7 @@ private struct OrbitNativeTranslationPanel: View {
                 try Task.checkCancellation()
                 await store.complete(request.id, text: result.targetText)
             } catch { await store.fail(request.id, message: error.localizedDescription) }
-        }.background(CaptureToolVisibility(onVisible: {}, onHidden: { store.cancel() }).frame(width: 0, height: 0))
+        }
     }
 }
 #endif
