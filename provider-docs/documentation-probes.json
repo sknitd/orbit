@@ -1,0 +1,157 @@
+[
+  {
+    "provider": "aviationstack",
+    "url": "https://aviationstack.com/documentation",
+    "account_api_called": false,
+    "status": 200,
+    "bytes": 85613,
+    "sha256": "d3a0387b226c66e2a37470422296aa281714c444f10f1c04560e44b7a1daac14",
+    "final_url": "https://docs.apilayer.com/aviationstack/docs/api-documentation?utm_source=AviationstackHomePage&utm_medium=Referral",
+    "response_file": "aviationstack.html",
+    "markers": {
+      "flight_iata": false,
+      "flight_status": false,
+      "access_key": false,
+      "https://api.aviationstack.com/v1/flights": false
+    }
+  },
+  {
+    "provider": "aviationstack-api-documentation",
+    "url": "https://docs.apilayer.com/aviationstack/docs/api-documentation",
+    "account_api_called": false,
+    "status": 200,
+    "bytes": 85373,
+    "sha256": "331d279a0cf737ab21e532afed189f448a1c3d899210f02ad56fcea6f96a81b4",
+    "final_url": "https://docs.apilayer.com/aviationstack/docs/api-documentation",
+    "response_file": "aviationstack-api-documentation.html",
+    "markers": {
+      "flight_iata": false,
+      "flight_status": false,
+      "access_key": false,
+      "api.aviationstack.com/v1/flights": false,
+      "scheduled": false,
+      "estimated": false,
+      "departure": false,
+      "arrival": false,
+      "gate": true,
+      "limit": true
+    }
+  },
+  {
+    "provider": "aviationstack-api-reference",
+    "url": "https://docs.apilayer.com/aviationstack/docs/aviationstack-api-v-1-0-0",
+    "account_api_called": false,
+    "linked_from": "https://docs.apilayer.com/aviationstack/docs/api-documentation",
+    "link_evidence": "Official page API Endpoints link and inert SSR apiSpec/shubUrl metadata, recorded in run-37226333904-1.",
+    "status": 200,
+    "bytes": 122650,
+    "sha256": "c078b8dbe0b5cd9ca66251c074952122c4d9ae234681767f19af44ed38c49dfb",
+    "final_url": "https://docs.apilayer.com/aviationstack/docs/aviationstack-api-v-1-0-0",
+    "response_file": "aviationstack-api-reference.html",
+    "markers": {
+      "flight_iata": true,
+      "flight_status": true,
+      "access_key": true,
+      "/v1/flights": true,
+      "scheduled": true,
+      "estimated": true,
+      "departure": true,
+      "arrival": true,
+      "gate": true,
+      "limit": true
+    }
+  },
+  {
+    "provider": "aviationstack-openapi",
+    "url": "https://api.swaggerhub.com/apis/apilayer-863/AviationstackAPI/1.0.0/swagger.json",
+    "account_api_called": false,
+    "linked_from": "https://docs.apilayer.com/aviationstack/docs/api-documentation",
+    "link_evidence": "Official page API Endpoints link and inert SSR apiSpec/shubUrl metadata, recorded in run-37226333904-1.",
+    "status": 200,
+    "bytes": 42863,
+    "sha256": "8951f953bd4911a0afbeb1ab4927bb942507bf23c1f277415af709f8b3db1e08",
+    "final_url": "https://api.swaggerhub.com/apis/apilayer-863/AviationstackAPI/1.0.0/swagger.json",
+    "response_file": "aviationstack-openapi.json",
+    "markers": {
+      "flight_iata": true,
+      "flight_status": true,
+      "access_key": true,
+      "scheduled": true,
+      "estimated": true,
+      "departure": true,
+      "arrival": true,
+      "gate": true,
+      "limit": true
+    },
+    "openapi_summary": {
+      "version": "3.0.0",
+      "servers": [
+        {
+          "url": "https://api.aviationstack.com",
+          "description": "Production server"
+        }
+      ],
+      "host": null,
+      "base_path": null,
+      "flights": {
+        "/v1/flights": {
+          "get_present": true,
+          "inline_parameter_names": [
+            "flight_status",
+            "flight_date",
+            "dep_iata",
+            "arr_iata",
+            "dep_icao",
+            "arr_icao",
+            "airline_name",
+            "airline_iata",
+            "airline_icao",
+            "flight_number",
+            "flight_iata",
+            "flight_icao",
+            "min_delay_dep",
+            "min_delay_arr",
+            "max_delay_dep",
+            "max_delay_arr",
+            "arr_scheduled_time_arr",
+            "dep_scheduled_time_dep"
+          ],
+          "parameter_refs": [
+            "#/components/parameters/AccessKey",
+            "#/components/parameters/Callback",
+            "#/components/parameters/Limit",
+            "#/components/parameters/Offset"
+          ]
+        }
+      }
+    }
+  },
+  {
+    "provider": "api-sports",
+    "url": "https://www.api-football.com/documentation-v3",
+    "account_api_called": false,
+    "status": 403,
+    "error": "HTTP Error 403: Forbidden",
+    "bytes": 5502,
+    "sha256": "cac98e09b7c415755c5b8837157a8dfb5e67dc50815b8a751a491150f7a90dc2",
+    "response_file": "api-sports.error-response.txt"
+  },
+  {
+    "provider": "api-sports-sdk-teams",
+    "url": "https://raw.githubusercontent.com/api-sports/api-sports/55887ecf0d5b2a494162561ead5a244dd7f64f56/src/API-Football.SDK/V3/Teams.cs",
+    "account_api_called": false,
+    "source_commit": "55887ecf0d5b2a494162561ead5a244dd7f64f56",
+    "evidence_scope": "Official SDK documents season/league queries; this file does not establish support for teams?search.",
+    "status": 200,
+    "bytes": 1049,
+    "sha256": "fb8c19b04d9e6d18c1839e82c50488f01b52871dfa13e05e8c683cb3fe50f7e5",
+    "final_url": "https://raw.githubusercontent.com/api-sports/api-sports/55887ecf0d5b2a494162561ead5a244dd7f64f56/src/API-Football.SDK/V3/Teams.cs",
+    "response_file": "api-sports-sdk-teams.cs",
+    "markers": {
+      "teams?": true,
+      "season=": true,
+      "league=": true,
+      "search": false
+    }
+  }
+]

@@ -1,0 +1,10 @@
+{
+  "checks" : [
+
+  ],
+  "diagnostic" : "Plugin command or sandbox exited with status 126. No output was applied.\nSandbox diagnostic: shell-init: error retrieving current directory: getcwd: cannot access parent directories: Operation not permitted\n\/bin\/bash: \/var\/folders\/36\/tjdph2t965j8snz9_vkdnw0r0000gn\/T\/OrbitPluginProbe-81A2CE2D-ABA8-4594-BDD5-BB4F6B1E636C\/plugin\/fixture.sh: Operation not permitted",
+  "outcome" : "failed",
+  "process_id" : 3555,
+  "terminated_by_signal" : false,
+  "termination_status" : 126
+}

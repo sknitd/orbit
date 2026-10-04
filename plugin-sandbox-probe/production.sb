@@ -1,0 +1,7 @@
+(version 1)
+(deny default)
+(allow process-exec (literal "/bin/bash"))
+(allow sysctl-read)
+(allow file-read-data (literal "/"))
+(allow file-read* (subpath "/System/Cryptexes/OS/System/Library") (subpath "/System/Cryptexes/OS/usr/lib") (subpath "/System/Library") (subpath "/System/Volumes/Preboot/Cryptexes/OS/System/Library") (subpath "/System/Volumes/Preboot/Cryptexes/OS/usr/lib") (subpath "/usr/lib") (literal "/bin/bash") (subpath "/var/folders/36/tjdph2t965j8snz9_vkdnw0r0000gn/T/OrbitPluginProbe-81A2CE2D-ABA8-4594-BDD5-BB4F6B1E636C/plugin"))
+(allow file-map-executable (subpath "/System/Cryptexes/OS/System/Library") (subpath "/System/Cryptexes/OS/usr/lib") (subpath "/System/Library") (subpath "/System/Volumes/Preboot/Cryptexes/OS/System/Library") (subpath "/System/Volumes/Preboot/Cryptexes/OS/usr/lib") (subpath "/usr/lib") (literal "/bin/bash"))
