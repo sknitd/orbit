@@ -109,7 +109,11 @@ jobs:
         run: |
           set -euo pipefail
           report_dir="$(mktemp -d)"
-          cp NotchOrbitPlus/build/build.log "$report_dir/build.log" || true
+          if [[ -f NotchOrbitPlus/build/build.log ]]; then
+            cp NotchOrbitPlus/build/build.log "$report_dir/build.log"
+          else
+            : > "$report_dir/build.log"
+          fi
           if [[ -f NotchOrbitPlus/build/launch-smoke.log ]]; then
             cp NotchOrbitPlus/build/launch-smoke.log "$report_dir/"
           fi
