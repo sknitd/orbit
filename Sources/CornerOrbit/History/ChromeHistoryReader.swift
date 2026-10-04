@@ -64,7 +64,8 @@ struct ChromeHistoryReader: ChromeHistoryReading {
         sqlite3_limit(database, SQLITE_LIMIT_LENGTH, 64 * 1024)
         sqlite3_limit(database, SQLITE_LIMIT_SQL_LENGTH, 16 * 1024)
         sqlite3_limit(database, SQLITE_LIMIT_ATTACHED, 0)
-        sqlite3_enable_load_extension(database, 0)
+        // Apple system SQLite omits the extension-loading API. This reader
+        // never enables or requests extensions; it uses only fixed read SQL.
         let context = Unmanaged.passUnretained(cancellation).toOpaque()
         sqlite3_progress_handler(database, 1_000, { context in
             guard let context else { return 1 }
