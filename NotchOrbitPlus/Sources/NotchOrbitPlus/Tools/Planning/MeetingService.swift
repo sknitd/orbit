@@ -16,7 +16,8 @@ final class PlusMeetingService: ObservableObject {
     private let store = EKEventStore()
     private let defaults: UserDefaults
     private let opener: @MainActor (URL) -> Bool
-    private var visible = false
+    private var visibleTools = Set<String>()
+    private var visible: Bool { !visibleTools.isEmpty }
     private var polling: Task<Void, Never>?
     private var observer: NSObjectProtocol?
     private var started = false
@@ -34,11 +35,14 @@ final class PlusMeetingService: ObservableObject {
         configurePolling()
     }
     func shutdown() {
-        polling?.cancel(); polling = nil; started = false
+        polling?.cancel(); polling = nil; started = false; visibleTools.removeAll()
         if let observer { NotificationCenter.default.removeObserver(observer) }
         observer = nil; meetings = []
     }
-    func setToolVisible(_ value: Bool) { visible = value; configurePolling() }
+    func setToolVisible(_ value: Bool, toolID: String = "calendar") {
+        if value { visibleTools.insert(toolID) } else { visibleTools.remove(toolID) }
+        configurePolling()
+    }
     func connect() async {
         do {
             guard try await store.requestFullAccessToEvents() else {

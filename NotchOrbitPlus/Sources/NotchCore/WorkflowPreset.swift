@@ -9,10 +9,11 @@ public enum WorkflowStep: Codable, Hashable, Sendable {
     case resize(maxDimension: Int)
     case convert(format: WorkflowFormat)
     case compress(quality: Double)
+    case compressVideo
     case zip
 
     public var order: Int {
-        switch self { case .resize: 0; case .convert: 1; case .compress: 2; case .zip: 3 }
+        switch self { case .resize: 0; case .convert: 1; case .compress, .compressVideo: 2; case .zip: 3 }
     }
     public var title: String {
         switch self {
@@ -20,6 +21,7 @@ public enum WorkflowStep: Codable, Hashable, Sendable {
         case .convert(let format): "Convert to \(format.title)"
         case .compress(let quality): quality.isFinite && (0...1).contains(quality)
             ? "Compress at \(Int((quality * 100).rounded()))%" : "Invalid compression quality"
+        case .compressVideo: "Smaller H.264 MP4"
         case .zip: "One batch ZIP"
         }
     }
@@ -40,8 +42,12 @@ public struct WorkflowPreset: Identifiable, Codable, Hashable, Sendable {
         self.id = id; self.name = name; self.steps = steps
     }
     public var summary: String { steps.map(\.title).joined(separator: " → ") }
+    public var isVideoWorkflow: Bool { steps.contains(.compressVideo) }
     public static var starter: WorkflowPreset {
         .init(name: "Web bundle", steps: [.resize(maxDimension: 1600), .convert(format: .jpeg), .compress(quality: 0.72), .zip])
+    }
+    public static var videoStarter: WorkflowPreset {
+        .init(name: "Smaller recording", steps: [.compressVideo])
     }
     public func validated() throws -> WorkflowPreset {
         var copy = self
@@ -53,6 +59,11 @@ public struct WorkflowPreset: Identifiable, Codable, Hashable, Sendable {
         }
         guard (1...4).contains(steps.count), zipIsLast else {
             throw WorkflowValidationError.invalid("Choose 1–4 steps; ZIP must be last.")
+        }
+        if isVideoWorkflow {
+            guard steps == [.compressVideo] || steps == [.compressVideo, .zip] else {
+                throw WorkflowValidationError.invalid("Video workflows use Compress Video, optionally followed by ZIP. Image and video steps cannot be mixed.")
+            }
         }
         guard zip(steps, steps.dropFirst()).allSatisfy({ $0.order < $1.order }) else {
             throw WorkflowValidationError.invalid("Use each step once, in Resize → Convert → Compress → ZIP order.")
@@ -74,7 +85,7 @@ public struct WorkflowPreset: Identifiable, Codable, Hashable, Sendable {
                         || steps.contains(where: { if case .convert = $0 { true } else { false } }) else {
                     throw WorkflowValidationError.invalid("Choose JPEG, HEIC, or WebP conversion after resizing before a quality step.")
                 }
-            case .convert, .zip: break
+            case .convert, .compressVideo, .zip: break
             }
         }
         return copy

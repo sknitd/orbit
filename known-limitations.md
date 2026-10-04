@@ -1,5 +1,7 @@
 # Known limitations
 
+The limitations below describe **OrbitDrop**. The separate NotchOrbitPlus 0.3.0 dashboard records its own [limitations](NotchOrbitPlus/known-limitations.md) and [executed evaluation](NotchOrbitPlus/EVALUATION.md), including private MediaRemote restrictions, hardware consent, optional sync and signing/update requirements.
+
 The implementation covers the actions and interaction listed in [implemented-features.md](implemented-features.md). The supplied product specification describes a much larger roadmap. Source implementation, automated native tests, interactive validation, and production distribution are distinct milestones.
 
 ## Native validation and distribution

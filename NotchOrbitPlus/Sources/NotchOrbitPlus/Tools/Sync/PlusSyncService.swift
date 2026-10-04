@@ -22,12 +22,14 @@ final class PlusSyncService: ObservableObject {
     private var timer: Task<Void, Never>?
     private var syncTask: Task<Void, Never>?
     private var settingsTask: Task<Void, Never>?
+    private var portableTask: Task<Void, Never>?
     private var generation = UUID()
     private var applyingRemote = false
     private var unsavedLocal = false
     private var ledgerUnreadable = false
-    private var readSettings: (@MainActor () -> SyncSharedSettings)?
-    private var applySettings: (@MainActor (SyncSharedSettings) -> Void)?
+    private var readSettings: (@MainActor () throws -> SyncSharedSettings)?
+    private var applySettings: (@MainActor (SyncSharedSettings) throws -> Void)?
+    private var validateSettings: (@MainActor (SyncSharedSettings) throws -> Void)?
     private let defaults = UserDefaults.standard
     private let enabledKey = "plus.sync.enabled"
     private let bookmarkKey = "plus.sync.folder.bookmark"
@@ -51,8 +53,10 @@ final class PlusSyncService: ObservableObject {
             self.error = "Local sync metadata could not be read. Its original and your local notes/tasks are preserved. Reset metadata with a backup before enabling sync."
         }
     }
-    func configureSettings(read: @escaping @MainActor () -> SyncSharedSettings, apply: @escaping @MainActor (SyncSharedSettings) -> Void) {
-        readSettings = read; applySettings = apply
+    func configureSettings(read: @escaping @MainActor () throws -> SyncSharedSettings,
+                           apply: @escaping @MainActor (SyncSharedSettings) throws -> Void,
+                           validate: (@MainActor (SyncSharedSettings) throws -> Void)? = nil) {
+        readSettings = read; applySettings = apply; validateSettings = validate
     }
     /// Call on launch. This does not access a shared folder unless the user previously enabled sync.
     func start() {
@@ -76,7 +80,7 @@ final class PlusSyncService: ObservableObject {
     }
     func shutdown() {
         generation = UUID(); timer?.cancel(); timer = nil; syncTask?.cancel(); syncTask = nil
-        settingsTask?.cancel(); settingsTask = nil; isSyncing = false
+        settingsTask?.cancel(); settingsTask = nil; portableTask?.cancel(); portableTask = nil; isSyncing = false
         if scoped, let folder { folder.stopAccessingSecurityScopedResource() }
         scoped = false; folder = nil
     }
@@ -114,6 +118,30 @@ final class PlusSyncService: ObservableObject {
         guard enabled, !applyingRemote, !ledgerUnreadable else { return }
         mutate { try $0.captureTasks(items) }
     }
+    func portableDidChange() {
+        guard enabled, !applyingRemote, !ledgerUnreadable else { return }
+        portableTask?.cancel()
+        portableTask = Task { [weak self] in
+            do { try await Task.sleep(for: .milliseconds(250)) } catch { return }
+            guard let self else { return }
+            mutate { try $0.capturePortable(readPortableLibrary()) }
+        }
+    }
+    private func readPortableLibrary() throws -> SyncPortableLibrary {
+        let value = SyncPortableLibrary(launcherPins: try PlusLauncherStore.shared.exportSyncedPins(),
+            workflows: try WorkflowStore.shared.exportSyncedPresets(), palettes: try CoreColorPaletteLibrary.decode(ColorPickerStore.shared.exportData()))
+        try value.validate(); return value
+    }
+    private func validatePortableApply(_ snapshot: SyncSnapshot) throws {
+        if let values = snapshot.launcherPins.preferred(on: snapshot.deviceID) { try PlusLauncherStore.shared.validateSyncedPins(values) }
+        if let values = snapshot.workflows.preferred(on: snapshot.deviceID) { try WorkflowStore.shared.validateSyncedPresets(values) }
+        if let values = snapshot.palettes.preferred(on: snapshot.deviceID) { try ColorPickerStore.shared.validateSyncImport(values.encoded()) }
+    }
+    private func applyPortable(_ snapshot: SyncSnapshot) throws {
+        if let values = snapshot.launcherPins.preferred(on: snapshot.deviceID) { try PlusLauncherStore.shared.applySyncedPins(values) }
+        if let values = snapshot.workflows.preferred(on: snapshot.deviceID) { try WorkflowStore.shared.applySyncedPresets(values) }
+        if let values = snapshot.palettes.preferred(on: snapshot.deviceID) { try ColorPickerStore.shared.applySyncedData(values.encoded()) }
+    }
     func reportUnsavedLocalChanges() { if enabled { unsavedLocal = true } }
     private func mutate(_ change: (inout SyncSnapshot) throws -> Void) {
         do {
@@ -146,6 +174,7 @@ final class PlusSyncService: ObservableObject {
             try next.captureTasks(values)
         }
         if let readSettings { try next.captureSettings(readSettings()) }
+        try next.capturePortable(readPortableLibrary())
         try persist(next); state = next
     }
     func syncNow() {
@@ -153,7 +182,7 @@ final class PlusSyncService: ObservableObject {
         unsavedLocal = false
         NotificationCenter.default.post(name: .plusSyncWillReadLocal, object: nil)
         guard !unsavedLocal else { error = "Unsaved local edits could not be flushed. Sync paused so they cannot be overwritten."; return }
-        settingsTask?.cancel(); settingsTask = nil
+        settingsTask?.cancel(); settingsTask = nil; portableTask?.cancel(); portableTask = nil
         do { try captureLocalFiles() } catch { self.error = "Sync paused; local originals are preserved: \(error.localizedDescription)"; return }
         let base = state, ticket = generation
         isSyncing = true; error = nil; status = "Reading shared snapshots…"
@@ -188,10 +217,15 @@ final class PlusSyncService: ObservableObject {
         // Revalidate/capture files changed while shared-folder coordination was pending.
         try captureLocalFiles()
         let merged = try SyncMerge.threeWay(base: state, local: state, remote: next)
+        try validatePortableApply(merged)
+        if let settings = merged.settings.preferred(on: merged.deviceID) { try validateSettings?(settings) }
         try LocalToolStorage.applySyncState(merged)
-        state = merged
         applyingRemote = true
-        if let settings = merged.settings.preferred(on: merged.deviceID) { applySettings?(settings) }
+        do {
+            try applyPortable(merged)
+            if let settings = merged.settings.preferred(on: merged.deviceID) { try applySettings?(settings) }
+        } catch { applyingRemote = false; throw error }
+        state = merged
         applyingRemote = false
         NotificationCenter.default.post(name: .plusSyncLocalDidChange, object: nil)
         return merged
@@ -213,6 +247,22 @@ final class PlusSyncService: ObservableObject {
             var next = state; try next.captureSettings(revision.value, resolve: true)
             try applyLocally(next); syncNow()
         } catch { self.error = "Could not resolve settings conflict; variants retained: \(error.localizedDescription)" }
+    }
+    func resolvePortable(_ section: SyncPortableSection, revisionID: UUID) {
+        do {
+            try flushBeforeResolution(); try backupConflicts()
+            var library = state.portableLibrary()
+            switch section {
+            case .launcher:
+                guard let value = state.launcherPins.revisions.first(where: { $0.id == revisionID })?.value else { return }; library.launcherPins = value
+            case .workflows:
+                guard let value = state.workflows.revisions.first(where: { $0.id == revisionID })?.value else { return }; library.workflows = value
+            case .palettes:
+                guard let value = state.palettes.revisions.first(where: { $0.id == revisionID })?.value else { return }; library.palettes = value
+            }
+            var next = state; try next.capturePortable(library, resolve: section)
+            try applyLocally(next); syncNow()
+        } catch { self.error = "Could not resolve portable library conflict; variants retained: \(error.localizedDescription)" }
     }
     private func flushBeforeResolution() throws {
         unsavedLocal = false

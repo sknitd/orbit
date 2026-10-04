@@ -14,7 +14,10 @@ struct WorkflowsToolView: View {
             HStack {
                 Label("Saved workflows", systemImage: "arrow.triangle.branch").font(.headline)
                 Spacer()
-                Button("New Preset") { editing = WorkflowPreset(name: "New workflow", steps: [.resize(maxDimension: 1600), .convert(format: .jpeg), .compress(quality: 0.72), .zip]) }
+                Button("New Preset") {
+                    store.setEditorOpen(true)
+                    editing = WorkflowPreset(name: "New workflow", steps: [.resize(maxDimension: 1600), .convert(format: .jpeg), .compress(quality: 0.72), .zip])
+                }
                     .disabled(store.isRunning || store.presets.count >= 24)
             }
             if !store.presets.isEmpty {
@@ -22,7 +25,7 @@ struct WorkflowsToolView: View {
                     Picker("Preset", selection: $store.selectedPresetID) {
                         ForEach(store.presets) { preset in Text(preset.name).tag(Optional(preset.id)) }
                     }.disabled(store.isRunning)
-                    Button("Edit") { editing = store.selectedPreset }.disabled(store.isRunning || store.selectedPreset == nil)
+                    Button("Edit") { store.setEditorOpen(true); editing = store.selectedPreset }.disabled(store.isRunning || store.selectedPreset == nil)
                     Button { if let preset = store.selectedPreset { store.move(preset.id, by: -1) } } label: { Image(systemName: "chevron.up") }
                         .help("Move preset earlier").disabled(store.isRunning || store.selectedPresetID == store.presets.first?.id)
                     Button { if let preset = store.selectedPreset { store.move(preset.id, by: 1) } } label: { Image(systemName: "chevron.down") }
@@ -59,10 +62,12 @@ struct WorkflowsToolView: View {
             if !store.outputURLs.isEmpty {
                 Button("Reveal Outputs") { NSWorkspace.shared.activateFileViewerSelecting(store.outputURLs) }
             }
-            Text("Still images: 64 files maximum, 512 MB each, 2 GB per batch. Resize preserves aspect ratio and never enlarges; without a Convert step it writes PNG. A compression step must reduce the file, otherwise the whole workflow rolls back. ZIP collects the entire batch into one archive.")
+            Text("Images or videos: 64 files maximum, 512 MB each, 2 GB per batch. Each preset uses one media type. Image resize preserves aspect ratio and never enlarges; without Convert it writes PNG. Video compression writes a playable H.264 MP4 using the native preset. Compression must reduce every file, otherwise the whole workflow rolls back. ZIP collects the batch into one archive.")
                 .font(.caption).foregroundStyle(.secondary)
         }
-        .sheet(item: $editing) { preset in WorkflowPresetEditor(preset: preset, save: store.save) }
+        .sheet(item: $editing, onDismiss: { store.setEditorOpen(false) }) { preset in
+            WorkflowPresetEditor(preset: preset, save: store.save)
+        }
         .confirmationDialog("Delete this saved workflow?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), titleVisibility: .visible) {
             if let deleting { Button("Delete \(deleting.name)", role: .destructive) { store.remove(deleting.id); self.deleting = nil } }
             Button("Cancel", role: .cancel) { deleting = nil }
@@ -72,8 +77,10 @@ struct WorkflowsToolView: View {
 
 @MainActor
 private struct WorkflowPresetEditor: View {
+    private enum PresetType: String, CaseIterable { case image = "Images", video = "Video Compression" }
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
+    @State private var presetType: PresetType
     @State private var resizing: Bool
     @State private var dimension: String
     @State private var converting: Bool
@@ -87,6 +94,7 @@ private struct WorkflowPresetEditor: View {
     init(preset: WorkflowPreset, save: @escaping @MainActor (WorkflowPreset) -> Bool) {
         id = preset.id; self.save = save
         _name = State(initialValue: preset.name)
+        _presetType = State(initialValue: preset.isVideoWorkflow ? .video : .image)
         let size = preset.steps.compactMap { if case .resize(let size) = $0 { size } else { nil as Int? } }.first
         _resizing = State(initialValue: size != nil); _dimension = State(initialValue: String(size ?? 1600))
         let type = preset.steps.compactMap { if case .convert(let type) = $0 { type } else { nil as WorkflowFormat? } }.first
@@ -99,7 +107,11 @@ private struct WorkflowPresetEditor: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Workflow preset").font(.title2.weight(.semibold))
             TextField("Name", text: $name).textFieldStyle(.roundedBorder)
+            Picker("Workflow type", selection: $presetType) {
+                ForEach(PresetType.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+            }.pickerStyle(.segmented)
             Form {
+                if presetType == .image {
                 Toggle("1. Resize longest edge", isOn: $resizing)
                 TextField("Maximum pixels (64–12,000)", text: $dimension).disabled(!resizing)
                 Toggle("2. Convert format", isOn: $converting)
@@ -111,9 +123,14 @@ private struct WorkflowPresetEditor: View {
                     Slider(value: $quality, in: 0.1...0.95, step: 0.01).disabled(!compressing)
                     Text("\(Int((quality * 100).rounded()))%").monospacedDigit().frame(width: 44)
                 }
-                Toggle("4. Group outputs in one ZIP", isOn: $zipping)
+                } else {
+                    Label("1. Compress video to H.264 MP4", systemImage: "film")
+                    Text("Apple's native smaller-file preset retains video duration and any existing audio track. A file that cannot become smaller rejects the entire batch.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Toggle(presetType == .image ? "4. Group outputs in one ZIP" : "2. Group outputs in one ZIP", isOn: $zipping)
             }
-            Text("Steps run in the shown order. Quality applies to JPEG, HEIC and WebP. Resizing without conversion writes lossless PNG.")
+            Text(presetType == .image ? "Steps run in the shown order. Quality applies to JPEG, HEIC and WebP. Resizing without conversion writes lossless PNG." : "Drop MOV, MP4 or another video supported by macOS. Image stages cannot be mixed into a video preset. The source recording stays intact.")
                 .font(.caption).foregroundStyle(.secondary)
             LocalToolError(message: error)
             HStack {
@@ -125,6 +142,8 @@ private struct WorkflowPresetEditor: View {
     }
     private func savePreset() {
         var steps: [WorkflowStep] = []
+        if presetType == .video { steps.append(.compressVideo) }
+        else {
         if resizing {
             guard let pixels = Int(dimension.trimmingCharacters(in: .whitespacesAndNewlines)) else {
                 error = "Enter a whole-number maximum dimension."; return
@@ -133,6 +152,7 @@ private struct WorkflowPresetEditor: View {
         }
         if converting { steps.append(.convert(format: format)) }
         if compressing { steps.append(.compress(quality: quality)) }
+        }
         if zipping { steps.append(.zip) }
         do {
             let valid = try WorkflowPreset(id: id, name: name, steps: steps).validated()

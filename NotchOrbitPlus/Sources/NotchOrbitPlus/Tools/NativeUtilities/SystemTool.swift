@@ -67,6 +67,7 @@ private enum OrbitSystemReader {
                 let entry = pointer.pointee
                 if let address = entry.ifa_addr, Int32(address.pointee.sa_family) == AF_LINK,
                    entry.ifa_flags & UInt32(IFF_UP) != 0, entry.ifa_flags & UInt32(IFF_LOOPBACK) == 0,
+                   entry.ifa_flags & UInt32(IFF_RUNNING) != 0,
                    let name = entry.ifa_name, let data = entry.ifa_data {
                     let counters = data.assumingMemoryBound(to: if_data.self).pointee
                     network[String(cString: name)] = OrbitNetworkBytes(received: UInt64(counters.ifi_ibytes), sent: UInt64(counters.ifi_obytes))
@@ -83,7 +84,7 @@ private enum OrbitSystemReader {
                       values[kIOPSTypeKey] as? String == kIOPSInternalBatteryType,
                       let current = values[kIOPSCurrentCapacityKey] as? Int,
                       let maximum = values[kIOPSMaxCapacityKey] as? Int, maximum > 0 else { continue }
-                batteryPercent = min(100, max(0, 100 * Double(current) / Double(maximum)))
+                batteryPercent = SystemDeviceSnapshot.batteryPercent(current: Double(current), maximum: Double(maximum))
                 if values[kIOPSIsChargingKey] as? Bool == true { batteryState = "Charging" }
                 else if values[kIOPSPowerSourceStateKey] as? String == kIOPSACPowerValue { batteryState = "Power adapter" }
                 else { batteryState = "Battery power" }

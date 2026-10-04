@@ -44,6 +44,9 @@ if info.get('CFBundleIdentifier') != 'com.sknitd.NotchOrbitPlus' or info.get('CF
     raise SystemExit('The built application has the wrong product identity.')
 architectures = subprocess.check_output(['lipo', '-archs', str(app / 'Contents/MacOS/NotchOrbitPlus')], text=True).split()
 signing = json.loads(pathlib.Path('build/distribution-signing.json').read_text())
+performance = json.loads(pathlib.Path('build/idle-performance.json').read_text())
+if performance.get('outcome') != 'passed':
+    raise SystemExit('The built application did not meet the measured idle-launch CPU and RSS budgets.')
 if set(architectures) != {'arm64', 'x86_64'}:
     raise SystemExit('The built application is not the required universal binary.')
 for architecture in architectures:
@@ -57,7 +60,14 @@ pathlib.Path('build/package-verification.json').write_text(json.dumps({
     'signature': 'Developer ID' if signing['kind'] == 'developer-id' else 'ad hoc',
     'signing_team_identifier': signing['team_identifier'], 'notarized': signing['notarized'],
     'notarization_status': signing['notarization_status'], 'codesign_verified': True, 'startup_smoke_seconds': 3,
-    'foundation_models_weak_linked': True, 'minimum_macos': info.get('LSMinimumSystemVersion')
+    'foundation_models_weak_linked': True, 'minimum_macos': info.get('LSMinimumSystemVersion'),
+    'idle_performance': {
+        'outcome': performance['outcome'], 'warmup_seconds': performance['warmup_seconds'],
+        'measurement_seconds': performance['measurement_seconds'],
+        'mean_cpu_percent': performance['mean_cpu_percent'],
+        'sampled_peak_rss_mb': performance['sampled_peak_rss_mb'], 'budgets': performance['budgets'],
+        'evidence_file': 'idle-performance.json'
+    }
 }, indent=2) + '\n')
 PY
 ditto -c -k --sequesterRsrc --keepParent "$app_path" dist/NotchOrbitPlus.app.zip

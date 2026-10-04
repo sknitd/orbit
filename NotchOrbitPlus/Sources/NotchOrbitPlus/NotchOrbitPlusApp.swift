@@ -23,9 +23,11 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
     let dashboardPreferences = DashboardPreferences()
     private lazy var dashboard = NotchDashboardController(
         modules: Self.dashboardModules(chooseFiles: { [weak self] in self?.chooseFiles() }, model: model),
-        preferences: dashboardPreferences, compactContent: { [weak self] in
+        preferences: dashboardPreferences, isInteractionActive: {
+            ScreenshotShelfStore.shared.isWorking || ScreenshotShelfStore.shared.isRecording || ColorPickerStore.shared.isPicking
+        }, compactContent: { [weak self] in
             guard let self else { return AnyView(Text("NotchOrbitPlus")) }
-            return AnyView(PlusCompactView(model: self.model))
+            return AnyView(PlusCompactView(model: self.model, preferences: self.dashboardPreferences))
         })
     private let shortcut = GlobalNotchShortcut()
     private let panel = NotchPanelController()
@@ -44,6 +46,12 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
         PlusMeetingService.shared.start()
         configureSync()
         PlusUpdateService.shared.start()
+        PlusIntentCoordinator.shared.toggleDashboard = { [weak self] in self?.dashboard.toggleExpanded() }
+        WorkflowStore.shared.onCompleted = { _ in PlusAppearanceStore.shared.playDropSoundIfEnabled() }
+        SystemControlsService.shared.canPresentHUD = { [weak self] in
+            guard let self else { return false }
+            return self.dashboard.frame != nil && !self.dashboardPreferences.hiddenToolIDs.contains(PlusTool.hud.rawValue)
+        }
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = NSImage(systemSymbolName: "rectangle.topthird.inset.filled",
                                     accessibilityDescription: "NotchOrbitPlus")
@@ -64,7 +72,7 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
         statusItem = item
         dashboard.onOpenSettings = { [weak self] in self?.showSettings() }
         dashboard.onOpenCompact = { [weak self] in
-            guard let self, let status = PlusLiveStatus.statuses(model: self.model, at: Date()).first else { return }
+            guard let self, let status = PlusLiveStatus.statuses(model: self.model, at: Date(), preferences: self.dashboardPreferences).first else { return }
             _ = self.dashboard.selectTool(id: status.toolID)
         }
         dashboard.start()
@@ -102,6 +110,14 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
         PlusSyncService.shared.shutdown()
         PlusUpdateService.shared.shutdown()
         WorkflowStore.shared.cancel()
+        ScreenshotShelfStore.shared.shutdown()
+        ColorPickerStore.shared.shutdown()
+        SystemControlsService.shared.disable()
+        SystemControlsService.shared.canPresentHUD = nil
+        DevicesService.shared.shutdown()
+        StatusService.shared.shutdown()
+        NetworkService.shared.shutdown()
+        PlusIntentCoordinator.shared.toggleDashboard = nil
         settingsSubscription?.cancel()
         LocalProductivityLifecycle.shutdown()
         model.cancel()
@@ -165,6 +181,7 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
                         self.cancelPresentation()
                         self.drag?.finishDrag()
                         self.model.run(action, urls: droppedURLs)
+                        PlusAppearanceStore.shared.playDropSoundIfEnabled()
                     }, onCancel: { [weak self] in
                         self?.cancelPresentation()
                         self?.drag?.finishDrag()
@@ -207,6 +224,9 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
         dashboard.setSuspended(model.preferences.paused)
         WorkflowStore.shared.outputDirectory = model.preferences.outputDownloads
             ? FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first : nil
+        if model.preferences.paused || dashboardPreferences.hiddenToolIDs.contains(PlusTool.hud.rawValue) {
+            SystemControlsService.shared.disable()
+        }
         shortcut.configure(enabled: dashboardPreferences.keyboardShortcutEnabled) { [weak self] in self?.dashboard.toggleExpanded() }
         updateMonitoringStatus()
     }
@@ -216,17 +236,31 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
             guard let preferences = self?.dashboardPreferences else { return SyncSharedSettings() }
             return SyncSharedSettings(toolOrder: preferences.toolOrder,
                 hiddenToolIDs: preferences.hiddenToolIDs.sorted(), openMode: preferences.openMode.rawValue,
-                hoverDelay: preferences.hoverDelay)
+                hoverDelay: preferences.hoverDelay,
+                appearance: try PlusAppearanceStore.shared.exportSyncSettings(),
+                livePriority: try PlusLivePriorityStore.shared.exportSyncSettings(),
+                worldZoneIDs: try WorldClockToolModel.shared.exportSyncZoneIDs())
         }, apply: { [weak self] shared in
-            guard let self, (try? shared.validate()) != nil,
-                  let mode = DashboardOpenMode(rawValue: shared.openMode) else { return }
+            try shared.validate()
+            guard let self, let mode = DashboardOpenMode(rawValue: shared.openMode) else {
+                throw SyncFailure.invalid("The dashboard cannot apply these shared settings.")
+            }
+            if let appearance = shared.appearance { try PlusAppearanceStore.shared.applySynced(appearance) }
+            if let priority = shared.livePriority { try PlusLivePriorityStore.shared.applySynced(priority) }
+            if let zones = shared.worldZoneIDs { try WorldClockToolModel.shared.applySyncedZoneIDs(zones) }
             self.dashboardPreferences.toolOrder = shared.toolOrder
             self.dashboardPreferences.hiddenToolIDs = Set(shared.hiddenToolIDs)
             self.dashboardPreferences.openMode = mode
             self.dashboardPreferences.hoverDelay = shared.hoverDelay
+        }, validate: { shared in
+            try shared.validate()
+            if let appearance = shared.appearance { try PlusAppearanceStore.shared.validateSyncApply(appearance) }
+            if let priority = shared.livePriority { try PlusLivePriorityStore.shared.validateSyncApply(priority) }
+            if let zones = shared.worldZoneIDs { try WorldClockToolModel.shared.validateSyncZoneIDs(zones) }
         })
-        settingsSubscription = dashboardPreferences.objectWillChange.sink { _ in
+        settingsSubscription = dashboardPreferences.objectWillChange.sink { [weak self] _ in
             PlusSyncService.shared.settingsDidChange()
+            Task { @MainActor [weak self] in self?.applyPreferences() }
         }
         PlusSyncService.shared.start()
     }

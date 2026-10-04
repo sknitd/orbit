@@ -4,7 +4,7 @@ import NotchCore
 
 @MainActor
 enum PlusLiveStatus {
-    static func statuses(model: AppModel, at date: Date) -> [LiveNotchStatus] {
+    static func statuses(model: AppModel, at date: Date, preferences: DashboardPreferences? = nil) -> [LiveNotchStatus] {
         var values: [LiveNotchStatus] = []
         let workflows = WorkflowStore.shared
         if workflows.isRunning {
@@ -30,22 +30,57 @@ enum PlusLiveStatus {
         let music = PlusNowPlayingStore.shared
         if music.backgroundMonitoring, music.connected, let track = music.snapshot, !track.title.isEmpty {
             values.append(.init(id: "music", kind: .music, title: track.title,
-                detail: track.playing ? track.artist : "Paused · \(track.artist)", toolID: "nowPlaying"))
+                detail: track.playing || !track.playbackStateKnown ? track.artist : "Paused · \(track.artist)", toolID: "nowPlaying"))
         }
-        return LiveNotchSelection.ordered(values)
+        let controls = SystemControlsService.shared
+        if controls.enabled, let hud = controls.hud {
+            values.append(.init(id: "hud", kind: .hud, title: hud.label,
+                detail: "\(hud.percent)%", toolID: "hud", progress: hud.level))
+        }
+        let devices = DevicesService.shared
+        if devices.backgroundMonitoring, devices.updatedAt != nil,
+           let device = (devices.devices + devices.bluetoothDevices).filter({ $0.connected != false && $0.batteryPercent != nil })
+               .min(by: { ($0.batteryPercent ?? 100) < ($1.batteryPercent ?? 100) }),
+           let battery = device.batteryPercent {
+            values.append(.init(id: "devices", kind: .devices, title: device.name,
+                detail: "Battery \(Int(battery.rounded()))%", toolID: "devices"))
+        }
+        let status = StatusService.shared
+        if status.backgroundMonitoring, let snapshot = status.snapshot {
+            if snapshot.focusIsActive == true {
+                values.append(.init(id: "focus-status", kind: .status, title: "Focus active",
+                    detail: "Shared Focus status", toolID: "status"))
+            }
+            if snapshot.inputDeviceIsRunning == true {
+                values.append(.init(id: "audio-input", kind: .status, title: "Audio input active",
+                    detail: snapshot.inputDeviceName ?? "Input device", toolID: "status"))
+            }
+            if snapshot.cameraInUseByAnotherApplication == true {
+                values.append(.init(id: "camera-in-use", kind: .status, title: "Camera active",
+                    detail: "Another application", toolID: "status"))
+            }
+        }
+        let visible = values.filter { preferences?.hiddenToolIDs.contains($0.toolID) != true }
+        return LiveNotchSelection.ordered(visible, priorityOrder: PlusLivePriorityStore.shared.priorityOrder)
     }
 }
 
 @MainActor
 struct PlusCompactView: View {
     let model: AppModel
+    @ObservedObject var preferences: DashboardPreferences
     @ObservedObject private var timer = FocusTimerService.shared
     @ObservedObject private var meetings = PlusMeetingService.shared
     @ObservedObject private var music = PlusNowPlayingStore.shared
     @ObservedObject private var workflows = WorkflowStore.shared
+    @ObservedObject private var controls = SystemControlsService.shared
+    @ObservedObject private var devices = DevicesService.shared
+    @ObservedObject private var priorities = PlusLivePriorityStore.shared
+    @ObservedObject private var status = StatusService.shared
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
-            LiveCompactContent(statuses: PlusLiveStatus.statuses(model: model, at: context.date), musicArtwork: music.artwork)
+            LiveCompactContent(statuses: PlusLiveStatus.statuses(model: model, at: context.date, preferences: preferences),
+                musicArtwork: music.artwork, priorityOrder: priorities.priorityOrder, hudSnapshot: controls.hud)
         }
     }
 }
@@ -54,11 +89,15 @@ struct PlusCompactView: View {
 struct LiveCompactContent: View {
     let statuses: [LiveNotchStatus]
     var musicArtwork: NSImage? = nil
-    private var ordered: [LiveNotchStatus] { LiveNotchSelection.ordered(statuses) }
+    var priorityOrder: [LiveNotchKind] = LiveNotchKind.defaultOrder
+    var hudSnapshot: SystemHUDSnapshot? = nil
+    private var ordered: [LiveNotchStatus] { LiveNotchSelection.ordered(statuses, priorityOrder: priorityOrder) }
     var body: some View {
         HStack(spacing: 7) {
             if let primary = ordered.first {
-                if primary.kind == .music, let musicArtwork {
+                if primary.kind == .hud, let hudSnapshot {
+                    Image(systemName: hudSnapshot.symbol).accessibilityHidden(true)
+                } else if primary.kind == .music, let musicArtwork {
                     Image(nsImage: musicArtwork).resizable().scaledToFill().frame(width: 22, height: 22)
                         .clipShape(RoundedRectangle(cornerRadius: 4)).accessibilityHidden(true)
                 } else if primary.kind == .processing, let progress = primary.progress {
@@ -74,6 +113,10 @@ struct LiveCompactContent: View {
                 }.frame(maxWidth: .infinity, alignment: .leading)
                 if primary.kind == .processing, let progress = primary.progress {
                     Text("\(Int(progress * 100))%").font(.system(size: 10)).monospacedDigit()
+                }
+                if primary.kind == .hud, let progress = primary.progress {
+                    ProgressView(value: progress).frame(width: 42).accessibilityLabel(primary.title)
+                        .accessibilityValue("\(Int(progress * 100)) percent")
                 }
                 ForEach(Array(ordered.dropFirst().prefix(2))) { activity in
                     Image(systemName: activity.kind.symbol).font(.system(size: 9)).foregroundStyle(.secondary)

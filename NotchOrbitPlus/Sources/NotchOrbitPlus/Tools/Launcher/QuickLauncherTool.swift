@@ -13,19 +13,31 @@ private struct PlusLauncherTargetCheck: Sendable {
 final class PlusLauncherStore: ObservableObject {
     static let shared = PlusLauncherStore()
     static let defaultsKey = "plus.launcher.pins.v1"
+    static let portableKey = "plus.launcher.logical.v1"
     @Published private(set) var pins: [PlusLauncherPin] = []
+    @Published private(set) var missingTargets: [SyncLauncherPin] = []
     @Published var search = ""
     @Published private(set) var busy = false
+    @Published private(set) var editorOpen = false
     @Published private(set) var status: String?
     @Published private(set) var targetErrors: [UUID: String] = [:]
     @Published private(set) var icons: [UUID: NSImage] = [:]
     private var task: Task<Void, Never>?
     private var generation = UUID()
     private var unreadableSavedData = false
+    private var logicalOrder: [UUID] = []
+    private let defaults: UserDefaults
+    private let onPortableChange: @MainActor () -> Void
 
-    private init() {
-        guard let data = UserDefaults.standard.data(forKey: Self.defaultsKey) else { return }
-        do { pins = try PlusLauncherPins.decode(data) }
+    init(defaults: UserDefaults = .standard, onPortableChange: @escaping @MainActor () -> Void = { PlusSyncService.shared.portableDidChange() }) {
+        self.defaults = defaults; self.onPortableChange = onPortableChange
+        do {
+            if let data = try PlusPortableDefaults.data(Self.defaultsKey, in: defaults) { pins = try PlusLauncherPins.decode(data) }
+            if let data = try PlusPortableDefaults.data(Self.portableKey, in: defaults) {
+                let values = try Self.decodeLogical(data)
+                logicalOrder = values.map(\.id); missingTargets = values.filter { target in !pins.contains(where: { $0.id == target.id }) }
+            }
+        }
         catch {
             unreadableSavedData = true
             status = "Saved launcher pins could not be read: \(error.localizedDescription) Reset saved pins to add new targets."
@@ -34,6 +46,10 @@ final class PlusLauncherStore: ObservableObject {
     }
     var filteredPins: [PlusLauncherPin] { pins.filter { PlusLauncherPins.matches($0, query: search) } }
     var needsReset: Bool { unreadableSavedData }
+    func setEditorOpen(_ value: Bool) { editorOpen = value }
+    var filteredMissingTargets: [SyncLauncherPin] {
+        missingTargets.filter { search.isEmpty || $0.label.localizedCaseInsensitiveContains(search) }
+    }
 
     func choose(_ kind: PlusLauncherKind) {
         guard !busy, !unreadableSavedData, kind != .shortcut else { return }
@@ -124,6 +140,11 @@ final class PlusLauncherStore: ObservableObject {
     func resetUnreadablePins() {
         guard unreadableSavedData else { return }
         do {
+            for key in [Self.defaultsKey, Self.portableKey] {
+                if let original = defaults.object(forKey: key) { defaults.set(original, forKey: "\(key).backup.\(UUID().uuidString)") }
+                defaults.removeObject(forKey: key)
+            }
+            missingTargets = []; logicalOrder = []
             try save([]); unreadableSavedData = false; status = "Saved pins reset. Choose targets to pin."
         } catch { status = error.localizedDescription }
     }
@@ -164,8 +185,101 @@ final class PlusLauncherStore: ObservableObject {
     }
     private func save(_ next: [PlusLauncherPin]) throws {
         let data = try PlusLauncherPins.encode(next)
-        UserDefaults.standard.set(data, forKey: Self.defaultsKey)
+        let logical = try localLogicalPins(next, allowingUnportableApplications: true) + missingTargets
+        try SyncLauncherPin.validate(logical)
+        defaults.set(data, forKey: Self.defaultsKey)
+        defaults.set(try JSONEncoder().encode(logical), forKey: Self.portableKey)
+        logicalOrder = logical.map(\.id)
         pins = next
+        onPortableChange()
+    }
+    private static func decodeLogical(_ data: Data) throws -> [SyncLauncherPin] {
+        guard data.count <= 131_072 else { throw SyncFailure.invalid("Saved logical launcher targets exceed their size limit.") }
+        let values = try JSONDecoder().decode([SyncLauncherPin].self, from: data); try SyncLauncherPin.validate(values); return values
+    }
+    private func localLogicalPins(_ values: [PlusLauncherPin], allowingUnportableApplications: Bool = false) throws -> [SyncLauncherPin] {
+        let previous = try PlusPortableDefaults.data(Self.portableKey, in: defaults).map(Self.decodeLogical) ?? []
+        return try values.compactMap { pin in
+            let identifier: String
+            switch pin.kind {
+            case .application:
+                guard let bundleID = Bundle(url: URL(fileURLWithPath: pin.targetIdentifier))?.bundleIdentifier
+                    ?? previous.first(where: { $0.id == pin.id && $0.kind == .application })?.targetIdentifier else {
+                    if allowingUnportableApplications { return nil }
+                    throw SyncFailure.invalid("The app ‘\(pin.label)’ has no readable bundle identifier. Its local pin is preserved; choose a valid app before syncing launcher pins.")
+                }
+                identifier = bundleID
+            case .folder: identifier = pin.id.uuidString
+            case .shortcut: identifier = pin.targetIdentifier.uppercased()
+            }
+            let logical = SyncLauncherPin(id: pin.id, label: pin.label, kind: pin.kind, targetIdentifier: identifier)
+            try logical.validate(); return logical
+        }
+    }
+    func exportSyncedPins() throws -> [SyncLauncherPin] {
+        guard !unreadableSavedData else { throw SyncFailure.invalid("Unreadable launcher originals are retained; reset with a backup before syncing.") }
+        if let original = try PlusPortableDefaults.data(Self.defaultsKey, in: defaults) { _ = try PlusLauncherPins.decode(original) }
+        let all = try localLogicalPins(pins) + missingTargets
+        try SyncLauncherPin.validate(all)
+        let rank = Dictionary(uniqueKeysWithValues: logicalOrder.enumerated().map { ($0.element, $0.offset) })
+        return all.enumerated().sorted {
+            let l = rank[$0.element.id, default: logicalOrder.count], r = rank[$1.element.id, default: logicalOrder.count]
+            return l == r ? $0.offset < $1.offset : l < r
+        }.map(\.element)
+    }
+    func validateSyncedPins(_ values: [SyncLauncherPin]) throws {
+        try SyncLauncherPin.validate(values)
+        let existing = try exportSyncedPins()
+        guard (!busy && !editorOpen) || existing == values else { throw SyncFailure.invalid("Close the rename editor or wait for the launcher operation before applying changed synced pins. Local drafts are retained.") }
+    }
+    func applySyncedPins(_ values: [SyncLauncherPin]) throws {
+        try validateSyncedPins(values)
+        let existingLogical = try exportSyncedPins()
+        var local: [PlusLauncherPin] = [], missing: [SyncLauncherPin] = [], errors: [UUID: String] = [:]
+        for logical in values {
+            if var existing = pins.first(where: { $0.id == logical.id && $0.kind == logical.kind }),
+               logical.kind != .application || existingLogical.first(where: { $0.id == logical.id })?.targetIdentifier == logical.targetIdentifier {
+                existing.label = logical.label; local.append(existing); continue
+            }
+            if logical.kind == .shortcut {
+                local.append(PlusLauncherPin(id: logical.id, label: logical.label, kind: .shortcut, targetIdentifier: logical.targetIdentifier)); continue
+            }
+            if logical.kind == .application, let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: logical.targetIdentifier),
+               let resolved = try? PlusLauncherBookmarks.makePin(at: url, kind: .application) {
+                local.append(PlusLauncherPin(id: logical.id, label: logical.label, kind: .application, targetIdentifier: resolved.targetIdentifier, bookmark: resolved.bookmark)); continue
+            }
+            missing.append(logical)
+            errors[logical.id] = logical.kind == .folder ? "Choose this folder on this Mac. Folder paths and bookmarks are never shared." : "This app is not installed or could not be resolved on this Mac."
+        }
+        let data = try PlusLauncherPins.encode(local), logicalData = try JSONEncoder().encode(values)
+        defaults.set(data, forKey: Self.defaultsKey); defaults.set(logicalData, forKey: Self.portableKey)
+        pins = local; missingTargets = missing; logicalOrder = values.map(\.id); targetErrors = errors
+        status = missing.isEmpty ? "Synced logical launcher targets; local bookmarks retained." : "\(missing.count) synced target(s) need local resolution."
+    }
+    func resolveMissingTarget(_ logical: SyncLauncherPin) {
+        guard !busy, missingTargets.contains(where: { $0.id == logical.id }), logical.kind != .shortcut else { return }
+        let panel = NSOpenPanel(); panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = logical.kind == .folder; panel.canChooseFiles = logical.kind == .application
+        if logical.kind == .application { panel.allowedContentTypes = [.applicationBundle] }
+        panel.message = "Resolve ‘\(logical.label)’ on this Mac. The chosen path and bookmark stay local."
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            if logical.kind == .application, Bundle(url: url)?.bundleIdentifier != logical.targetIdentifier {
+                throw SyncFailure.invalid("Choose the application with bundle identifier \(logical.targetIdentifier).")
+            }
+            let chosen = try PlusLauncherBookmarks.makePin(at: url, kind: logical.kind)
+            let binding = PlusLauncherPin(id: logical.id, label: logical.label, kind: logical.kind, targetIdentifier: chosen.targetIdentifier, bookmark: chosen.bookmark)
+            let next = try PlusLauncherPins.inserting(binding, into: pins)
+            let remaining = missingTargets.filter { $0.id != logical.id }, prior = missingTargets
+            missingTargets = remaining
+            do { try save(next) } catch { missingTargets = prior; throw error }
+            targetErrors[logical.id] = nil; status = "Resolved \(logical.label) locally."
+        } catch { status = error.localizedDescription }
+    }
+    func removeMissingTarget(_ id: UUID) {
+        guard !busy else { return }
+        let previous = missingTargets; missingTargets.removeAll { $0.id == id }
+        do { try save(pins); targetErrors[id] = nil } catch { missingTargets = previous; status = error.localizedDescription }
     }
     private func refreshTargetsAfterOperation() {
         // `perform` clears its busy state before this queued explicit-pin refresh.
@@ -237,7 +351,7 @@ struct QuickLauncherToolView: View {
                         }.frame(maxWidth: .infinity, alignment: .leading)
                         Button("Launch") { model.launch(pin) }.disabled(model.busy || (pin.kind == .shortcut && shortcuts.busy))
                         Menu {
-                            Button("Rename") { renameID = pin.id; renameText = pin.label; showRename = true }
+                            Button("Rename") { model.setEditorOpen(true); renameID = pin.id; renameText = pin.label; showRename = true }
                             Button("Move up") { model.move(pin.id, by: -1) }.disabled(model.pins.first?.id == pin.id)
                             Button("Move down") { model.move(pin.id, by: 1) }.disabled(model.pins.last?.id == pin.id)
                             Button("Unpin", role: .destructive) { model.unpin(pin.id) }
@@ -246,6 +360,17 @@ struct QuickLauncherToolView: View {
                 }
                 if model.filteredPins.isEmpty { Text("No pinned targets match this search.").foregroundStyle(.secondary) }
             } else if !model.needsReset { Text("Choose an app, folder, or shortcut to add your first pin.").foregroundStyle(.secondary) }
+            ForEach(model.filteredMissingTargets) { target in
+                HStack {
+                    VStack(alignment: .leading) {
+                        Text(target.label)
+                        Text(model.targetErrors[target.id] ?? "This synced target needs local resolution.").font(.caption).foregroundStyle(.orange)
+                    }
+                    Spacer()
+                    Button("Choose on This Mac…") { model.resolveMissingTarget(target) }
+                    Button("Unpin") { model.removeMissingTarget(target.id) }
+                }.disabled(model.busy || model.needsReset)
+            }
             if model.busy { ProgressView().controlSize(.small) }
             if let status = model.status { Text(status).font(.caption).textSelection(.enabled) }
             if model.needsReset { Button("Reset unreadable saved pins", role: .destructive) { showReset = true } }
@@ -266,6 +391,8 @@ struct QuickLauncherToolView: View {
             Button("Cancel", role: .cancel) {}
         } message: { Text("This removes only the unreadable saved pin list. It does not change applications, folders, or Shortcuts.") }
         .onAppear(perform: model.refreshTargets)
+        .onChange(of: showRename) { _, open in model.setEditorOpen(open) }
+        .onDisappear { if !showRename { model.setEditorOpen(false) } }
     }
     private func symbol(_ kind: PlusLauncherKind) -> String {
         switch kind { case .application: "app"; case .folder: "folder"; case .shortcut: "square.stack.3d.up" }

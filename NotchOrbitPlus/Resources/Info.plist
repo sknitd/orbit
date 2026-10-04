@@ -6,8 +6,8 @@
 <key>CFBundleIdentifier</key><string>com.sknitd.NotchOrbitPlus</string>
 <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.2.0</string>
-<key>CFBundleVersion</key><string>2</string>
+<key>CFBundleShortVersionString</key><string>0.3.0</string>
+<key>CFBundleVersion</key><string>3</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>LSUIElement</key><true/>
@@ -16,6 +16,9 @@
 <key>NSInputMonitoringUsageDescription</key><string>NotchOrbitPlus observes file drag gestures to reveal local actions near the notch.</string>
 <key>NSCameraUsageDescription</key><string>NotchOrbit Plus uses the camera only when you start Mirror; audio is not captured.</string>
 <key>NSAppleEventsUsageDescription</key><string>Connect Music or Spotify to show and control playback in Now Playing.</string>
+<key>NSBluetoothAlwaysUsageDescription</key><string>Connect Devices to read available Bluetooth peripheral battery information.</string>
+<key>NSScreenCaptureUsageDescription</key><string>Capture a screenshot or start a screen recording only when you request it.</string>
+<key>NSFocusStatusUsageDescription</key><string>Connect Focus Status to display the shared Focus state only while this tool is visible or background monitoring is enabled.</string>
 <key>NSCalendarsFullAccessUsageDescription</key><string>NotchOrbitPlus shows the calendar events you choose to access in your notch.</string>
 <key>NSRemindersFullAccessUsageDescription</key><string>NotchOrbitPlus shows your reminders and lets you mark them complete.</string>
 </dict></plist>

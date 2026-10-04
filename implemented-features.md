@@ -1,5 +1,7 @@
 # Implemented features
 
+This root catalog describes **OrbitDrop**. The separate NotchOrbitPlus 0.3.0 dashboard has its own [implemented features](NotchOrbitPlus/implemented-features.md), [limitations](NotchOrbitPlus/known-limitations.md) and [build evidence](NotchOrbitPlus/EVALUATION.md), including system media, capture, HUD, devices, planning tools, sync and AppIntents.
+
 This describes implemented source behavior, not a claim that all native behavior has passed interactive macOS acceptance. See the recorded automated results and [MANUAL-ACCEPTANCE.md](MANUAL-ACCEPTANCE.md).
 
 ## Application and interaction

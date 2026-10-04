@@ -50,7 +50,16 @@ private final class ConverterToolStore: ObservableObject {
 @MainActor
 struct ConverterToolView: View {
     @StateObject private var store = ConverterToolStore()
+    @State private var mode = "units"
     var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Picker("Conversion", selection: $mode) { Text("Units").tag("units"); Text("Currency").tag("currency") }
+                .pickerStyle(.segmented).padding([.top, .horizontal], 12)
+            if mode == "currency" { CurrencyConverterToolView() }
+            else { unitContent }
+        }
+    }
+    private var unitContent: some View {
         VStack(alignment: .leading, spacing: 14) {
             Picker("Measurement", selection: $store.family) {
                 ForEach(UnitFamily.allCases) { Text($0.title).tag($0) }

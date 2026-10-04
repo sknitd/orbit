@@ -78,6 +78,7 @@ jobs:
             NotchOrbitPlus/dist/NotchOrbitPlus.app.zip.sha256
             NotchOrbitPlus/build/build.log
             NotchOrbitPlus/build/launch-smoke.log
+            NotchOrbitPlus/build/idle-performance.json
             NotchOrbitPlus/build/package-verification.json
             NotchOrbitPlus/build/sdk-inventory.json
             NotchOrbitPlus/build/distribution-signing.json
@@ -102,6 +103,9 @@ jobs:
           cp NotchOrbitPlus/build/build.log "$report_dir/build.log" || true
           if [[ -f NotchOrbitPlus/build/launch-smoke.log ]]; then
             cp NotchOrbitPlus/build/launch-smoke.log "$report_dir/"
+          fi
+          if [[ -f NotchOrbitPlus/build/idle-performance.json ]]; then
+            cp NotchOrbitPlus/build/idle-performance.json "$report_dir/"
           fi
           if [[ -f NotchOrbitPlus/build/package-verification.json ]]; then
             cp NotchOrbitPlus/build/package-verification.json "$report_dir/"
@@ -140,6 +144,7 @@ jobs:
           cp -R "$report_dir/"* .
           git add --force build.log build-status.json
           if [[ -f launch-smoke.log ]]; then git add --force launch-smoke.log; fi
+          if [[ -f idle-performance.json ]]; then git add --force idle-performance.json; fi
           if [[ -f package-verification.json ]]; then git add --force package-verification.json; fi
           if [[ -f sdk-inventory.json ]]; then git add --force sdk-inventory.json; fi
           for evidence in distribution-signing.json signing-credential-status.json notary-submit.json update-feed.json update-publication.json; do

@@ -31,6 +31,15 @@ extension NotchAppDelegate {
                 case .launcher: AnyView(QuickLauncherToolView())
                 case .workflows: AnyView(WorkflowsToolView())
                 case .fileActions: AnyView(FileActionsToolView(chooseFiles: chooseFiles, model: model))
+                case .capture: AnyView(ScreenshotShelfToolView())
+                case .colorPicker: AnyView(ColorPickerToolView())
+                case .hud: AnyView(HUDToolView())
+                case .devices: AnyView(DevicesToolView())
+                case .status: AnyView(StatusToolView())
+                case .network: AnyView(NetworkToolView())
+                case .worldClock: AnyView(WorldClockToolView())
+                case .githubActions: AnyView(GithubActionsToolView())
+                case .focusStats: AnyView(FocusStatsToolView())
                 }
             }
         }
@@ -72,6 +81,7 @@ struct PlusSettingsView: View {
     @ObservedObject var dashboardPreferences: DashboardPreferences
     let requestAccess: () -> Void
     let applyPreferences: () -> Void
+    @ObservedObject private var appearance = PlusAppearanceStore.shared
     var body: some View {
         TabView {
             DashboardSettingsView(preferences: dashboardPreferences)
@@ -80,11 +90,13 @@ struct PlusSettingsView: View {
                 .tabItem { Label("File actions", systemImage: "wand.and.stars") }
             SyncSettingsView().tabItem { Label("Sync", systemImage: "arrow.triangle.2.circlepath") }
             PlusDistributionSettingsView().tabItem { Label("Updates", systemImage: "arrow.down.circle") }
+            AppearanceSettingsView().tabItem { Label("Appearance", systemImage: "paintpalette") }
+            LivePrioritySettingsView().tabItem { Label("Live priority", systemImage: "list.number") }
             VStack(spacing: 16) {
                 Image(systemName: "rectangle.topthird.inset.filled").font(.system(size: 56)).foregroundStyle(.blue)
                 Text("NotchOrbitPlus").font(.title.weight(.semibold))
-                Text("Twenty-two tools, below your notch.").font(.title3)
-                Text("Version \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.0") · macOS 14+")
+                Text("\(PlusTool.allCases.count) tools, below your notch.").font(.title3)
+                Text("Version \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.3.0") · macOS 14+")
                     .foregroundStyle(.secondary)
                 Text("Ask Orbit requires macOS 26 and Apple Intelligence. Connected services need their own setup.")
                     .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
@@ -92,6 +104,7 @@ struct PlusSettingsView: View {
                 Link("Features and setup", destination: URL(string: "https://github.com/sknitd/orbit/tree/codex/orbitdrop/NotchOrbitPlus")!)
             }.padding(24).tabItem { Label("About", systemImage: "info.circle") }
         }.padding(12).frame(width: 700, height: 600)
+            .tint(appearance.accentColor).preferredColorScheme(appearance.preferredColorScheme)
             .onChange(of: dashboardPreferences.keyboardShortcutEnabled) { _, _ in applyPreferences() }
     }
 }

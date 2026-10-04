@@ -8,19 +8,35 @@ final class FocusTimerService: ObservableObject {
     static let shared = FocusTimerService()
     @Published private(set) var timer: FocusTimer
     @Published private(set) var now = Date()
-    @Published var focusMinutes: Double = UserDefaults.standard.double(forKey: "focus.minutes").nonzeroOr(25)
-    @Published var restMinutes: Double = UserDefaults.standard.double(forKey: "focus.rest").nonzeroOr(5)
-    @Published var automaticBreak = UserDefaults.standard.bool(forKey: "focus.automaticBreak")
-    @Published var soundEnabled = UserDefaults.standard.object(forKey: "focus.sound") as? Bool ?? true
+    @Published var focusMinutes: Double
+    @Published var restMinutes: Double
+    @Published var automaticBreak: Bool
+    @Published var soundEnabled: Bool
     @Published var noiseEnabled = false { didSet { updateNoise() } }
     @Published private(set) var message = "Ready for a focus session."
+    @Published private(set) var historyError: String?
     private var ticker: Task<Void, Never>?
     private var player: AVAudioPlayer?
+    private let defaults: UserDefaults
+    private var unreadableTimerData: Data?
 
-    init() {
-        if let data = UserDefaults.standard.data(forKey: "focus.timer"),
-           let restored = try? JSONDecoder().decode(FocusTimer.self, from: data) { timer = restored }
-        else { timer = FocusTimer() }
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        focusMinutes = defaults.double(forKey: "focus.minutes").nonzeroOr(25)
+        restMinutes = defaults.double(forKey: "focus.rest").nonzeroOr(5)
+        automaticBreak = defaults.bool(forKey: "focus.automaticBreak")
+        soundEnabled = defaults.object(forKey: "focus.sound") as? Bool ?? true
+        timer = FocusTimer()
+        if let data = defaults.data(forKey: "focus.timer") {
+            do {
+                guard data.count <= 4 * 1_024 * 1_024 else { throw CocoaError(.fileReadTooLarge) }
+                timer = try JSONDecoder().decode(FocusTimer.self, from: data)
+            } catch {
+                unreadableTimerData = data
+                historyError = "Saved focus history could not be read. Its original is preserved; starting a new session creates a backup."
+                message = historyError ?? "Could not restore the saved focus timer."
+            }
+        }
         if timer.isRunning { schedule() }
     }
     var remaining: TimeInterval { timer.remaining(at: now) }
@@ -30,6 +46,14 @@ final class FocusTimerService: ObservableObject {
     }
     var compactText: String? { timer.phase == .idle ? nil : remainingText }
     func start(rest: Bool = false) {
+        let duration = rest ? restMinutes : focusMinutes
+        guard duration.isFinite, duration > 0, duration <= 1_440 else {
+            message = "Choose a positive duration up to 1,440 minutes."; return
+        }
+        if let unreadableTimerData {
+            defaults.set(unreadableTimerData, forKey: "focus.timer.backup." + UUID().uuidString)
+            self.unreadableTimerData = nil; historyError = nil
+        }
         timer.start(minutes: rest ? restMinutes : focusMinutes, phase: rest ? .rest : .focus, at: Date())
         now = Date(); message = rest ? "Take a break." : "Focus time."
         persist(); schedule(); updateNoise()
@@ -47,26 +71,30 @@ final class FocusTimerService: ObservableObject {
     }
     func shutdown() { ticker?.cancel(); player?.stop(); persist() }
     func persist() {
-        if let data = try? JSONEncoder().encode(timer) { UserDefaults.standard.set(data, forKey: "focus.timer") }
-        UserDefaults.standard.set(focusMinutes, forKey: "focus.minutes")
-        UserDefaults.standard.set(restMinutes, forKey: "focus.rest")
-        UserDefaults.standard.set(automaticBreak, forKey: "focus.automaticBreak")
-        UserDefaults.standard.set(soundEnabled, forKey: "focus.sound")
+        if unreadableTimerData == nil {
+            do { defaults.set(try JSONEncoder().encode(timer), forKey: "focus.timer") }
+            catch { historyError = "Could not save focus history: \(error.localizedDescription)" }
+        }
+        defaults.set(focusMinutes, forKey: "focus.minutes")
+        defaults.set(restMinutes, forKey: "focus.rest")
+        defaults.set(automaticBreak, forKey: "focus.automaticBreak")
+        defaults.set(soundEnabled, forKey: "focus.sound")
+    }
+    func update(at date: Date) {
+        now = date
+        if let phase = timer.finishIfDue(at: now) {
+            message = phase == .focus ? "Focus complete. Take a break." : "Break complete. Ready to focus."
+            if soundEnabled { NSSound(named: "Glass")?.play() }
+            if phase == .focus && automaticBreak { timer.start(minutes: restMinutes, phase: .rest, at: now) }
+            persist(); updateNoise()
+        }
     }
     private func schedule() {
         ticker?.cancel()
         ticker = Task { [weak self] in
             while !Task.isCancelled {
                 guard let self else { return }
-                self.now = Date()
-                if let phase = self.timer.finishIfDue(at: self.now) {
-                    self.message = phase == .focus ? "Focus complete. Take a break." : "Break complete. Ready to focus."
-                    if self.soundEnabled { NSSound(named: "Glass")?.play() }
-                    if phase == .focus && self.automaticBreak {
-                        self.timer.start(minutes: self.restMinutes, phase: .rest, at: self.now)
-                    }
-                    self.persist(); self.updateNoise()
-                }
+                self.update(at: Date())
                 guard self.timer.isRunning else { return }
                 do { try await Task.sleep(for: .seconds(1)) } catch { return }
             }
@@ -136,6 +164,7 @@ struct TimersToolView: View {
                 Toggle("Soft focus noise", isOn: $service.noiseEnabled)
             }
             Text(service.message).font(.callout).foregroundStyle(.secondary)
+            LocalToolError(message: service.historyError)
             Text("The countdown continues in the closed notch and stays accurate after sleep. Soft noise plays only during a running focus session.")
                 .font(.caption).foregroundStyle(.secondary)
         }.padding(12).onDisappear { service.persist() }

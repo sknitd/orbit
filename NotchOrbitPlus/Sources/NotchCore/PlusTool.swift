@@ -4,12 +4,14 @@ public enum PlusTool: String, CaseIterable, Codable, Sendable, Identifiable {
     case assistant, aiUsage, sales, clipboard, teleprompter, timers, fileShelf, mirror
     case calendar, reminders, todos, weather, stocks, emoji, converter, system
     case quickNote, nowPlaying, shortcuts, launcher, workflows, fileActions
+    case capture, colorPicker, hud, devices, status, network, worldClock, githubActions, focusStats
 
     public var id: String { rawValue }
     public static let defaultOrder: [PlusTool] = [
         .assistant, .aiUsage, .sales, .clipboard, .teleprompter, .timers, .fileShelf, .mirror,
         .calendar, .reminders, .todos, .weather, .stocks, .emoji, .converter, .system,
-        .quickNote, .nowPlaying, .shortcuts, .launcher, .workflows, .fileActions
+        .quickNote, .nowPlaying, .shortcuts, .launcher, .workflows, .capture, .colorPicker,
+        .hud, .devices, .status, .network, .worldClock, .githubActions, .focusStats, .fileActions
     ]
     public var title: String {
         switch self {
@@ -35,6 +37,15 @@ public enum PlusTool: String, CaseIterable, Codable, Sendable, Identifiable {
         case .launcher: "Quick Launcher"
         case .workflows: "Workflows"
         case .fileActions: "File Actions"
+        case .capture: "Screenshot Shelf"
+        case .colorPicker: "Color Picker"
+        case .hud: "Volume & Brightness"
+        case .devices: "Devices"
+        case .status: "Status"
+        case .network: "Network"
+        case .worldClock: "World Clock"
+        case .githubActions: "GitHub Actions"
+        case .focusStats: "Focus Stats"
         }
     }
     public var symbol: String {
@@ -61,6 +72,15 @@ public enum PlusTool: String, CaseIterable, Codable, Sendable, Identifiable {
         case .launcher: "square.grid.2x2"
         case .workflows: "point.3.connected.trianglepath.dotted"
         case .fileActions: "wand.and.stars"
+        case .capture: "camera.viewfinder"
+        case .colorPicker: "eyedropper"
+        case .hud: "speaker.wave.2"
+        case .devices: "headphones"
+        case .status: "circle.inset.filled"
+        case .network: "network"
+        case .worldClock: "globe"
+        case .githubActions: "play.rectangle"
+        case .focusStats: "chart.bar.xaxis"
         }
     }
     public var description: String {
@@ -87,6 +107,15 @@ public enum PlusTool: String, CaseIterable, Codable, Sendable, Identifiable {
         case .launcher: "Launch pinned apps, folders and favourite Shortcuts."
         case .workflows: "Run saved image-processing steps through one real drop."
         case .fileActions: "Transform files through the original authenticated drop wheel."
+        case .capture: "Capture an area, window or display directly into File Shelf."
+        case .colorPicker: "Pick a screen color and organize local palettes."
+        case .hud: "Opt in to volume and brightness controls in the notch."
+        case .devices: "Read available Mac and peripheral battery information."
+        case .status: "Inspect available microphone, camera and Focus status."
+        case .network: "Inspect live interface traffic and local VPN state."
+        case .worldClock: "Compare chosen time zones and meeting times."
+        case .githubActions: "Read your repositories and workflow runs on request."
+        case .focusStats: "Review a week of completed focus sessions."
         }
     }
 }

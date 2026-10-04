@@ -19,10 +19,11 @@ struct SyncSettingsView: View {
                 if let error = sync.error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
             }
             Section("What is shared") {
-                Text("Quick Note, To-Dos, tool order, hidden tools, hover/click open mode and hover delay.")
+                Text("Quick Note, To-Dos, logical launcher pins, workflow presets, saved color palettes, tool order, hidden tools, hover/click behavior, appearance, live-status priorities and saved World Clock zones.")
                 Text("API credentials, clipboard history, File Shelf contents, meeting data, display size/selection, keyboard permissions, bookmarks and account configuration stay local.").font(.caption).foregroundStyle(.secondary)
                 Text("Snapshots are readable JSON in the folder you choose. Your folder provider controls encryption, access and delivery. A successful write confirms only this Mac’s local folder write.").font(.caption).foregroundStyle(.secondary)
                 Text("Independent task edits merge by field. Deletions leave tombstones so an offline Mac cannot recreate a removed task. Conflicting notes or preferences stay as variants until you choose; discarded variants are backed up locally before resolution.").font(.caption).foregroundStyle(.secondary)
+                Text("Applications sync by bundle identifier and Shortcuts by identifier. Synced folder pins need an explicit local folder choice on each Mac. Paths, bookmarks and color-picking history stay local. Concurrent edits to the same library retain complete variants; different library categories merge independently.").font(.caption).foregroundStyle(.secondary)
             }
             if sync.state.note.hasConflict {
                 Section("Note conflict — choose intentionally") {
@@ -41,7 +42,43 @@ struct SyncSettingsView: View {
                         VStack(alignment: .leading, spacing: 5) {
                             Text("Device \(revision.deviceID.uuidString.prefix(8)) · \(revision.writtenAt.formatted(date: .abbreviated, time: .shortened))").font(.caption)
                             Text("\(revision.value.openMode == "clickOnly" ? "Click only" : "Hover or click") · \(revision.value.hoverDelay, specifier: "%.2f") s · \(revision.value.hiddenToolIDs.count) hidden tools").font(.caption)
+                            if let appearance = revision.value.appearance { Text("\(appearance.theme.rawValue.capitalized) · \(appearance.accent.rawValue.capitalized) · Drop sound \(appearance.dropSound ? "on" : "off")").font(.caption) }
+                            if let priority = revision.value.livePriority { Text(priority.order.map(\.title).joined(separator: " → ")).font(.caption).lineLimit(3) }
+                            if let zones = revision.value.worldZoneIDs { Text("World Clock: \(zones.joined(separator: ", "))").font(.caption).lineLimit(3) }
                             Button("Use This Settings Variant") { sync.resolveSettings(revision.id) }.disabled(sync.isSyncing)
+                        }
+                    }
+                }
+            }
+            if sync.state.launcherPins.hasConflict {
+                Section("Launcher conflict — choose intentionally") {
+                    ForEach(sync.state.launcherPins.revisions) { revision in
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("Device \(revision.deviceID.uuidString.prefix(8)) · \(revision.value.count) targets").font(.caption)
+                            Text(revision.value.prefix(8).map(\.label).joined(separator: ", ")).font(.caption).lineLimit(3)
+                            Button("Use These Launcher Pins") { sync.resolvePortable(.launcher, revisionID: revision.id) }.disabled(sync.isSyncing)
+                        }
+                    }
+                }
+            }
+            if sync.state.workflows.hasConflict {
+                Section("Workflow conflict — choose intentionally") {
+                    ForEach(sync.state.workflows.revisions) { revision in
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("Device \(revision.deviceID.uuidString.prefix(8)) · \(revision.value.count) presets").font(.caption)
+                            Text(revision.value.prefix(8).map(\.name).joined(separator: ", ")).font(.caption).lineLimit(3)
+                            Button("Use These Workflow Presets") { sync.resolvePortable(.workflows, revisionID: revision.id) }.disabled(sync.isSyncing)
+                        }
+                    }
+                }
+            }
+            if sync.state.palettes.hasConflict {
+                Section("Palette conflict — choose intentionally") {
+                    ForEach(sync.state.palettes.revisions) { revision in
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("Device \(revision.deviceID.uuidString.prefix(8)) · \(revision.value.palettes.count) palettes").font(.caption)
+                            Text(revision.value.palettes.prefix(8).map(\.name).joined(separator: ", ")).font(.caption).lineLimit(3)
+                            Button("Use These Saved Palettes") { sync.resolvePortable(.palettes, revisionID: revision.id) }.disabled(sync.isSyncing)
                         }
                     }
                 }

@@ -7,10 +7,19 @@ import SwiftUI
 @MainActor
 private final class DashboardWindow: NSPanel {
     var onEscape: (() -> Void)?
+    var onToolStep: ((Int) -> Void)?
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
     override func keyDown(with event: NSEvent) {
         if event.keyCode == 53 { onEscape?() } else { super.keyDown(with: event) }
+    }
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        let modifiers = event.modifierFlags.intersection([.control, .shift, .option, .command])
+        if event.keyCode == 48, modifiers == .control || modifiers == [.control, .shift] {
+            onToolStep?(modifiers.contains(.shift) ? -1 : 1)
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
     }
 }
 
@@ -39,6 +48,7 @@ public final class NotchDashboardController {
     public var onOpenCompact: (@MainActor () -> Void)?
     private let modules: [NotchDashboardModule]
     private let compactContent: @MainActor () -> AnyView
+    private let isInteractionActive: @MainActor () -> Bool
     private let presentation = DashboardPresentation()
     private var panel: DashboardWindow?
     private var hosting: NSHostingView<NotchDashboardView>?
@@ -46,7 +56,11 @@ public final class NotchDashboardController {
     private var screenObserver: NSObjectProtocol?
     private var accessibilityObserver: NSObjectProtocol?
     private var keyObserver: NSObjectProtocol?
+    private var spaceObserver: NSObjectProtocol?
+    private var fullscreenTask: Task<Void, Never>?
+    private var hiddenForFullscreen = false
     private var preferenceObserver: AnyCancellable?
+    private var appearanceObserver: AnyCancellable?
     private var hoverOpenTask: Task<Void, Never>?
     private var hoverCloseTask: Task<Void, Never>?
     private var started = false
@@ -64,13 +78,14 @@ public final class NotchDashboardController {
     public var selectedToolTitle: String? { visibleModules.first { $0.id == selectedToolID }?.title }
 
     public init(modules: [NotchDashboardModule], preferences: DashboardPreferences = DashboardPreferences(),
+                isInteractionActive: @escaping @MainActor () -> Bool = { false },
                 compactContent: @escaping @MainActor () -> AnyView = {
                     AnyView(Label("NotchOrbitPlus", systemImage: "rectangle.topthird.inset.filled")
                         .font(.system(size: 11, weight: .medium)))
                 }) {
         var seen = Set<String>()
         self.modules = modules.filter { seen.insert($0.id).inserted }
-        self.preferences = preferences; self.compactContent = compactContent
+        self.preferences = preferences; self.compactContent = compactContent; self.isInteractionActive = isInteractionActive
         lastDisplaySelection = preferences.displaySelection
         preferences.register(self.modules.map { .init(id: $0.id, title: $0.title, symbol: $0.symbol) })
         presentation.selectedToolID = visibleModules.first?.id
@@ -95,6 +110,11 @@ public final class NotchDashboardController {
         reconcileSelection()
         if panel == nil { makePanel() }
         guard layout(on: target, animated: false) else { return }
+        configureSpaceBehavior()
+        guard !PlusFullscreenDetection.shouldHide(on: target, enabled: preferences.hideInFullscreen) else {
+            hiddenForFullscreen = true; panel?.orderOut(nil); return
+        }
+        hiddenForFullscreen = false
         panel?.orderFrontRegardless()
     }
 
@@ -113,6 +133,12 @@ public final class NotchDashboardController {
         guard visibleModules.contains(where: { $0.id == id }) else { return false }
         presentation.selectedToolID = id
         return true
+    }
+    @discardableResult
+    public func moveSelection(by offset: Int) -> Bool {
+        guard let id = DashboardBehavior.neighboringTool(current: selectedToolID,
+            orderedVisibleIDs: visibleModules.map(\.id), offset: offset) else { return false }
+        return selectTool(id: id)
     }
 
     public func setSuspended(_ value: Bool) {
@@ -138,8 +164,11 @@ public final class NotchDashboardController {
         if let screenObserver { NotificationCenter.default.removeObserver(screenObserver) }
         if let accessibilityObserver { NSWorkspace.shared.notificationCenter.removeObserver(accessibilityObserver) }
         if let keyObserver { NotificationCenter.default.removeObserver(keyObserver) }
+        if let spaceObserver { NSWorkspace.shared.notificationCenter.removeObserver(spaceObserver) }
         screenObserver = nil; accessibilityObserver = nil; keyObserver = nil
+        spaceObserver = nil; fullscreenTask?.cancel(); fullscreenTask = nil
         preferenceObserver?.cancel(); preferenceObserver = nil
+        appearanceObserver?.cancel(); appearanceObserver = nil
         panel?.contentView = nil; hosting = nil; panel = nil
     }
 
@@ -184,9 +213,10 @@ public final class NotchDashboardController {
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
         window.hidesOnDeactivate = false; window.isFloatingPanel = true; window.becomesKeyOnlyIfNeeded = true
         window.isReleasedWhenClosed = false; window.animationBehavior = .none
-        window.appearance = NSAppearance(named: .darkAqua)
+        window.appearance = PlusAppearanceStore.shared.panelAppearance
         window.setAccessibilityLabel("NotchOrbitPlus dashboard")
         window.onEscape = { [weak self] in self?.collapse() }
+        window.onToolStep = { [weak self] offset in _ = self?.moveSelection(by: offset) }
         keyObserver = NotificationCenter.default.addObserver(forName: NSWindow.didBecomeKeyNotification,
                                                             object: window, queue: .main) { [weak self] _ in
             Task { @MainActor [weak self] in
@@ -215,7 +245,10 @@ public final class NotchDashboardController {
         let notch = NotchScreenLayout.layout(for: screen)
         let visible = screen.visibleFrame
         let wantedWidth = presentation.expanded ? preferences.width : max(240, min(340, (notch.notchRect?.width ?? 180) + 44))
-        let width = max(0, min(wantedWidth, visible.width - 24))
+        let rule = preferences.displayRule(NotchScreenLayout.screenID(for: screen))
+        guard rule.enabled else { panel.orderOut(nil); return false }
+        let targetWidth = presentation.expanded ? rule.width ?? wantedWidth : wantedWidth
+        let width = max(0, min(targetWidth, visible.width - 24))
         let height = max(0, min(presentation.expanded ? 440 : 36, notch.anchor.y - visible.minY - 12))
         guard width >= 120, height >= 24 else { panel.orderOut(nil); return false }
         let x = max(visible.minX + 12, min(notch.anchor.x - width / 2, visible.maxX - 12 - width))
@@ -262,7 +295,11 @@ public final class NotchDashboardController {
         hoverCloseTask?.cancel()
         hoverCloseTask = Task { @MainActor [weak self] in
             do { try await Task.sleep(for: .milliseconds(320)) } catch { return }
+            while self?.isInteractionActive() == true {
+                do { try await Task.sleep(for: .milliseconds(250)) } catch { return }
+            }
             guard let self, !self.presentation.pinned, !self.presentation.openedManually,
+                  self.panel?.frame.contains(NSEvent.mouseLocation) != true,
                   self.panel?.attachedSheet == nil,
                   !(self.panel?.firstResponder is NSTextView) else { return }
             self.hoverCloseTask = nil
@@ -273,17 +310,26 @@ public final class NotchDashboardController {
         hoverOpenTask?.cancel(); hoverCloseTask?.cancel(); hoverOpenTask = nil; hoverCloseTask = nil
     }
     private func installObservers() {
+        appearanceObserver = PlusAppearanceStore.shared.objectWillChange.sink { [weak self] _ in
+            Task { @MainActor [weak self] in self?.panel?.appearance = PlusAppearanceStore.shared.panelAppearance }
+        }
         preferenceObserver = preferences.objectWillChange.sink { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.reconcileSelection()
                 self.cancelHoverTasks()
+                self.configureSpaceBehavior()
+                self.configureFullscreenMonitoring()
                 if self.wantsVisible, !self.suspended {
                     let displayChanged = self.lastDisplaySelection != self.preferences.displaySelection
                     self.lastDisplaySelection = self.preferences.displaySelection
                     guard let screen = displayChanged ? self.preferredScreen() : self.currentScreen() else { self.dismiss(); return }
                     self.screenID = NotchScreenLayout.screenID(for: screen)
-                    self.layout(on: screen, animated: false)
+                    guard self.layout(on: screen, animated: false) else { return }
+                    if !self.preferences.hideInFullscreen || !PlusFullscreenDetection.shouldHide(on: screen, enabled: true) {
+                        self.hiddenForFullscreen = false
+                        self.panel?.orderFrontRegardless()
+                    }
                 }
             }
         }
@@ -302,6 +348,36 @@ public final class NotchDashboardController {
                     self?.presentation.increaseContrast = NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
                 }
             }
+        spaceObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
+                Task { @MainActor [weak self] in self?.updateFullscreenVisibility() }
+            }
+        configureFullscreenMonitoring()
+    }
+    private func configureSpaceBehavior() {
+        panel?.collectionBehavior = preferences.spaceBehavior == .allSpaces
+            ? [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
+            : [.moveToActiveSpace, .fullScreenAuxiliary, .transient, .ignoresCycle]
+    }
+    private func configureFullscreenMonitoring() {
+        fullscreenTask?.cancel(); fullscreenTask = nil
+        guard preferences.hideInFullscreen else { updateFullscreenVisibility(); return }
+        fullscreenTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                self?.updateFullscreenVisibility()
+                do { try await Task.sleep(for: .seconds(1)) } catch { return }
+            }
+        }
+    }
+    private func updateFullscreenVisibility() {
+        guard wantsVisible, !suspended, let screen = currentScreen() else { return }
+        let shouldHide = PlusFullscreenDetection.shouldHide(on: screen, enabled: preferences.hideInFullscreen)
+        if shouldHide {
+            hiddenForFullscreen = true; cancelHoverTasks(); panel?.orderOut(nil)
+        } else if hiddenForFullscreen {
+            hiddenForFullscreen = false
+            if layout(on: screen, animated: false) { panel?.orderFrontRegardless() }
+        }
     }
 }
 #endif

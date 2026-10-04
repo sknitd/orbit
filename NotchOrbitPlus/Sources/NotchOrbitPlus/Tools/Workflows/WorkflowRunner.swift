@@ -42,10 +42,10 @@ struct WorkflowRunner: Sendable {
             throw OrbitError.invalidInput("Drop 1–64 distinct local files into the saved workflow.")
         }
         let originalItems = try FileInspector.inspect(urls)
-        let needsImages = preset.steps.contains { $0 != .zip }
+        let needsImages = !preset.isVideoWorkflow && preset.steps.contains { $0 != .zip }
         guard originalItems.count == urls.count,
-              originalItems.allSatisfy({ needsImages ? $0.kind == .image : $0.kind != .folder }) else {
-            throw OrbitError.invalidInput(needsImages ? "This workflow needs still images only." : "Drop regular files, not folders, into this workflow.")
+              originalItems.allSatisfy({ preset.isVideoWorkflow ? $0.kind == .video : needsImages ? $0.kind == .image : $0.kind != .folder }) else {
+            throw OrbitError.invalidInput(preset.isVideoWorkflow ? "This workflow needs video files only, such as MOV or MP4." : needsImages ? "This workflow needs still images only." : "Drop regular files, not folders, into this workflow.")
         }
         guard originalItems.allSatisfy({ $0.byteCount <= 512 * 1024 * 1024 }),
               originalItems.reduce(0, { $0 + $1.byteCount }) <= 2 * 1024 * 1024 * 1024 else {
@@ -87,6 +87,10 @@ struct WorkflowRunner: Sendable {
                     let result = try await ImageEngine().perform(.compressImage, items: FileInspector.inspect(current),
                                                                  context: .init(outputDirectory: output, quality: quality, progress: stepProgress))
                     current = result.outputs
+                case .compressVideo:
+                    let result = try await NativeMediaEngine().perform(.compressVideo, items: FileInspector.inspect(current),
+                                                                      context: .init(outputDirectory: output, progress: stepProgress))
+                    current = result.outputs
                 case .zip:
                     let bundle = try directory(preset.name, in: output)
                     for (position, url) in current.enumerated() {
@@ -118,6 +122,7 @@ struct WorkflowRunner: Sendable {
             return result
         } catch {
             for output in published { try? FileManager.default.removeItem(at: output) }
+            if Task.isCancelled { throw CancellationError() }
             throw error
         }
     }

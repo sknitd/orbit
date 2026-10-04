@@ -1,6 +1,7 @@
 #if os(macOS)
 import AppKit
 import SwiftUI
+import NotchCore
 
 @MainActor
 public struct NotchDashboardModule: Identifiable {
@@ -34,6 +35,9 @@ struct NotchDashboardView: View {
     let toggleExpanded: @MainActor () -> Void
     let collapse: @MainActor () -> Void
     let openSettings: @MainActor () -> Void
+    @FocusState private var focusedToolID: String?
+    @ObservedObject private var appearance = PlusAppearanceStore.shared
+    @Environment(\.colorScheme) private var colorScheme
 
     private var visibleModules: [NotchDashboardModule] {
         let order = preferences.orderedTools.map(\.id)
@@ -48,7 +52,8 @@ struct NotchDashboardView: View {
     var body: some View {
         ZStack {
             DashboardMaterial()
-            Color.black.opacity(presentation.increaseContrast ? 0.9 : 0.63)
+            if colorScheme == .light { Color.white.opacity(presentation.increaseContrast ? 0.95 : 0.84) }
+            else { Color.black.opacity(presentation.increaseContrast ? 0.9 : 0.63) }
             Group {
                 if presentation.expanded { expandedContent.transition(dashboardTransition) }
                 else { compact.transition(dashboardTransition) }
@@ -60,10 +65,12 @@ struct NotchDashboardView: View {
                                           bottomTrailingRadius: 22, topTrailingRadius: 7))
         .overlay(UnevenRoundedRectangle(topLeadingRadius: 7, bottomLeadingRadius: 22,
                                         bottomTrailingRadius: 22, topTrailingRadius: 7)
-            .strokeBorder(.white.opacity(presentation.increaseContrast ? 0.6 : 0.11), lineWidth: 0.7))
-        .preferredColorScheme(.dark)
+            .strokeBorder((colorScheme == .light ? Color.black : Color.white)
+                .opacity(presentation.increaseContrast ? 0.6 : 0.11), lineWidth: 0.7))
+        .preferredColorScheme(appearance.preferredColorScheme).tint(appearance.accentColor)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("NotchOrbitPlus dashboard")
+        .accessibilityHint("Tab moves between controls. Control-Tab changes tools. Escape closes the dashboard.")
     }
 
     private var compact: some View {
@@ -107,9 +114,19 @@ struct NotchDashboardView: View {
                                                 in: RoundedRectangle(cornerRadius: 9))
                             }.buttonStyle(.plain).foregroundStyle(presentation.selectedToolID == module.id ? .primary : .secondary)
                                 .id(module.id).accessibilityLabel(module.title)
+                                .focused($focusedToolID, equals: module.id)
                                 .accessibilityAddTraits(presentation.selectedToolID == module.id ? .isSelected : [])
                         }
                     }.padding(.horizontal, 12).padding(.vertical, 8)
+                        .onMoveCommand { direction in
+                            guard focusedToolID != nil else { return }
+                            let step: Int
+                            switch direction { case .left, .up: step = -1; case .right, .down: step = 1; default: return }
+                            if let id = DashboardBehavior.neighboringTool(current: focusedToolID,
+                                orderedVisibleIDs: visibleModules.map(\.id), offset: step) {
+                                focusedToolID = id; presentation.selectedToolID = id
+                            }
+                        }
                         .animation(dashboardSpring, value: presentation.selectedToolID)
                 }
                 .onAppear {

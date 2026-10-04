@@ -118,6 +118,48 @@ final class FileShelfToolStore: ObservableObject {
         }
     }
 
+    /// Generated captures always become owned shelf copies, independent of the drop Auto-save preference.
+    /// Await publication before the capture subsystem removes its private staging file.
+    func addManagedCapture(_ url: URL,
+                           isCurrent: @MainActor () -> Bool = { true },
+                           didPublish: @MainActor (FileShelfItem) -> Void = { _ in }) async throws -> FileShelfItem {
+        let source = url.standardizedFileURL
+        let values = try source.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+        guard source.isFileURL, (source.host ?? "").isEmpty || source.host == "localhost",
+              values.isRegularFile == true, values.isSymbolicLink != true,
+              ["png", "mov", "mp4"].contains(source.pathExtension.lowercased()),
+              items.count + inFlight.count < 200, !inFlight.contains(source),
+              let directory = managedDirectory else { throw CocoaError(.fileReadCorruptFile) }
+        inFlight.insert(source); importing += 1
+        defer { inFlight.remove(source); importing -= 1 }
+        let child = Task.detached(priority: .userInitiated) {
+            try Self.prepare(source, copy: true, directory: directory)
+        }
+        let item = try await withTaskCancellationHandler {
+            try await child.value
+        } onCancel: { child.cancel() }
+        do {
+            try Task.checkCancellation()
+            guard isCurrent() else { throw CancellationError() }
+            // Save the proposed index first so an error cannot leave an unindexed owned capture.
+            if persistState {
+                try LocalToolStorage.save(ShelfLibraryArchive(state: FileShelfState(
+                    items: [item] + items, autoSave: autoSave, retention: retention), metadata: metadata),
+                                          file: "file-shelf.json")
+            }
+            items.insert(item, at: 0)
+            error = nil; status = "Saved a managed capture; its staging source is unchanged."
+            scheduleExpiration()
+            // The capture's history/status commit shares this MainActor turn; a
+            // cancelled caller never needs to remove a user-editable published item.
+            didPublish(item)
+            return item
+        } catch {
+            try deleteManagedCopy(item)
+            throw error
+        }
+    }
+
     private nonisolated static func prepare(_ source: URL, copy: Bool, directory: URL) throws -> FileShelfItem {
         let granted = source.startAccessingSecurityScopedResource()
         defer { if granted { source.stopAccessingSecurityScopedResource() } }

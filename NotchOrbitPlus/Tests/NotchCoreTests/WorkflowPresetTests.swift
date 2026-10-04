@@ -3,6 +3,25 @@ import XCTest
 @testable import NotchCore
 
 final class WorkflowPresetTests: XCTestCase {
+    func testVideoPresetRoundTripsAndOnlyAllowsCompressionThenOptionalZIP() throws {
+        for steps: [WorkflowStep] in [[.compressVideo], [.compressVideo, .zip]] {
+            let preset = WorkflowPreset(name: "Recording", steps: steps)
+            let restored = try JSONDecoder().decode(WorkflowPreset.self, from: JSONEncoder().encode(preset))
+            XCTAssertEqual(try restored.validated(), preset)
+            XCTAssertTrue(restored.isVideoWorkflow)
+            XCTAssertTrue(restored.summary.contains("MP4"))
+        }
+        XCTAssertNoThrow(try WorkflowPreset.videoStarter.validated())
+        XCTAssertFalse(WorkflowPreset.starter.isVideoWorkflow)
+        let invalid: [[WorkflowStep]] = [
+            [.resize(maxDimension: 1600), .compressVideo],
+            [.convert(format: .jpeg), .compressVideo],
+            [.compress(quality: 0.5), .compressVideo],
+            [.compressVideo, .compressVideo], [.zip, .compressVideo],
+            [.compressVideo, .zip, .zip]
+        ]
+        for steps in invalid { XCTAssertThrowsError(try WorkflowPreset(name: "Mixed", steps: steps).validated()) }
+    }
     func testSavedFourStagePresetRoundTripsWithoutChangingItsIdentityOrParameters() throws {
         let id = UUID()
         let preset = WorkflowPreset(id: id, name: "Photo delivery", steps: [
