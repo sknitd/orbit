@@ -54,10 +54,33 @@ final class CornerHistoryTests: XCTestCase, @unchecked Sendable {
         sqlite3_close_v2(database)
         try originalDB.write(to: file); try originalWAL.write(to: wal)
         let shm = URL(fileURLWithPath: file.path + "-shm")
+        // Apple SQLite may persist WAL/SHM after close. Only this private
+        // synthetic fixture removes its SHM after all connections are closed.
+        if FileManager.default.fileExists(atPath: shm.path) { try FileManager.default.removeItem(at: shm) }
         XCTAssertFalse(FileManager.default.fileExists(atPath: shm.path))
         let entries = try await ChromeHistoryReader().read(from: file, limit: 100)
         XCTAssertEqual(entries.map(\.title), ["Committed WAL row"])
         XCTAssertEqual(try Data(contentsOf: file), originalDB); XCTAssertEqual(try Data(contentsOf: wal), originalWAL)
+    }
+
+    func testParentFolderAliasReadsSameHistoryButFinalHistorySymlinkIsRefused() async throws {
+        let root = try fixture(); defer { try? FileManager.default.removeItem(at: root) }
+        let profile = root.appendingPathComponent("physical-profile", isDirectory: true)
+        try FileManager.default.createDirectory(at: profile, withIntermediateDirectories: false)
+        let file = profile.appendingPathComponent("History"), database = try database(file)
+        try insert(database, url: "https://example.com/alias", title: "Parent alias", seconds: 1_700_000_123); sqlite3_close_v2(database)
+        let alias = root.appendingPathComponent("profile-alias", isDirectory: true)
+        try FileManager.default.createSymbolicLink(at: alias, withDestinationURL: profile)
+        let before = try Data(contentsOf: file)
+        let entries = try await ChromeHistoryReader().read(from: alias.appendingPathComponent("History"), limit: 100)
+        XCTAssertEqual(entries.map(\.title), ["Parent alias"])
+        XCTAssertEqual(try Data(contentsOf: file), before)
+        let finalLink = profile.appendingPathComponent("History-link")
+        try FileManager.default.createSymbolicLink(at: finalLink, withDestinationURL: file)
+        do { _ = try await ChromeHistoryReader().read(from: alias.appendingPathComponent("History-link"), limit: 100); XCTFail("A final History symlink must still be refused") }
+        catch ChromeHistoryError.invalidFile {}
+        XCTAssertEqual(try Data(contentsOf: file), before)
+        XCTAssertEqual(try FileManager.default.destinationOfSymbolicLink(atPath: finalLink.path), file.path)
     }
 
     func testActualSQLiteSkipsUnsafeURLsMalformedDatesAndTypedRowsWithoutInventingEntries() async throws {

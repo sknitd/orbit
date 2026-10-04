@@ -1,6 +1,7 @@
 import Foundation
 import SQLite3
 import CornerCore
+import Darwin
 
 protocol ChromeHistoryReading: Sendable {
     func read(from historyFile: URL, limit: Int) async throws -> [CornerHistoryEntry]
@@ -17,7 +18,7 @@ enum ChromeHistoryError: Error, LocalizedError, Equatable, Sendable {
         case .unsupportedSchema: "This database does not contain the supported Chrome urls table (URL, title, visit time and visit count)."
         case .busy: "Chrome's history is temporarily locked. The previous loaded entries remain available; try Refresh again or close Chrome first."
         case .timedOut: "The bounded history query timed out. The previous loaded entries remain available."
-        case .databaseUnavailable: "Chrome history could not be opened read-only. Choose a readable profile and retry. If macOS denies access, review the app's Files and Folders or Full Disk Access settings yourself."
+        case .databaseUnavailable(let code): "Chrome history could not be opened read-only (SQLite code \(code)). Refresh or reselect a readable History file/profile. If macOS denies access, review Files and Folders or Full Disk Access settings yourself."
         }
     }
 }
@@ -54,11 +55,19 @@ struct ChromeHistoryReader: ChromeHistoryReading {
         guard info.isRegularFile == true, info.isSymbolicLink != true else { throw ChromeHistoryError.invalidFile }
         guard let size = info.fileSize, size >= 100 else { throw ChromeHistoryError.invalidDatabase }
         guard Int64(size) <= maximumFileBytes else { throw ChromeHistoryError.oversizedFile }
+        let identity = try sourceIdentity(file)
+        // SQLite NOFOLLOW rejects symlinks in parent components too. Resolve
+        // supported parent aliases (including macOS /var -> /private/var), but
+        // preserve and revalidate the final leaf rather than resolving it.
+        let databaseFile = file.deletingLastPathComponent().resolvingSymlinksInPath().standardizedFileURL
+            .appendingPathComponent(file.lastPathComponent, isDirectory: false)
+        guard try sourceIdentity(databaseFile) == identity else { throw ChromeHistoryError.invalidFile }
 
         var database: OpaquePointer?
-        let code = sqlite3_open_v2(file.path, &database, SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_NOFOLLOW, nil)
+        let code = sqlite3_open_v2(databaseFile.path, &database, SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_NOFOLLOW, nil)
         guard code == SQLITE_OK, let database else { if let database { sqlite3_close_v2(database) }; throw mappedError(code, cancellation: cancellation) }
         defer { sqlite3_close_v2(database) }
+        guard try sourceIdentity(databaseFile) == identity else { throw ChromeHistoryError.invalidFile }
         guard sqlite3_db_readonly(database, "main") == 1 else { throw ChromeHistoryError.invalidDatabase }
         sqlite3_busy_timeout(database, 750)
         sqlite3_limit(database, SQLITE_LIMIT_LENGTH, 64 * 1024)
@@ -106,6 +115,18 @@ struct ChromeHistoryReader: ChromeHistoryReading {
         }
         try cancellation.check()
         return CornerHistorySanitizer.sanitize(entries, limit: limit)
+    }
+
+    private struct SourceIdentity: Equatable { let device: Int64; let inode: UInt64 }
+    private static func sourceIdentity(_ file: URL) throws -> SourceIdentity {
+        var value = stat()
+        guard lstat(file.path, &value) == 0 else { throw ChromeHistoryError.databaseUnavailable(SQLITE_CANTOPEN) }
+        // lstat checks the final directory entry itself, so a direct History
+        // symlink remains refused even when its parent is a supported alias.
+        guard value.st_mode & mode_t(S_IFMT) == mode_t(S_IFREG) else { throw ChromeHistoryError.invalidFile }
+        guard value.st_size >= 100 else { throw ChromeHistoryError.invalidDatabase }
+        guard value.st_size <= maximumFileBytes else { throw ChromeHistoryError.oversizedFile }
+        return SourceIdentity(device: Int64(value.st_dev), inode: UInt64(value.st_ino))
     }
 
     private static func validateSchema(_ database: OpaquePointer, cancellation: HistoryReadCancellation) throws {
