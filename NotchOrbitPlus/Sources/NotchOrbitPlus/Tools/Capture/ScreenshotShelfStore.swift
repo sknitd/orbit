@@ -54,9 +54,10 @@ final class ScreenshotShelfStore: ObservableObject {
         }
     }
     func setVisible(_ value: Bool) {
-        // An explicit one-shot area selection moves the pointer off the dashboard.
-        // It can finish its own overlay; continuous recording must stop when hidden.
-        if visible && !value && (preparingRecording || isRecording) { cancel() }
+        // Selection/sampling overlays do not count as hidden in CaptureToolVisibility.
+        // An actual hide/tab switch cancels every active capture, including a PNG.
+        // An explicit Intent may start while already hidden; this is transition-based.
+        if visible && !value && (preparingRecording || isRecording || isWorking) { cancel() }
         visible = value
         if value { refreshDisplayChoices() }
     }

@@ -70,6 +70,33 @@ final class CaptureFilesEvaluationTests: NativeImageFixtureCase, @unchecked Send
         shelf.shutdown()
     }
 
+    @MainActor
+    func testActualHideCancelsAwaitedScreenshotBeforeScreenCaptureAndPublication() async throws {
+        let directory = fixtureDirectory.appendingPathComponent("HiddenShelf")
+        let shelf = FileShelfToolStore(managedDirectory: directory, persistState: false)
+        let fixture = CaptureHideFixture()
+        var checked = 0; var requested = 0
+        let store = ScreenshotShelfStore(shelf: shelf, persistState: false,
+            permissionCheck: {
+                checked += 1
+                // Deterministically hide during the owned screenshot child, before
+                // it can invoke ScreenCaptureKit. This fixture never calls real TCC.
+                fixture.store?.setVisible(false)
+                return true
+            }, permissionRequest: { requested += 1; return false })
+        fixture.store = store
+        store.setVisible(true)
+        do { _ = try await store.captureFullScreenForIntent(); XCTFail("A hidden screenshot must cancel") }
+        catch is CancellationError { }
+        XCTAssertEqual(checked, 1); XCTAssertEqual(requested, 0)
+        XCTAssertFalse(store.isWorking); XCTAssertFalse(store.isRecording)
+        XCTAssertTrue(store.history.isEmpty); XCTAssertTrue(shelf.items.isEmpty)
+        XCTAssertNil(store.error)
+        XCTAssertEqual(store.status, "Capture stopped; no partial capture will be published.")
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: directory.path).isEmpty)
+        store.shutdown(); shelf.shutdown()
+    }
+
     func testNativeWriterCreatesDecodableMOVAndExtendsAnUnchangedRealFrame() async throws {
         let output = fixtureDirectory.appendingPathComponent("unchanged.mov")
         let writer = try CaptureMovieWriter(url: output, width: 64, height: 48)
@@ -118,4 +145,9 @@ final class CaptureFilesEvaluationTests: NativeImageFixtureCase, @unchecked Send
             formatDescription: try XCTUnwrap(description), sampleTiming: &timing, sampleBufferOut: &result), noErr)
         return try XCTUnwrap(result)
     }
+}
+
+@MainActor
+private final class CaptureHideFixture {
+    weak var store: ScreenshotShelfStore?
 }

@@ -5,7 +5,9 @@ import NotchCore
 @MainActor
 enum PlusFullscreenDetection {
     static func requestAccess() {
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        // The documented option's literal avoids importing a mutable C global
+        // into Swift 6's strict concurrency checks.
+        let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
         _ = AXIsProcessTrustedWithOptions(options)
     }
     static func shouldHide(on screen: NSScreen, enabled: Bool) -> Bool {
@@ -27,7 +29,8 @@ enum PlusFullscreenDetection {
         var position = CGPoint.zero, size = CGSize.zero
         guard AXValueGetValue(positionValue as! AXValue, .cgPoint, &position),
               AXValueGetValue(sizeValue as! AXValue, .cgSize, &size),
-              position.x.isFinite, position.y.isFinite, size.width > 0, size.height > 0 else { return false }
+              position.x.isFinite, position.y.isFinite, size.width.isFinite, size.height.isFinite,
+              size.width > 0, size.height > 0 else { return false }
         let bounds = CGRect(origin: position, size: size)
         let display = NSScreen.screens.compactMap { candidate -> (UInt32, CGFloat)? in
             guard let id = NotchScreenLayout.screenID(for: candidate) else { return nil }
