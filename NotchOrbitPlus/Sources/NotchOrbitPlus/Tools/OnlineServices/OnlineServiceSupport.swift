@@ -8,10 +8,12 @@ enum OnlineServiceKeychain {
     static func read(_ account: String) throws -> String? {
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service, kSecAttrAccount as String: account,
-            kSecReturnData as String: true, kSecMatchLimit as String: kSecMatchLimitOne]
+            kSecReturnData as String: true, kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecUseAuthenticationUI as String: kSecUseAuthenticationUIFail]
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound { return nil }
+        if status == errSecInteractionNotAllowed { throw OnlineServiceError.message("Unlock your login Keychain in Keychain Access, then retry.") }
         guard status == errSecSuccess, let data = result as? Data, let text = String(data: data, encoding: .utf8) else {
             throw OnlineServiceError.message("Could not read the saved key from Keychain (\(status)).")
         }
@@ -113,11 +115,16 @@ enum OnlineServiceHTTPS {
 struct OnlineStatusView: View {
     let busy: Bool
     let error: String?
-    let cancel: () -> Void
+    let cancel: @MainActor () -> Void
     var body: some View {
-        if busy { HStack { ProgressView().controlSize(.small); Text("Loading…"); Button("Cancel", action: cancel) } }
+        if busy { HStack { ProgressView().controlSize(.small); Text("Loading…"); Button("Cancel") { cancel() } } }
         if let error { Text(error).font(.callout).foregroundStyle(.orange).textSelection(.enabled) }
     }
 }
 
 func onlineAmount(_ value: Decimal) -> String { NSDecimalNumber(decimal: value).stringValue }
+func onlineRoundedUSD(_ value: Decimal) -> String {
+    let formatter = NumberFormatter(); formatter.numberStyle = .decimal
+    formatter.minimumFractionDigits = 2; formatter.maximumFractionDigits = 2
+    return formatter.string(from: NSDecimalNumber(decimal: value)) ?? onlineAmount(value)
+}

@@ -35,6 +35,7 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        LocalProductivityLifecycle.start()
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = NSImage(systemSymbolName: "rectangle.topthird.inset.filled",
                                     accessibilityDescription: "NotchOrbitPlus")
@@ -80,6 +81,7 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
         dashboard.stop()
         shortcut.stop()
         FocusTimerService.shared.shutdown()
+        LocalProductivityLifecycle.shutdown()
         model.cancel()
     }
 

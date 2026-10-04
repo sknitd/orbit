@@ -81,6 +81,17 @@ struct PlusSettingsView: View {
                 .tabItem { Label("Dashboard", systemImage: "rectangle.topthird.inset.filled") }
             NotchSettingsView(model: model, requestAccess: requestAccess, applyPreferences: applyPreferences)
                 .tabItem { Label("File actions", systemImage: "wand.and.stars") }
+            VStack(spacing: 16) {
+                Image(systemName: "rectangle.topthird.inset.filled").font(.system(size: 56)).foregroundStyle(.blue)
+                Text("NotchOrbitPlus").font(.title.weight(.semibold))
+                Text("Twenty tools, below your notch.").font(.title3)
+                Text("Version \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0") · macOS 14+")
+                    .foregroundStyle(.secondary)
+                Text("Ask Orbit requires macOS 26 and Apple Intelligence. Connected services need their own setup.")
+                    .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                Link("Report an issue or request a feature", destination: URL(string: "https://github.com/sknitd/orbit/issues/new")!)
+                Link("Features and setup", destination: URL(string: "https://github.com/sknitd/orbit/tree/codex/orbitdrop/NotchOrbitPlus")!)
+            }.padding(24).tabItem { Label("About", systemImage: "info.circle") }
         }.padding(12).frame(width: 700, height: 600)
             .onChange(of: dashboardPreferences.keyboardShortcutEnabled) { _, _ in applyPreferences() }
     }

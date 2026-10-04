@@ -1,7 +1,8 @@
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
-private enum ClipKind: String, Codable, CaseIterable, Sendable {
+enum ClipKind: String, Codable, CaseIterable, Sendable {
     case text, link, image, files
     var title: String { rawValue.capitalized }
     var symbol: String {
@@ -9,7 +10,7 @@ private enum ClipKind: String, Codable, CaseIterable, Sendable {
     }
 }
 
-private struct LocalClip: Identifiable, Codable, Equatable, Sendable {
+struct LocalClip: Identifiable, Codable, Equatable, Sendable {
     var id = UUID()
     var createdAt = Date()
     let kind: ClipKind
@@ -31,7 +32,16 @@ private struct LocalClip: Identifiable, Codable, Equatable, Sendable {
 }
 
 @MainActor
-private final class ClipboardToolStore: ObservableObject {
+final class ClipboardToolStore: ObservableObject {
+    private static var instance: ClipboardToolStore?
+    static var shared: ClipboardToolStore {
+        if let instance { return instance }
+        let store = ClipboardToolStore()
+        instance = store
+        return store
+    }
+    static func shutdownIfInitialized() { instance?.setObserving(false) }
+
     @Published private(set) var clips: [LocalClip] = []
     @Published private(set) var observing = false
     @Published var error: String?
@@ -40,8 +50,13 @@ private final class ClipboardToolStore: ObservableObject {
     private var lastCount = 0
     private let limit = 100
     private let totalByteLimit = 20 * 1_024 * 1_024
+    private let pasteboard: NSPasteboard
+    private let persistHistory: Bool
 
-    init() {
+    init(pasteboard: NSPasteboard? = nil, persistHistory: Bool = true) {
+        self.pasteboard = pasteboard ?? .general
+        self.persistHistory = persistHistory
+        guard persistHistory else { return }
         do {
             clips = try LocalToolStorage.load([LocalClip].self, file: "clipboard.json", fallback: [])
             boundHistory()
@@ -54,8 +69,8 @@ private final class ClipboardToolStore: ObservableObject {
         observation = nil
         observing = enabled
         guard enabled else { status = "Observation is off."; return }
-        lastCount = NSPasteboard.general.changeCount
-        status = "Watching new copies on this Mac."
+        lastCount = pasteboard.changeCount
+        status = "Watching new copies on this Mac, including while the panel is hidden."
         observation = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 do { try await Task.sleep(for: .milliseconds(700)) } catch { return }
@@ -65,8 +80,9 @@ private final class ClipboardToolStore: ObservableObject {
         }
     }
 
-    private func captureIfChanged() {
-        let board = NSPasteboard.general
+    func captureIfChanged() {
+        guard observing else { return }
+        let board = pasteboard
         guard board.changeCount != lastCount else { return }
         lastCount = board.changeCount
         let types = (board.types ?? []) + (board.pasteboardItems ?? []).flatMap(\.types)
@@ -89,7 +105,10 @@ private final class ClipboardToolStore: ObservableObject {
             clip = LocalClip(kind: .image, image: image, imageType: NSPasteboard.PasteboardType.png.rawValue)
         } else if let image = board.data(forType: .tiff), image.count <= 4 * 1_024 * 1_024 {
             clip = LocalClip(kind: .image, image: image, imageType: NSPasteboard.PasteboardType.tiff.rawValue)
-        } else if let value = board.string(forType: .string), !value.isEmpty {
+        } else if let type = (board.types ?? []).first(where: { UTType($0.rawValue)?.conforms(to: .image) == true }),
+                  let image = board.data(forType: type), image.count <= 4 * 1_024 * 1_024 {
+            clip = LocalClip(kind: .image, image: image, imageType: type.rawValue)
+        } else if let value = board.string(forType: .string) ?? board.string(forType: .URL), !value.isEmpty {
             guard value.utf8.count <= 100_000 else { status = "Skipped text larger than 100 KB."; return }
             let url = URL(string: value.trimmingCharacters(in: .whitespacesAndNewlines))
             let isLink = ["http", "https", "mailto"].contains(url?.scheme?.lowercased() ?? "")
@@ -111,13 +130,14 @@ private final class ClipboardToolStore: ObservableObject {
         while clips.reduce(0, { $0 + $1.byteCount }) > totalByteLimit { clips.removeLast() }
     }
     private func save() {
+        guard persistHistory else { return }
         do { try LocalToolStorage.save(clips, file: "clipboard.json"); error = nil }
         catch { self.error = "Could not save clipboard history: \(error.localizedDescription)" }
     }
     func clear() { clips.removeAll(); save(); status = "History cleared." }
     func remove(_ clip: LocalClip) { clips.removeAll { $0.id == clip.id }; save() }
     func copy(_ clip: LocalClip) {
-        let board = NSPasteboard.general
+        let board = pasteboard
         board.clearContents()
         let success: Bool
         switch clip.kind {
@@ -141,7 +161,7 @@ private final class ClipboardToolStore: ObservableObject {
 
 @MainActor
 struct ClipboardToolView: View {
-    @StateObject private var store = ClipboardToolStore()
+    @ObservedObject private var store = ClipboardToolStore.shared
     @State private var search = ""
     @State private var filter = "all"
     private var visible: [LocalClip] {
@@ -152,11 +172,13 @@ struct ClipboardToolView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Toggle("Observe clipboard", isOn: Binding(get: { store.observing }, set: store.setObserving))
+                Toggle("Observe clipboard", isOn: Binding(get: { store.observing }, set: { enabled in
+                    store.setObserving(enabled)
+                }))
                 Spacer()
                 Button("Clear History", action: store.clear).disabled(store.clips.isEmpty)
             }
-            Text("Off at every launch. Opt in to new copies; known concealed, transient, and password-manager clips are skipped.")
+            Text("Off at every launch; once enabled, keeps observing while hidden. Known concealed, transient, and password-manager clips are skipped.")
                 .font(.caption).foregroundStyle(.secondary)
             HStack {
                 TextField("Search history", text: $search).textFieldStyle(.roundedBorder)

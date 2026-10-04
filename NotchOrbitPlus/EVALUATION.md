@@ -12,7 +12,7 @@ Portable suites cover inherited activation/geometry/payload boundaries, deadline
 
 The reference's marketing count is twenty; its visible text/HTML explicitly names nineteen. The app adds its existing File Actions as the twentieth entry. This is an independently implemented feature set with the following material differences:
 
-- AI Usage supports explicitly selected normalized local usage reports; it does not automatically retrieve subscription session/weekly limits from tools already signed in. There is no universal documented public quota API for all five advertised services, and installed-tool credentials are not extracted.
+- AI Usage supports an explicit live Codex quota read through the installed CLI's documented `account/rateLimits/read` protocol, with initialization only and no model/thread/turn/tool calls. Other providers use selected normalized local reports. Automatic signed-in account collection for Claude, Cursor, Copilot and Grok is not implemented; installed-tool credentials are not extracted. The live Codex protocol is pinned to public source `openai/codex` commit `afb436df8b70bb5bc57b86d9a3e829968988cd21`.
 - Now Playing supports Music and Spotify through public Automation. Synced lyrics require a real local timestamped LRC file. System-wide player discovery, browser playback and automatic lyrics are not claimed.
 - Ask Orbit uses genuine weak-linked FoundationModels, requiring an eligible macOS 26+ Apple Intelligence configuration. Unsupported systems show availability information.
 - Stocks uses an explicitly configured market-data provider; quote delay and intraday access depend on that provider's plan. Weather uses Open-Meteo, not a provisioned WeatherKit entitlement.

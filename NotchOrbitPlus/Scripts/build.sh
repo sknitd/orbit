@@ -15,6 +15,8 @@ evaluation_path="${NOTCHORBITPLUS_EVAL_DIR:-$task_root/build/evaluation}"
 [[ "$evaluation_path" == /* ]] || evaluation_path="$task_root/$evaluation_path"
 mkdir -p "$evaluation_path"
 NOTCHORBITPLUS_EVAL_DIR="$evaluation_path" TEST_RUNNER_NOTCHORBITPLUS_EVAL_DIR="$evaluation_path" \
+  NOTCHORBITPLUS_PUBLIC_PROBE_DIR="$task_root/build/public-probes" \
+  TEST_RUNNER_NOTCHORBITPLUS_PUBLIC_PROBE_DIR="$task_root/build/public-probes" \
   xcodebuild -project NotchOrbitPlus.xcodeproj -scheme NotchOrbitPlus -configuration Debug \
   -destination "platform=macOS,arch=$host_arch" -derivedDataPath build/DerivedData \
   CODE_SIGNING_ALLOWED=NO test

@@ -96,12 +96,21 @@ public enum OnlineServiceDecoding {
         return (start, calendar.date(byAdding: .day, value: 1, to: start)!)
     }
     public static func majorUnits(_ minor: Decimal, currency: String) throws -> Decimal {
-        let zero = Set(["BIF", "CLP", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA", "PYG", "RWF", "UGX", "VND", "VUV", "XAF", "XOF", "XPF"])
+        let zero = Set(["BIF", "CLP", "DJF", "GNF", "ISK", "JPY", "KMF", "KRW", "PYG", "RWF", "UGX", "UYI", "VND", "VUV", "XAF", "XOF", "XPF"])
         let three = Set(["BHD", "IQD", "JOD", "KWD", "LYD", "OMR", "TND"])
         guard minor >= 0, Locale.commonISOCurrencyCodes.contains(currency) else {
             throw OnlineDataError.invalid("Invalid amount or currency in an order.")
         }
         return minor / (zero.contains(currency) ? 1 : three.contains(currency) ? 1000 : 100)
+    }
+    public static func providerMajorUnits(_ minor: Decimal, currency: String, provider: OnlineSalesProvider) throws -> Decimal {
+        guard minor >= 0, Locale.commonISOCurrencyCodes.contains(currency) else { throw OnlineDataError.invalid("Invalid provider amount or currency.") }
+        // These order APIs document their integer amounts in cents. Dodo and Paddle use currency-smallest units.
+        if [.lemon, .gumroad, .polar].contains(provider) { return minor / 100 }
+        // Stripe has compatibility exceptions distinct from ISO currency exponents.
+        if provider == .stripe && ["ISK", "UGX"].contains(currency) { return minor / 100 }
+        if provider == .stripe && currency == "MGA" { return minor }
+        return try majorUnits(minor, currency: currency)
     }
 
     public static func sales(_ data: Data, provider: OnlineSalesProvider, fetchedAt: Date = Date()) throws -> OnlineSalesReport {
@@ -142,6 +151,7 @@ public enum OnlineServiceDecoding {
             let status = attributes["status"] as? String ?? ""
             if provider == .stripe && row["paid"] as? Bool != true { continue }
             if provider == .stripe && row["captured"] as? Bool == false { continue }
+            if provider == .polar && row["paid"] as? Bool != true { continue }
             if provider == .lemon && !["paid", "refunded"].contains(status) { continue }
             if provider == .dodo && status != "succeeded" { continue }
             if provider == .paddle && !["completed", "paid"].contains(status) { continue }
@@ -173,20 +183,35 @@ public enum OnlineServiceDecoding {
                 case .shopify: value = nil
                 }
                 currency = currency.uppercased()
-                amount = try majorUnits(decimal(value), currency: currency)
+                let minor = try decimal(value)
+                amount = try providerMajorUnits(minor, currency: currency, provider: provider)
             }
             guard amount >= 0, Locale.commonISOCurrencyCodes.contains(currency) else {
                 throw OnlineDataError.invalid("Invalid order total or currency.")
             }
             let title = (attributes["product_name"] as? String) ?? (row["name"] as? String) ?? (attributes["order_number"] as? String) ?? String(id.suffix(12))
             var refund: Decimal?
-            if provider == .stripe, let value = row["amount_refunded"] { refund = try majorUnits(decimal(value), currency: currency) }
-            if provider == .polar, let value = row["refunded_amount"] { refund = try majorUnits(decimal(value), currency: currency) }
-            if provider == .lemon, status == "refunded" { refund = amount }
+            if provider == .stripe, let value = row["amount_refunded"] {
+                let minor = try decimal(value)
+                refund = try providerMajorUnits(minor, currency: currency, provider: provider)
+            }
+            if provider == .polar, let value = row["refunded_amount"] {
+                let netRefund = try decimal(value)
+                let taxRefund = try row["refunded_tax_amount"].map { try decimal($0) } ?? 0
+                refund = try providerMajorUnits(netRefund + taxRefund, currency: currency, provider: provider)
+            }
+            if provider == .lemon, let value = attributes["refunded_amount"] {
+                refund = try providerMajorUnits(decimal(value), currency: currency, provider: provider)
+            }
             if provider == .gumroad, row["refunded"] as? Bool == true { refund = amount }
             if provider == .shopify, let value = row["totalRefundedSet"] as? [String: Any], let money = value["shopMoney"] as? [String: Any] {
                 guard money["currencyCode"] as? String == currency else { throw OnlineDataError.invalid("Refund currency differs from order currency.") }
                 refund = try decimal(money["amount"])
+            }
+            if provider == .paddle, let totals = (row["adjustment_totals"] ?? row["adjustments_totals"]) as? [String: Any],
+               let breakdown = totals["breakdown"] as? [String: Any], let value = breakdown["refund"] {
+                guard totals["currency_code"] as? String == currency else { throw OnlineDataError.invalid("Paddle refund currency differs from transaction currency.") }
+                refund = try majorUnits(decimal(value), currency: currency)
             }
             guard refund == nil || refund! >= 0 else { throw OnlineDataError.invalid("Invalid refund amount.") }
             orders.append(OnlineSalesOrder(id: id, date: date, amount: amount, currency: currency, title: title, refundedAmount: refund))

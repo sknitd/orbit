@@ -38,6 +38,14 @@ private final class OrbitMirrorPipeline: @unchecked Sendable {
     func stop() { queue.async { [self] in if session.isRunning { session.stopRunning() } } }
 }
 
+/// NotificationCenter removal is thread safe; these immutable tokens are owned
+/// for the model's lifetime and callbacks hold only a weak model reference.
+private final class OrbitMirrorObserverLifetime: @unchecked Sendable {
+    private let tokens: [NSObjectProtocol]
+    init(tokens: [NSObjectProtocol]) { self.tokens = tokens }
+    deinit { for token in tokens { NotificationCenter.default.removeObserver(token) } }
+}
+
 @MainActor
 private final class OrbitMirrorModel: ObservableObject {
     let pipeline = OrbitMirrorPipeline()
@@ -46,6 +54,27 @@ private final class OrbitMirrorModel: ObservableObject {
     @Published var message = "Start Mirror to use your camera. Audio is never captured."
     private var task: Task<Void, Never>?
     private var generation = UUID()
+    private var observations: OrbitMirrorObserverLifetime?
+
+    init() {
+        let session = pipeline.session
+        let failures = NotificationCenter.default.addObserver(forName: AVCaptureSession.runtimeErrorNotification,
+            object: session, queue: .main) { [weak self] notification in
+                let detail = (notification.userInfo?[AVCaptureSessionErrorKey] as? NSError)?.localizedDescription
+                    ?? "The camera reported a capture error."
+                Task { @MainActor [weak self] in self?.captureFailed(detail) }
+            }
+        let interruptions = NotificationCenter.default.addObserver(forName: AVCaptureSession.wasInterruptedNotification,
+            object: session, queue: .main) { [weak self] _ in
+                Task { @MainActor [weak self] in self?.captureFailed("Camera capture was interrupted by macOS. Start Mirror to try again.") }
+            }
+        observations = OrbitMirrorObserverLifetime(tokens: [failures, interruptions])
+    }
+
+    private func captureFailed(_ detail: String) {
+        stop()
+        message = detail
+    }
 
     func start() {
         guard !running, !starting else { return }
@@ -106,7 +135,10 @@ private struct OrbitMirrorPreview: NSViewRepresentable {
         let view = OrbitMirrorPreviewView(frame: .zero); view.preview.session = pipeline.session
         return view
     }
-    func updateNSView(_ view: OrbitMirrorPreviewView, context: Context) { view.preview.session = pipeline.session }
+    func updateNSView(_ view: OrbitMirrorPreviewView, context: Context) {
+        view.preview.session = pipeline.session
+        view.needsLayout = true
+    }
     static func dismantleNSView(_ view: OrbitMirrorPreviewView, coordinator: ()) { view.preview.session = nil }
 }
 

@@ -41,6 +41,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Prepare build tools
         run: command -v cmake || brew install cmake
+      - name: Probe live public weather and FX endpoints
+        id: public_probes
+        continue-on-error: true
+        run: python3 NotchOrbitPlus/Scripts/public-service-probes.py
       - name: Test and build NotchOrbitPlus
         id: build
         shell: bash
@@ -63,6 +67,7 @@ jobs:
             NotchOrbitPlus/build/launch-smoke.log
             NotchOrbitPlus/build/package-verification.json
             NotchOrbitPlus/build/sdk-inventory.json
+            NotchOrbitPlus/build/public-probes/
             NotchOrbitPlus/build/evaluation/*.png
             NotchOrbitPlus/build/DerivedData/Logs/Test/*.xcresult
       - name: Preserve NotchOrbitPlus result for Git retrieval
@@ -70,6 +75,7 @@ jobs:
         env:
           BUILD_OUTCOME: ${{ steps.build.outcome }}
           SOURCE_COMMIT: ${{ github.sha }}
+          PUBLIC_PROBES_OUTCOME: ${{ steps.public_probes.outcome }}
         shell: bash
         run: |
           set -euo pipefail
@@ -88,6 +94,9 @@ jobs:
             mkdir -p "$report_dir/evaluation"
             cp NotchOrbitPlus/build/evaluation/*.png "$report_dir/evaluation/" || true
           fi
+          if [[ -d NotchOrbitPlus/build/public-probes ]]; then
+            cp -R NotchOrbitPlus/build/public-probes "$report_dir/"
+          fi
           if [[ "$BUILD_OUTCOME" == success && -f NotchOrbitPlus/dist/NotchOrbitPlus.app.zip ]]; then
             cp NotchOrbitPlus/dist/NotchOrbitPlus.app.zip NotchOrbitPlus/dist/NotchOrbitPlus.app.zip.sha256 "$report_dir/"
           fi
@@ -96,6 +105,7 @@ jobs:
           pathlib.Path(sys.argv[1], 'build-status.json').write_text(json.dumps({
             'product': 'NotchOrbitPlus', 'source_directory': 'NotchOrbitPlus',
             'outcome': os.environ['BUILD_OUTCOME'], 'source_commit': os.environ['SOURCE_COMMIT'],
+            'public_service_probes_outcome': os.environ['PUBLIC_PROBES_OUTCOME'],
             'runner': 'macos-26', 'run_id': os.environ['GITHUB_RUN_ID'],
             'native_notch_drag_acceptance': 'requires interactive Mac validation'
           }, indent=2) + '\n')
@@ -110,6 +120,7 @@ jobs:
           if [[ -f package-verification.json ]]; then git add --force package-verification.json; fi
           if [[ -f sdk-inventory.json ]]; then git add --force sdk-inventory.json; fi
           if [[ -d evaluation ]]; then git add --force evaluation; fi
+          if [[ -d public-probes ]]; then git add --force public-probes; fi
           if [[ -f NotchOrbitPlus.app.zip ]]; then git add --force NotchOrbitPlus.app.zip NotchOrbitPlus.app.zip.sha256; fi
           git commit -m "NotchOrbitPlus build results for ${SOURCE_COMMIT}"
           git push origin HEAD

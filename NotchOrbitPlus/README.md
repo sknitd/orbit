@@ -21,8 +21,8 @@ The development app is ad hoc signed and **not notarized**. If macOS blocks it, 
 | Tool | What it does | Setup or practical limit |
 | --- | --- | --- |
 | Ask Orbit | On-device chat, rewrite and summarize using Apple Foundation Models | **macOS 26+**, compatible Apple Silicon, enabled Apple Intelligence and downloaded model; no cloud fallback |
-| AI Usage | Session/weekly usage, known limits and remaining quota from imported local reports for Claude, Codex, Cursor, Copilot and Grok | Imported snapshots; **automatic signed-in account quota collection is not implemented** |
-| Sales | Read-only provider adapters for Stripe, Shopify, Lemon Squeezy, Gumroad, Dodo, Polar and Paddle; recent paid orders and grouped-currency totals | User-provided provider credentials stored in this app's Keychain items; gross-paid accounting and coverage are labeled; service/account verification required |
+| AI Usage | Live Codex quota through a selected installed Codex CLI; imported session/weekly reports for Claude, Codex, Cursor, Copilot and Grok | Live read uses Codex's documented account-only protocol; other providers use imported snapshots, with actual timestamps/limits |
+| Sales | Read-only adapters for Stripe, Shopify, Lemon Squeezy, Gumroad, Dodo, Polar and Paddle; recent paid orders, grouped-currency amounts and dated USD conversion | User credentials in this app's Keychain; current UTC creation-day gross paid amounts, available order-attached refunds and ten-page cap are labeled; real-account verification required |
 | Clipboard | Search/filter text, links, images and files; re-copy, delete and clear retained clips | Explicit opt-in, bounded local history; skips recognized confidential/transient markers, which cannot identify every secret |
 | Teleprompter | Auto-saved script with import, play/pause, restart, speed and text-size controls | Keep the dashboard open/pinned while reading |
 | Timers | Focus/break countdowns, pause/resume, completed sessions, optional automatic breaks and soft focus sound | Deadline survives hiding/sleep; remaining time appears in the closed dashboard |
@@ -47,7 +47,7 @@ The feature comparison describes implemented tools and their setup, not verified
 
 Notes, tasks, retained clipboard, shelf data, teleprompter scripts and imported usage reports stay in this app's local storage. Clipboard is opt-in; clear retained history when appropriate. Managed shelf copies can be removed by the selected retention rule; originals are preserved. Camera capture and system/player sampling stop when their tool is hidden.
 
-Weather, stocks, merchant integrations and foreign-exchange lookup contact their respective providers when you request data. Provider credentials are stored in this app's macOS Keychain namespace, not in preferences or source. Use keys with read-only permissions where the provider supports them. There is no telemetry or remote AI fallback. AI Usage does not inspect sign-in caches or extract credentials from installed tools.
+Weather, stocks, merchant integrations and foreign-exchange lookup contact their respective providers when you request data. Provider credentials are stored in this app's macOS Keychain namespace, not in preferences or source. Use keys with read-only permissions where the provider supports them. There is no telemetry or remote AI fallback. AI Usage does not inspect sign-in caches or extract credentials: its explicit live Codex read lets your selected, already signed-in CLI handle its own authentication. It performs no model, thread, turn or tool call and records only reported quota windows.
 
 ## Build
 

@@ -7,6 +7,11 @@ import NotchCore
 struct AIUsageToolView: View {
     @State private var exports: [OnlineAIUsageExport] = []
     @State private var error: String?
+    @State private var codexPath = UserDefaults.standard.string(forKey: "plus.aiusage.codex.executable") ?? ""
+    @State private var codexQuota: OnlineCodexQuota?
+    @State private var codexBusy = false
+    @State private var codexJob: Task<Void, Never>?
+    @State private var codexGeneration = UUID()
     private var storageURL: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("com.sknitd.NotchOrbitPlus", isDirectory: true).appendingPathComponent("AIUsageImports.json")
@@ -15,10 +20,32 @@ struct AIUsageToolView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 Text("AI Usage").font(.title2.bold())
-                Text("Import a local usage export for Claude, Codex, Cursor, Copilot or Grok. These services do not offer one universal documented subscription-quota API. This tool reads only the file you select; it does not inspect sign-in tokens or authentication caches.")
+                Text("Read Codex quota through your installed CLI, or import a local usage export for Claude, Codex, Cursor, Copilot or Grok. This tool does not inspect sign-in tokens or authentication caches.")
                     .font(.caption).foregroundStyle(.secondary)
-                HStack { Button("Import usage JSON…", action: importUsage); Button("Save format example…", action: saveExample) }
+                GroupBox("Codex live quota") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Choose a trusted Codex CLI you installed and signed in to in Terminal. The CLI handles its own authentication; only its documented quota-read method is requested.")
+                            .font(.caption).foregroundStyle(.secondary)
+                        HStack {
+                            Button("Choose Codex CLI…") { chooseCodex() }.disabled(codexBusy)
+                            Button("Read Codex Live") { readCodex() }.disabled(codexPath.isEmpty || codexBusy)
+                            if codexBusy { ProgressView().controlSize(.small); Button("Cancel") { cancelCodex() } }
+                        }
+                        if !codexPath.isEmpty { Text(codexPath).font(.caption2).textSelection(.enabled) }
+                        if let quota = codexQuota {
+                            Text("CLI quota snapshot · fetched \(quota.fetchedAt.formatted(date: .abbreviated, time: .shortened))").font(.caption)
+                            ForEach(quota.windows) { window in
+                                Text(window.label).font(.subheadline.bold())
+                                Text("Used \(window.usedPercent, specifier: "%.1f")% · remaining \(window.remainingPercent, specifier: "%.1f")% at fetch")
+                                ProgressView(value: window.usedPercent / 100)
+                                if let reset = window.resetsAt { Text("Reset \(reset.formatted(date: .abbreviated, time: .shortened))").font(.caption) }
+                            }
+                        } else { Text("No live quota has been read. CLI version, sign-in and subscription plan must support rate-limit snapshots.").font(.caption).foregroundStyle(.secondary) }
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                }
+                HStack { Button("Import usage JSON…") { importUsage() }; Button("Save format example…") { saveExample() } }
                 Text("Imports are snapshots, not an automatic signed-in account connection. Exported time and known limits stay visible.").font(.caption).foregroundStyle(.secondary)
+                Text("Claude, Cursor, Copilot and Grok support normalized local exports here; their automatic signed-in subscription quotas are unavailable.").font(.caption).foregroundStyle(.secondary)
                 if let error { Text(error).foregroundStyle(.orange).font(.callout) }
                 if exports.isEmpty { ContentUnavailableView("No imported usage", systemImage: "chart.bar", description: Text("Select an export you created or obtained from your provider.")) }
                 ForEach(exports, id: \.provider) { item in
@@ -45,7 +72,31 @@ struct AIUsageToolView: View {
                     Text("Percent exports must supply their actual limit (normally 100) to show remaining percentage. No missing limit is inferred.").font(.caption)
                 }
             }.padding(16)
-        }.frame(minWidth: 480, minHeight: 400).onAppear(perform: load)
+        }.frame(minWidth: 480, minHeight: 400).onAppear { load() }.onDisappear { cancelCodex() }
+    }
+    private func chooseCodex() {
+        let panel = NSOpenPanel(); panel.canChooseDirectories = false; panel.allowsMultipleSelection = false
+        panel.message = "Choose only a trusted Codex CLI executable you installed (for example /opt/homebrew/bin/codex). This button does not run it."
+        if FileManager.default.fileExists(atPath: "/opt/homebrew/bin") { panel.directoryURL = URL(fileURLWithPath: "/opt/homebrew/bin", isDirectory: true) }
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let canonical = url.resolvingSymlinksInPath()
+            guard try canonical.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile == true,
+                  FileManager.default.isExecutableFile(atPath: canonical.path) else { throw OnlineServiceError.message("Select a regular executable file from your trusted Codex installation.") }
+            codexPath = url.path; UserDefaults.standard.set(codexPath, forKey: "plus.aiusage.codex.executable"); error = nil
+        } catch { self.error = error.localizedDescription }
+    }
+    private func cancelCodex() { codexGeneration = UUID(); codexJob?.cancel(); codexJob = nil; codexBusy = false }
+    private func readCodex() {
+        cancelCodex(); error = nil; codexBusy = true
+        let ticket = codexGeneration, executable = URL(fileURLWithPath: codexPath)
+        codexJob = Task {
+            defer { if ticket == codexGeneration { codexBusy = false } }
+            do {
+                let quota = try await OnlineCodexQuotaReader.read(executable: executable)
+                try Task.checkCancellation(); codexQuota = quota
+            } catch is CancellationError {} catch { if ticket == codexGeneration { self.error = error.localizedDescription } }
+        }
     }
     private func importUsage() {
         let panel = NSOpenPanel(); panel.allowedContentTypes = [.json]; panel.canChooseDirectories = false

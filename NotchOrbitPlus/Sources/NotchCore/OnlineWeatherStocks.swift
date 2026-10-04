@@ -35,7 +35,17 @@ public struct OnlineWeatherResponse: Codable, Sendable {
               daily.precipitation_probability_max.allSatisfy({ $0.isFinite && (0...100).contains($0) }) else {
             throw OnlineDataError.invalid("Weather provider returned an incomplete seven-day forecast.")
         }
-        for day in daily.time { _ = try OnlineServiceDecoding.calendarDate(day) }
+        let dates = try daily.time.map { try OnlineServiceDecoding.calendarDate($0) }
+        for index in 1..<dates.count where dates[index].timeIntervalSince(dates[index - 1]) != 86_400 {
+            throw OnlineDataError.invalid("Forecast dates must be seven consecutive calendar days.")
+        }
+        _ = try OnlineServiceDecoding.calendarDate(String(current.time.prefix(10)))
+        guard current.time.range(of: #"^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$"#, options: .regularExpression) != nil else {
+            throw OnlineDataError.invalid("Invalid local observation timestamp.")
+        }
+        guard zip(daily.temperature_2m_min, daily.temperature_2m_max).allSatisfy({ $0 <= $1 }) else {
+            throw OnlineDataError.invalid("Forecast minimum exceeds maximum temperature.")
+        }
     }
     public static func condition(_ code: Int) -> String {
         switch code {

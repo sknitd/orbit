@@ -71,12 +71,14 @@ private final class OrbitNowPlayingModel: ObservableObject {
     @Published var player: OrbitSupportedPlayer = .music
     @Published var snapshot: OrbitPlayerSnapshot?
     @Published var artwork: NSImage?
+    @Published var artworkMessage: String?
     @Published var error: String?
     @Published var connected = false
     @Published var lyrics: [OrbitLRCLine] = []
     @Published var lyricsName: String?
     private let scripting = OrbitPlayerScripting()
     private var polling: Task<Void, Never>?
+    private var artworkTask: Task<Void, Never>?
     private var generation = UUID()
     private var artworkKey = ""
 
@@ -88,7 +90,7 @@ private final class OrbitNowPlayingModel: ObservableObject {
         }
         // The first scripting request, and its Automation grant, occur only
         // after this explicit user control. Polling stops after any denial.
-        connected = true; error = nil; snapshot = nil; artwork = nil; artworkKey = ""
+        connected = true; error = nil; snapshot = nil; artwork = nil; artworkMessage = nil; artworkKey = ""
         resume()
     }
 
@@ -109,28 +111,53 @@ private final class OrbitNowPlayingModel: ObservableObject {
                     self.snapshot = value
                     let key = value.title + "\n" + value.artist + "\n" + (value.artworkURL?.absoluteString ?? value.album)
                     if key != self.artworkKey {
-                        self.artworkKey = key; self.artwork = nil
+                        self.artworkTask?.cancel(); self.artworkTask = nil
+                        self.artworkKey = key; self.artwork = nil; self.artworkMessage = nil
                         if let data = value.artwork { self.artwork = NSImage(data: data) }
                         else if let url = value.artworkURL, url.scheme?.lowercased() == "https" {
-                            var request = URLRequest(url: url); request.timeoutInterval = 6
-                            let (data, response) = try await URLSession.shared.data(for: request)
-                            if (response as? HTTPURLResponse)?.statusCode == 200, data.count <= 4_194_304,
-                               self.generation == id { self.artwork = NSImage(data: data) }
+                            self.loadArtwork(url, key: key, generation: id)
                         }
                     }
                     try await Task.sleep(for: .seconds(1))
                 } catch is CancellationError { return }
                 catch {
                     guard self.generation == id else { return }
-                    self.error = error.localizedDescription; self.connected = false
+                    self.error = error.localizedDescription; self.disconnect()
                     return
                 }
             }
         }
     }
 
-    func stop() { generation = UUID(); polling?.cancel(); polling = nil }
-    func disconnect() { stop(); connected = false; snapshot = nil; artwork = nil }
+    private func loadArtwork(_ url: URL, key: String, generation id: UUID) {
+        artworkTask = Task { [weak self] in
+            guard let self else { return }
+            defer { if self.generation == id, self.artworkKey == key { self.artworkTask = nil } }
+            do {
+                var request = URLRequest(url: url); request.timeoutInterval = 6
+                let (data, response) = try await URLSession.shared.data(for: request)
+                try Task.checkCancellation()
+                guard self.generation == id, self.artworkKey == key else { return }
+                guard (response as? HTTPURLResponse)?.statusCode == 200,
+                      data.count <= 4_194_304, let image = NSImage(data: data) else {
+                    self.artworkMessage = "The player's artwork image could not be loaded. Playback controls remain available."
+                    return
+                }
+                self.artwork = image
+            } catch is CancellationError { return }
+            catch {
+                guard self.generation == id, self.artworkKey == key else { return }
+                self.artworkMessage = "Artwork unavailable: \(error.localizedDescription)"
+            }
+        }
+    }
+    func retryArtwork() { artworkKey = ""; artworkMessage = nil }
+    func stop() {
+        generation = UUID(); polling?.cancel(); polling = nil
+        if artworkTask != nil, artwork == nil { artworkKey = "" }
+        artworkTask?.cancel(); artworkTask = nil
+    }
+    func disconnect() { stop(); connected = false; snapshot = nil; artwork = nil; artworkMessage = nil }
     func command(_ command: String) {
         guard connected else { return }
         let chosen = player
@@ -208,6 +235,10 @@ struct NowPlayingToolView: View {
                 }
             }
             if let error = model.error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
+            if let status = model.artworkMessage {
+                Text(status).font(.caption).foregroundStyle(.secondary)
+                Button("Retry artwork", action: model.retryArtwork).disabled(!model.connected)
+            }
             Text("Public scripting supports Music and Spotify. Other players and automatic lyric fetching are unavailable. Spotify artwork may load from the player's image URL.")
                 .font(.caption).foregroundStyle(.secondary)
         }.onAppear { model.resume() }.onDisappear { model.stop() }

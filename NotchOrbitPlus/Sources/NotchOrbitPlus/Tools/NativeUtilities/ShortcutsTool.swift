@@ -65,7 +65,8 @@ private final class OrbitShortcutProcess: @unchecked Sendable {
 }
 
 @MainActor
-private final class OrbitShortcutsModel: ObservableObject {
+private final class OrbitShortcutsModel: NSObject, ObservableObject {
+    static let shared = OrbitShortcutsModel()
     @Published var choices: [OrbitShortcutChoice] = []
     @Published var selectedID = ""
     @Published var busy = false
@@ -73,6 +74,13 @@ private final class OrbitShortcutsModel: ObservableObject {
     private var task: Task<Void, Never>?
     private var process: OrbitShortcutProcess?
     private var generation = UUID()
+
+    override init() {
+        super.init()
+        NotificationCenter.default.addObserver(self, selector: #selector(applicationWillTerminate),
+            name: NSApplication.willTerminateNotification, object: nil)
+    }
+    @objc private func applicationWillTerminate() { cancel() }
 
     func load() { execute(["list", "--show-identifiers"], listing: true) }
     func runSelected() {
@@ -112,7 +120,7 @@ private final class OrbitShortcutsModel: ObservableObject {
 
 @MainActor
 struct ShortcutsToolView: View {
-    @StateObject private var model = OrbitShortcutsModel()
+    @StateObject private var model = OrbitShortcutsModel.shared
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Shortcuts").font(.headline)
@@ -132,7 +140,6 @@ struct ShortcutsToolView: View {
             Text(model.message).font(.caption).textSelection(.enabled)
             Text("Runs the selected shortcut and its actions. Actions may request input or permissions.")
                 .font(.caption).foregroundStyle(.secondary)
-        }.onDisappear { model.cancel() }
-            .background(OrbitNativeToolVisibility(onVisible: {}, onHidden: model.cancel).frame(width: 0, height: 0))
+        }
     }
 }

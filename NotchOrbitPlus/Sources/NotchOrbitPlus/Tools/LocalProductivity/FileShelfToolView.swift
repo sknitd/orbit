@@ -4,7 +4,16 @@ import UniformTypeIdentifiers
 import NotchCore
 
 @MainActor
-private final class FileShelfToolStore: ObservableObject {
+final class FileShelfToolStore: ObservableObject {
+    private static var instance: FileShelfToolStore?
+    static var shared: FileShelfToolStore {
+        if let instance { return instance }
+        let store = FileShelfToolStore()
+        instance = store
+        return store
+    }
+    static func shutdownIfInitialized() { instance?.shutdown() }
+
     @Published private(set) var items: [FileShelfItem] = []
     @Published var autoSave = false { didSet { save() } }
     @Published var retention: ShelfRetention = .week { didSet { pruneExpired(); save() } }
@@ -15,14 +24,20 @@ private final class FileShelfToolStore: ObservableObject {
     private var expiration: Task<Void, Never>?
     private var inFlight = Set<URL>()
     private var scopedURLs: [UUID: URL] = [:]
+    private let persistState: Bool
 
-    init() {
+    init(managedDirectory suppliedDirectory: URL? = nil, persistState: Bool = true) {
+        self.persistState = persistState
         do {
-            let directory = try LocalToolStorage.directory().appendingPathComponent("ShelfFiles", isDirectory: true)
+            let directory: URL
+            if let suppliedDirectory { directory = suppliedDirectory }
+            else { directory = try LocalToolStorage.directory().appendingPathComponent("ShelfFiles", isDirectory: true) }
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
                                                    attributes: [.posixPermissions: 0o700])
             managedDirectory = directory
-            let state = try LocalToolStorage.load(FileShelfState.self, file: "file-shelf.json", fallback: .init())
+            let state = persistState
+                ? try LocalToolStorage.load(FileShelfState.self, file: "file-shelf.json", fallback: .init())
+                : FileShelfState()
             items = state.items; autoSave = state.autoSave; retention = state.retention
             pruneExpired()
         } catch { self.error = "Could not open the local file shelf: \(error.localizedDescription)" }
@@ -33,6 +48,7 @@ private final class FileShelfToolStore: ObservableObject {
     }
 
     private func save() {
+        guard persistState else { scheduleExpiration(); return }
         do {
             try LocalToolStorage.save(FileShelfState(items: items, autoSave: autoSave, retention: retention), file: "file-shelf.json")
             scheduleExpiration()
@@ -63,7 +79,7 @@ private final class FileShelfToolStore: ObservableObject {
         return true
     }
 
-    private func add(_ url: URL) {
+    func add(_ url: URL) {
         let host = (url.host ?? "").lowercased()
         guard url.isFileURL, host.isEmpty || host == "localhost", !url.path.isEmpty else {
             error = "The shelf accepts local file URLs only."
@@ -100,10 +116,22 @@ private final class FileShelfToolStore: ObservableObject {
     private nonisolated static func prepare(_ source: URL, copy: Bool, directory: URL) throws -> FileShelfItem {
         let granted = source.startAccessingSecurityScopedResource()
         defer { if granted { source.stopAccessingSecurityScopedResource() } }
-        guard FileManager.default.fileExists(atPath: source.path) else { throw CocoaError(.fileNoSuchFile) }
+        var sourceIsDirectory = ObjCBool(false)
+        guard FileManager.default.fileExists(atPath: source.path, isDirectory: &sourceIsDirectory) else {
+            throw CocoaError(.fileNoSuchFile)
+        }
         let bookmark = try source.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil)
         let id = UUID()
         guard copy else { return FileShelfItem(id: id, originalURL: source, bookmark: bookmark) }
+        if sourceIsDirectory.boolValue {
+            let sourcePath = source.resolvingSymlinksInPath().standardizedFileURL.path
+            let copyPath = directory.resolvingSymlinksInPath().standardizedFileURL.path
+            let prefix = sourcePath.hasSuffix("/") ? sourcePath : sourcePath + "/"
+            guard copyPath != sourcePath, !copyPath.hasPrefix(prefix) else {
+                throw NSError(domain: "NotchOrbitPlus.Shelf", code: 3,
+                              userInfo: [NSLocalizedDescriptionKey: "Cannot auto-save a folder inside itself. Turn off Auto-save copies to keep a reference instead."])
+            }
+        }
         let folder = directory.appendingPathComponent(id.uuidString, isDirectory: true)
         let destination = folder.appendingPathComponent(source.lastPathComponent)
         do {
@@ -203,6 +231,11 @@ private final class FileShelfToolStore: ObservableObject {
             self?.pruneExpired()
         }
     }
+    func shutdown() {
+        expiration?.cancel(); expiration = nil
+        for url in scopedURLs.values { url.stopAccessingSecurityScopedResource() }
+        scopedURLs.removeAll()
+    }
 }
 
 @MainActor
@@ -216,7 +249,7 @@ private struct ShelfShareButton: NSViewRepresentable {
     @MainActor final class Coordinator: NSObject {
         var resolve: () -> URL?
         private var picker: NSSharingServicePicker?
-        init(resolve: @escaping () -> URL?) { self.resolve = resolve }
+        init(resolve: @escaping () -> URL?) { self.resolve = resolve; super.init() }
         @objc func share(_ sender: NSButton) {
             guard let url = resolve() else { return }
             let picker = NSSharingServicePicker(items: [url])
@@ -228,7 +261,7 @@ private struct ShelfShareButton: NSViewRepresentable {
 
 @MainActor
 struct FileShelfToolView: View {
-    @StateObject private var store = FileShelfToolStore()
+    @ObservedObject private var store = FileShelfToolStore.shared
     @State private var targeted = false
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -258,7 +291,7 @@ struct FileShelfToolView: View {
                         .buttonStyle(.borderless).accessibilityLabel("Remove \(item.originalURL.lastPathComponent) from shelf")
                 }
             }.overlay(RoundedRectangle(cornerRadius: 6).stroke(targeted ? Color.accentColor : Color.clear, lineWidth: 2))
-                .onDrop(of: [UTType.fileURL], isTargeted: $targeted, perform: store.receive)
+                .onDrop(of: [UTType.fileURL], isTargeted: $targeted) { providers in store.receive(providers) }
             HStack {
                 if store.importing > 0 { ProgressView().controlSize(.small); Text("Adding \(store.importing) file(s)…") }
                 else { Text(store.status) }

@@ -31,14 +31,16 @@ private enum OnlineSalesAdapter {
             url = try OnlineServiceHTTPS.url("https://api.gumroad.com/v2/sales", [URLQueryItem(name: "access_token", value: token),
                 URLQueryItem(name: "after", value: String(start.prefix(10))), URLQueryItem(name: "before", value: String(end.prefix(10)))])
         case .dodo:
-            url = try OnlineServiceHTTPS.url("https://live.dodopayments.com/payments", [URLQueryItem(name: "page_size", value: "100"), URLQueryItem(name: "page_number", value: "0")])
+            url = try OnlineServiceHTTPS.url("https://live.dodopayments.com/payments", [URLQueryItem(name: "page_size", value: "100"), URLQueryItem(name: "page_number", value: "0"),
+                URLQueryItem(name: "created_at_gte", value: start), URLQueryItem(name: "created_at_lte", value: end), URLQueryItem(name: "status", value: "succeeded")])
             headers["Authorization"] = "Bearer \(token)"
         case .polar:
             url = try OnlineServiceHTTPS.url("https://api.polar.sh/v1/orders/", [URLQueryItem(name: "limit", value: "100"), URLQueryItem(name: "page", value: "1"), URLQueryItem(name: "sorting", value: "-created_at")])
             headers["Authorization"] = "Bearer \(token)"
         case .paddle:
             url = try OnlineServiceHTTPS.url("https://api.paddle.com/transactions", [URLQueryItem(name: "per_page", value: "100"),
-                URLQueryItem(name: "created_at[gte]", value: start), URLQueryItem(name: "created_at[lt]", value: end)])
+                URLQueryItem(name: "created_at[GTE]", value: start), URLQueryItem(name: "created_at[LT]", value: end),
+                URLQueryItem(name: "include", value: "adjustments_totals")])
             headers["Authorization"] = "Bearer \(token)"
         }
         let originalHost = url.host
@@ -213,13 +215,13 @@ struct SalesToolView: View {
                 }
                 Toggle("Convert combined gross paid total to USD using dated Frankfurter rates", isOn: $model.convertUSD).font(.caption)
                 Button("Refresh connected providers (\(model.connected.count))") { model.refresh() }.disabled(model.busy || model.connected.isEmpty)
-                OnlineStatusView(busy: model.busy, error: model.error, cancel: model.cancel)
+                OnlineStatusView(busy: model.busy, error: model.error, cancel: { model.cancel() })
                 if !model.reports.isEmpty {
                     Text("Gross paid · original currencies").font(.headline)
                     ForEach(model.groupedTotals.keys.sorted(), id: \.self) { currency in Text("\(currency) \(onlineAmount(model.groupedTotals[currency]!))") }
                     if let fx = model.fx {
                         let converted = fx.converted(model.groupedTotals)
-                        Text("Combined USD gross paid: \(onlineAmount(converted.usd))").font(.headline)
+                        Text("Combined USD gross paid: \(onlineRoundedUSD(converted.usd))").font(.headline)
                         Text("Frankfurter reference FX dated \(fx.rateDate); indicative conversion at that date, not settlement amounts.").font(.caption).foregroundStyle(.secondary)
                         if !converted.excluded.isEmpty { Text("Excluded from USD total: \(converted.excluded.joined(separator: ", ")) (no FX rate).").font(.caption).foregroundStyle(.orange) }
                     }

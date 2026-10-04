@@ -39,11 +39,21 @@ struct NotchDashboardView: View {
         let order = preferences.orderedTools.map(\.id)
         return order.compactMap { id in modules.first { $0.id == id && !preferences.hiddenToolIDs.contains(id) } }
     }
+    private var dashboardSpring: Animation? {
+        presentation.reduceMotion ? nil : .spring(duration: 0.22, bounce: 0.12)
+    }
+    private var dashboardTransition: AnyTransition {
+        presentation.reduceMotion ? .identity : .opacity.combined(with: .offset(y: -3))
+    }
     var body: some View {
         ZStack {
             DashboardMaterial()
             Color.black.opacity(presentation.increaseContrast ? 0.9 : 0.63)
-            if presentation.expanded { expandedContent } else { compact }
+            Group {
+                if presentation.expanded { expandedContent.transition(dashboardTransition) }
+                else { compact.transition(dashboardTransition) }
+            }
+            .animation(dashboardSpring, value: presentation.expanded)
         }
         .frame(width: presentation.width, height: presentation.height)
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 7, bottomLeadingRadius: 22,
@@ -100,33 +110,40 @@ struct NotchDashboardView: View {
                                 .accessibilityAddTraits(presentation.selectedToolID == module.id ? .isSelected : [])
                         }
                     }.padding(.horizontal, 12).padding(.vertical, 8)
+                        .animation(dashboardSpring, value: presentation.selectedToolID)
                 }
                 .onAppear {
                     if let id = presentation.selectedToolID { proxy.scrollTo(id, anchor: .center) }
                 }
                 .onChange(of: presentation.selectedToolID) { _, id in
                     if let id {
-                        withAnimation(presentation.reduceMotion ? nil : .easeOut(duration: 0.15)) {
+                        withAnimation(dashboardSpring) {
                             proxy.scrollTo(id, anchor: .center)
                         }
                     }
                 }
             }.frame(height: 47)
             Divider().overlay(.white.opacity(0.05))
-            if let module = visibleModules.first(where: { $0.id == presentation.selectedToolID }) ?? visibleModules.first {
-                ScrollView {
-                    module.content().frame(maxWidth: .infinity, alignment: .topLeading)
-                        .padding(18)
-                }.id(module.id)
-            } else {
-                ContentUnavailableView {
-                    Label("No visible tools", systemImage: "square.grid.2x2")
-                } description: {
-                    Text("Choose which tools appear in dashboard settings.")
-                } actions: {
-                    Button("Open Settings", action: openSettings)
-                }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            Group {
+                if let module = visibleModules.first(where: { $0.id == presentation.selectedToolID }) ?? visibleModules.first {
+                    ScrollView {
+                        module.content().frame(maxWidth: .infinity, alignment: .topLeading)
+                            .padding(18)
+                    }.id(module.id).transition(dashboardTransition)
+                } else {
+                    ContentUnavailableView {
+                        Label("No visible tools", systemImage: "square.grid.2x2")
+                    } description: {
+                        Text("Choose which tools appear in dashboard settings.")
+                    } actions: {
+                        Button("Open Settings", action: openSettings)
+                    }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .transition(dashboardTransition)
+                }
             }
+            // Only dashboard navigation drives these transitions; live tool
+            // readings do not become triggers for the shell's spring animation.
+            .animation(dashboardSpring, value: presentation.selectedToolID)
         }
     }
 }

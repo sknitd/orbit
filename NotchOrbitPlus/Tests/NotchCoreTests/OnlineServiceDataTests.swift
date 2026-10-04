@@ -27,7 +27,7 @@ final class OnlineServiceDataTests: XCTestCase {
             (.lemon, ["data": [["id": "synthetic_l", "attributes": ["status": "paid", "currency": "USD", "total": 1250, "created_at": stamp]]]], Decimal(string: "12.50")!),
             (.gumroad, ["success": true, "sales": [["id": "synthetic_g", "currency": "usd", "price": 1250, "created_at": stamp]]], Decimal(string: "12.50")!),
             (.dodo, ["items": [["payment_id": "synthetic_d", "status": "succeeded", "currency": "USD", "total_amount": 1250, "created_at": stamp]]], Decimal(string: "12.50")!),
-            (.polar, ["items": [["id": "synthetic_p", "currency": "usd", "total_amount": 1250, "refunded_amount": 0, "created_at": stamp]]], Decimal(string: "12.50")!),
+            (.polar, ["items": [["id": "synthetic_p", "paid": true, "currency": "usd", "total_amount": 1250, "refunded_amount": 0, "created_at": stamp]]], Decimal(string: "12.50")!),
             (.paddle, ["data": [["id": "synthetic_t", "status": "completed", "currency_code": "USD", "created_at": stamp, "details": ["totals": ["grand_total": "1250"]]]]], Decimal(string: "12.50")!),
             (.shopify, ["data": ["orders": ["edges": [["node": ["id": "synthetic_s", "createdAt": stamp, "displayFinancialStatus": "PAID", "totalPriceSet": ["shopMoney": ["amount": "12.50", "currencyCode": "USD"]], "totalRefundedSet": ["shopMoney": ["amount": "1.50", "currencyCode": "USD"]]]]]]]], Decimal(string: "12.50")!)
         ]
@@ -87,7 +87,7 @@ final class OnlineServiceDataTests: XCTestCase {
     }
     func testWeatherRequiresSevenCompleteFiniteDays() throws {
         var forecast: [String: Any] = ["current": ["time": "2024-10-04T12:00", "temperature_2m": 20, "weather_code": 0, "wind_speed_10m": 4],
-            "daily": ["time": Array(repeating: "2024-10-04", count: 7), "weather_code": Array(repeating: 0, count: 7), "temperature_2m_max": Array(repeating: 20, count: 7), "temperature_2m_min": Array(repeating: 10, count: 7), "precipitation_probability_max": Array(repeating: 20, count: 7)]]
+            "daily": ["time": ["2024-10-04", "2024-10-05", "2024-10-06", "2024-10-07", "2024-10-08", "2024-10-09", "2024-10-10"], "weather_code": Array(repeating: 0, count: 7), "temperature_2m_max": Array(repeating: 20, count: 7), "temperature_2m_min": Array(repeating: 10, count: 7), "precipitation_probability_max": Array(repeating: 20, count: 7)]]
         try JSONDecoder().decode(OnlineWeatherResponse.self, from: json(forecast)).validate()
         var daily = forecast["daily"] as! [String: Any]; daily["temperature_2m_max"] = [20]
         forecast["daily"] = daily

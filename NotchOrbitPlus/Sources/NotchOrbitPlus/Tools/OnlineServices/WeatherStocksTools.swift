@@ -76,7 +76,7 @@ struct WeatherToolView: View {
                 Text("Weather").font(.title2.bold())
                 HStack { TextField("City", text: $model.query).onSubmit { model.search() }; Button("Search") { model.search() }.disabled(model.busy) }
                 Text("City-based weather. No location permission or account required.").font(.caption).foregroundStyle(.secondary)
-                OnlineStatusView(busy: model.busy, error: model.error, cancel: model.cancel)
+                OnlineStatusView(busy: model.busy, error: model.error, cancel: { model.cancel() })
                 ForEach(model.places) { place in Button(place.label) { model.fetch(place) }.buttonStyle(.bordered) }
                 if let cache = model.cache {
                     HStack { Text(cache.place.label).font(.headline); Spacer(); Button("Refresh") { model.fetch(cache.place) }.disabled(model.busy) }
@@ -174,7 +174,7 @@ struct StocksToolView: View {
                 Link("Get a key / provider documentation", destination: URL(string: "https://www.alphavantage.co/documentation/")!).font(.caption)
                 HStack { TextField("Ticker symbol", text: $model.symbol).onSubmit { model.fetch() }; Button("Refresh") { model.fetch() }.disabled(model.busy || !model.savedKey) }
                 Toggle("Also request hourly intraday chart (may require premium plan)", isOn: $model.includeIntraday).font(.caption)
-                OnlineStatusView(busy: model.busy, error: model.error, cancel: model.cancel)
+                OnlineStatusView(busy: model.busy, error: model.error, cancel: { model.cancel() })
                 if let quote = model.quote {
                     Text("\(quote.symbol) · \(onlineAmount(quote.price))").font(.title3.bold())
                     Text("Change \(onlineAmount(quote.change)) · \(quote.changePercent)")
