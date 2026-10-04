@@ -24,7 +24,8 @@ struct CornerWebsitesSettingsView: View {
                         HStack {
                             if let date = history.lastRefreshed { Text("Loaded \(date.formatted(date: .abbreviated, time: .shortened))").font(.caption) }
                             Spacer()
-                            Button("Disconnect") { history.disconnect() }.disabled(!history.isConnected || store.isPreview)
+                            Button("Disconnect") { history.disconnect() }
+                                .disabled(store.isPreview || (!history.isConnected && history.errorMessage == nil))
                         }
                         if let error = history.errorMessage {
                             Text(error).foregroundStyle(.orange).textSelection(.enabled)
@@ -46,7 +47,8 @@ struct CornerWebsitesSettingsView: View {
                         HStack {
                             Text("Up to 200 links; credentials and non-web URLs are excluded.").font(.caption).foregroundStyle(.secondary)
                             Spacer()
-                            Button("Clear Links") { recent.clear() }.disabled(store.isPreview || recent.entries.isEmpty)
+                            Button("Clear Links") { recent.clear() }
+                                .disabled(store.isPreview || (recent.entries.isEmpty && recent.errorMessage == nil))
                         }
                     }.padding(8).frame(maxWidth: .infinity, alignment: .leading)
                 }
