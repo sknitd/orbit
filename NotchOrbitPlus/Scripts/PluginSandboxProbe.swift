@@ -43,7 +43,12 @@ enum PluginSandboxProbe {
             results.append(["test": "explicit-folder-read", "outcome": "passed"])
             try JSONSerialization.data(withJSONObject: ["outcome": "passed", "checks": results], options: [.prettyPrinted, .sortedKeys]).write(to: report.appendingPathComponent("status.json"))
         } catch {
-            let failure: [String: Any] = ["outcome": "failed", "checks": results, "diagnostic": error.localizedDescription]
+            var failure: [String: Any] = ["outcome": "failed", "checks": results, "diagnostic": error.localizedDescription]
+            if let processFailure = error as? PlusPluginProcessFailure {
+                failure["process_id"] = processFailure.processID
+                failure["termination_status"] = processFailure.status
+                failure["terminated_by_signal"] = processFailure.terminatedBySignal
+            }
             if let data = try? JSONSerialization.data(withJSONObject: failure, options: [.prettyPrinted, .sortedKeys]) {
                 try? data.write(to: report.appendingPathComponent("status.json"))
             }

@@ -23,6 +23,13 @@ PY
     ls -l /bin/sh
     file /bin/sh
     readlink /bin/sh || true
+    ls -l /var/select/sh || true
+    readlink /var/select/sh || true
+    for shell_path in /bin/bash /bin/dash /bin/zsh; do
+        ls -l "$shell_path" || true
+        file "$shell_path" || true
+        otool -L "$shell_path" || true
+    done
 } > "$report_root/runtime.txt" 2>&1
 sdk_path="$(xcrun --sdk macosx --show-sdk-path)"
 xcrun swiftc -swift-version 6 -strict-concurrency=complete -parse-as-library \
@@ -31,4 +38,12 @@ xcrun swiftc -swift-version 6 -strict-concurrency=complete -parse-as-library \
     "$task_root/Sources/NotchCore/CorePlugins.swift" \
     "$probe_workspace/PluginSandbox.swift" "$task_root/Scripts/PluginSandboxProbe.swift" \
     -o "$probe_workspace/plugin-probe" > "$report_root/compile.log" 2>&1
+probe_started="$(date +%s)"
+set +e
 "$probe_workspace/plugin-probe" "$report_root"
+probe_status=$?
+set -e
+if [[ "$probe_status" != 0 ]]; then
+    python3 "$task_root/Scripts/plugin-sandbox-diagnostics.py" "$report_root" "$probe_started" || true
+fi
+exit "$probe_status"

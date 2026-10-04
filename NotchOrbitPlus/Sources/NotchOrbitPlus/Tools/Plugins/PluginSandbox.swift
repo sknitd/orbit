@@ -9,6 +9,7 @@ struct PlusPluginPackage: Sendable {
 struct PlusPluginProcessFailure: LocalizedError, Sendable {
     let status: Int32
     let terminatedBySignal: Bool
+    let processID: Int32
     let diagnostic: String
     var errorDescription: String? {
         let cause = terminatedBySignal ? "signal \(status)" : "status \(status)"
@@ -60,7 +61,12 @@ enum PlusPluginFolderIO {
 
 enum PlusPluginSandbox {
     static let executable = URL(fileURLWithPath: "/usr/bin/sandbox-exec")
-    static var available: Bool { FileManager.default.isExecutableFile(atPath: executable.path) }
+    // Apple's sh implementation can dispatch/re-exec another interpreter.
+    // Pick the POSIX interpreter explicitly so no selector access is needed.
+    static let interpreter = URL(fileURLWithPath: "/bin/bash")
+    static var available: Bool {
+        FileManager.default.isExecutableFile(atPath: executable.path) && FileManager.default.isExecutableFile(atPath: interpreter.path)
+    }
     static func profile(folder: URL, writable: Bool, readFolders: [URL]) throws -> String {
         guard folder.isFileURL, readFolders.count <= 4, readFolders.allSatisfy(\.isFileURL) else { throw CorePluginError.invalid("Invalid plugin folder grants.") }
         func literal(_ path: String) throws -> String {
@@ -78,10 +84,10 @@ enum PlusPluginSandbox {
         var profile = """
         (version 1)
         (deny default)
-        (allow process-exec (literal "/bin/sh"))
+        (allow process-exec (literal "/bin/bash"))
         (allow sysctl-read)
-        (allow file-read* \(runtimeFilters) (literal "/bin/sh") (subpath \(root)))
-        (allow file-map-executable \(runtimeFilters) (literal "/bin/sh"))
+        (allow file-read* \(runtimeFilters) (literal "/bin/bash") (subpath \(root)))
+        (allow file-map-executable \(runtimeFilters) (literal "/bin/bash"))
         """
         for folder in readFolders { profile += "\n(allow file-read* (subpath \(try literal(folder.resolvingSymlinksInPath().path))))" }
         if writable { profile += "\n(allow file-write* (subpath \(root)))" }
@@ -106,7 +112,7 @@ final class PlusPluginProcess: @unchecked Sendable {
         try Task.checkCancellation()
         let child = Process(); let output = Pipe()
         child.executableURL = PlusPluginSandbox.executable
-        child.arguments = ["-p", profile, "/bin/sh", folder.appendingPathComponent(command.script).path]
+        child.arguments = ["-p", profile, PlusPluginSandbox.interpreter.path, "--noprofile", "--norc", "--posix", folder.appendingPathComponent(command.script).path]
         child.currentDirectoryURL = folder
         var environment = ["PATH": "/nonexistent", "LC_ALL": "C", "ORBIT_PLUGIN_API": "1"]
         if let clipboard { environment["ORBIT_CLIPBOARD"] = clipboard }
@@ -139,7 +145,7 @@ final class PlusPluginProcess: @unchecked Sendable {
                 !CharacterSet.controlCharacters.contains($0) || $0 == "\n" || $0 == "\t"
             }).trimmingCharacters(in: .whitespacesAndNewlines)
             throw PlusPluginProcessFailure(status: child.terminationStatus,
-                terminatedBySignal: child.terminationReason == .uncaughtSignal, diagnostic: diagnostic)
+                terminatedBySignal: child.terminationReason == .uncaughtSignal, processID: child.processIdentifier, diagnostic: diagnostic)
         }
         return data
     }

@@ -27,7 +27,9 @@ final class PluginSandboxTests: XCTestCase, @unchecked Sendable {
         XCTAssertTrue(profile.contains("(subpath \"\(cryptexRuntime)\")"), "dyld's sealed OS runtime must remain readable through its resolved path")
         XCTAssertFalse(profile.contains("(subpath \"/System/Cryptexes/OS\")"))
         XCTAssertFalse(profile.contains("(subpath \"/System/Volumes/Preboot\")"))
-        XCTAssertTrue(profile.contains("(allow process-exec (literal \"/bin/sh\"))"))
+        XCTAssertTrue(profile.contains("(allow process-exec (literal \"/bin/bash\"))"))
+        XCTAssertFalse(profile.contains("(literal \"/bin/sh\")"), "The selector shim must not receive an execution grant")
+        XCTAssertEqual(PlusPluginSandbox.interpreter.path, "/bin/bash")
     }
     func testSandboxRunsActualJSONAndDeniesWritingOutsidePluginFolder() async throws {
         guard PlusPluginSandbox.available else { throw XCTSkip("macOS sandbox-exec unavailable; production fails closed") }
