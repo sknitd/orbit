@@ -1,0 +1,21 @@
+{
+  "product": "CornerOrbit",
+  "source_commit": "99ee9ed0123322a4785442afb1006a5eaca555ac",
+  "architectures": [
+    "x86_64",
+    "arm64"
+  ],
+  "slices": {
+    "x86_64": {
+      "minimum_macos": "14.0",
+      "vtool_output": "build/DerivedData/Build/Products/Release/CornerOrbit.app/Contents/MacOS/CornerOrbit (architecture x86_64):\nLoad command 11\n      cmd LC_BUILD_VERSION\n  cmdsize 32\n platform MACOS\n    minos 14.0\n      sdk 15.5\n   ntools 1\n     tool LD\n  version 1167.5\n"
+    },
+    "arm64": {
+      "minimum_macos": "14.0",
+      "vtool_output": "build/DerivedData/Build/Products/Release/CornerOrbit.app/Contents/MacOS/CornerOrbit (architecture arm64):\nLoad command 11\n      cmd LC_BUILD_VERSION\n  cmdsize 32\n platform MACOS\n    minos 14.0\n      sdk 15.5\n   ntools 1\n     tool LD\n  version 1167.5\n"
+    }
+  },
+  "bundle_identifier": "com.sknitd.CornerOrbit",
+  "version": "0.1.0",
+  "build_number": "1"
+}
