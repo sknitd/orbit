@@ -1,0 +1,80 @@
+name: Probe NotchOrbitPlus SDK
+on:
+  push:
+    branches: [codex/orbitdrop]
+    paths: ['.github/workflows/notch-plus-sdk-probe.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  sdk:
+    runs-on: macos-26
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile genuine public FoundationModels for both CPUs
+        id: probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p sdk-report
+          {
+            xcodebuild -version
+            sdk_path="$(xcrun --sdk macosx --show-sdk-path)"
+            xcrun --sdk macosx --show-sdk-version
+            [[ -d "$sdk_path/System/Library/Frameworks/FoundationModels.framework" ]]
+            cat > sdk-report/Probe.swift <<'SWIFT'
+          import FoundationModels
+          @available(macOS 26.0, *)
+          @MainActor
+          public func foundationModelsProbe() {
+              _ = SystemLanguageModel.default.availability
+          }
+          SWIFT
+            for architecture in arm64 x86_64; do
+              xcrun swiftc -emit-library -swift-version 6 -strict-concurrency=complete \
+                -target "$architecture-apple-macos14.0" -sdk "$sdk_path" \
+                -module-cache-path sdk-report/module-cache \
+                -Xlinker -weak_framework -Xlinker FoundationModels \
+                sdk-report/Probe.swift -o "sdk-report/Probe-$architecture.dylib"
+              otool -l "sdk-report/Probe-$architecture.dylib" > "sdk-report/loads-$architecture.txt"
+            done
+            python3 - <<'PY'
+          from pathlib import Path
+          for architecture in ('arm64', 'x86_64'):
+              loads = Path(f'sdk-report/loads-{architecture}.txt').read_text()
+              framework = [block for block in loads.split('Load command ') if '/FoundationModels.framework/' in block]
+              if len(framework) != 1 or 'LC_LOAD_WEAK_DYLIB' not in framework[0]:
+                  raise SystemExit(f'FoundationModels is not weak-linked for {architecture}')
+          print('Public FoundationModels compiled and weak-linked for arm64 and x86_64 at deployment 14.0.')
+          PY
+          } 2>&1 | tee sdk-report/probe.log
+      - name: Publish SDK probe evidence
+        if: always()
+        env:
+          PROBE_OUTCOME: ${{ steps.probe.outcome }}
+          SOURCE_COMMIT: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_dir="$(mktemp -d)"
+          cp sdk-report/probe.log "$report_dir/" || true
+          cp sdk-report/loads-*.txt "$report_dir/" || true
+          python3 - "$report_dir" <<'PY'
+          import json, os, pathlib, sys
+          pathlib.Path(sys.argv[1], 'sdk-status.json').write_text(json.dumps({
+            'outcome': os.environ['PROBE_OUTCOME'], 'source_commit': os.environ['SOURCE_COMMIT'],
+            'runner': 'macos-26', 'run_id': os.environ['GITHUB_RUN_ID'],
+            'purpose': 'public FoundationModels, both architectures, weak-linked at macOS 14.0'
+          }, indent=2) + '\n')
+          PY
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git checkout --orphan "codex/notch-plus-sdk/run-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          git rm -rf --ignore-unmatch .
+          cp "$report_dir/"* .
+          git add --force sdk-status.json
+          if [[ -f probe.log ]]; then git add --force probe.log; fi
+          if compgen -G 'loads-*.txt' > /dev/null; then git add --force loads-*.txt; fi
+          git commit -m "NotchOrbitPlus SDK probe for ${SOURCE_COMMIT}"
+          git push origin HEAD
