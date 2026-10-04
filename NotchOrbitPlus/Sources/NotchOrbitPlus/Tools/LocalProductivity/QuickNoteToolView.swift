@@ -113,6 +113,7 @@ struct QuickNoteToolView: View {
             }
             if let notice = store.backupNotice { Text(notice).font(.caption).foregroundStyle(.secondary) }
             TextEditor(text: $store.text).font(.body).accessibilityLabel("Quick note text")
+                .frame(height: 200)
                 .overlay(RoundedRectangle(cornerRadius: 4).stroke(.quaternary))
             HStack {
                 if store.pending { Text("Saving…") }
