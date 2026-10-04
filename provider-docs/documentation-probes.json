@@ -1,0 +1,22 @@
+[
+  {
+    "provider": "aviationstack",
+    "url": "https://aviationstack.com/documentation",
+    "account_api_called": false,
+    "status": 200,
+    "bytes": 85613,
+    "sha256": "9e79c56146fe012708b7b47975264cd2ce63df19c009b5721a2868c9023096ff",
+    "markers": {
+      "flight_iata": false,
+      "flight_status": false,
+      "access_key": false,
+      "https://api.aviationstack.com/v1/flights": false
+    }
+  },
+  {
+    "provider": "api-sports",
+    "url": "https://www.api-football.com/documentation-v3",
+    "account_api_called": false,
+    "error": "HTTP Error 403: Forbidden"
+  }
+]
