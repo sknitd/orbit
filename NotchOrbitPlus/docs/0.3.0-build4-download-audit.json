@@ -1,0 +1,12 @@
+{
+  "verified_at": "2026-10-04T20:42:18.389050+00:00",
+  "source_commit": "b5e99d868cc4e34754cf827adbd0012c2e129a78",
+  "artifact_commit": "9f39669d503deacaf1adb19a963eb5f280611c96",
+  "authentication_used": false,
+  "requested_url": "https://github.com/sknitd/orbit/raw/9f39669d503deacaf1adb19a963eb5f280611c96/NotchOrbitPlus.app.zip",
+  "final_url": "https://raw.githubusercontent.com/sknitd/orbit/9f39669d503deacaf1adb19a963eb5f280611c96/NotchOrbitPlus.app.zip",
+  "http_status": 200,
+  "archive_bytes": 11261776,
+  "archive_sha256": "da9461b610ee4e179835f0493b82bfb0517b18b2689fe83b625380cee1421f0c",
+  "matches_ci_archive": true
+}

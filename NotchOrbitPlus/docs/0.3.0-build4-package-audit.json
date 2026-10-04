@@ -1,0 +1,88 @@
+{
+  "source_commit": "b5e99d868cc4e34754cf827adbd0012c2e129a78",
+  "version": "0.3.0",
+  "build_number": "4",
+  "archive_sha256": "da9461b610ee4e179835f0493b82bfb0517b18b2689fe83b625380cee1421f0c",
+  "archive_bytes": 11261776,
+  "mach_o_slices": [
+    {
+      "cpu": "0x1000007",
+      "minimum_macos": [
+        14,
+        0,
+        0
+      ],
+      "foundation_models_weakly_linked": true,
+      "translation_weakly_linked": true,
+      "embedded_signature_present": true
+    },
+    {
+      "cpu": "0x100000c",
+      "minimum_macos": [
+        14,
+        0,
+        0
+      ],
+      "foundation_models_weakly_linked": true,
+      "translation_weakly_linked": true,
+      "embedded_signature_present": true
+    }
+  ],
+  "archive_contents_verified": true,
+  "executable_permissions_verified": true,
+  "five_app_intents_metadata_verified": true,
+  "apple_signature_verification_source": "genuine macOS CI",
+  "bundled_resources_match_compiled_source": true,
+  "bundled_resource_inspection": [
+    {
+      "path": "CommandHelpers/orbit-notify",
+      "bytes": 1848,
+      "sha256": "ed823d9beec381203c303edf25164e0534d6d9d5342becdff480e565afb88c51",
+      "source_repository_path": "NotchOrbitPlus/Resources/CommandHelpers/orbit-notify",
+      "source_commit": "b5e99d868cc4e34754cf827adbd0012c2e129a78"
+    },
+    {
+      "path": "CommandHelpers/orbit-run",
+      "bytes": 1340,
+      "sha256": "dcbff091bdc17b500db0476ce4acf70b70b9875a53a68d16ab64ff2b9f1ca5a1",
+      "source_repository_path": "NotchOrbitPlus/Resources/CommandHelpers/orbit-run",
+      "source_commit": "b5e99d868cc4e34754cf827adbd0012c2e129a78"
+    },
+    {
+      "path": "Plugins/HelloOrbit/manifest.json",
+      "bytes": 347,
+      "sha256": "8bf5b3ebb26903f1dad95caf8785f40e81576f01f926b1ef1c523ac938fb41b8",
+      "source_repository_path": "NotchOrbitPlus/Resources/Plugins/HelloOrbit/manifest.json",
+      "source_commit": "b5e99d868cc4e34754cf827adbd0012c2e129a78"
+    },
+    {
+      "path": "Plugins/HelloOrbit/hello.sh",
+      "bytes": 90,
+      "sha256": "7960f3af0738e525d7e394ad4765b29b53ce525113b896bd49a5b8a55871eda2",
+      "source_repository_path": "NotchOrbitPlus/Resources/Plugins/HelloOrbit/hello.sh",
+      "source_commit": "b5e99d868cc4e34754cf827adbd0012c2e129a78"
+    },
+    {
+      "path": "Plugins/ClipboardLength/manifest.json",
+      "bytes": 356,
+      "sha256": "ccca587e25b1aba1fa25b647b0835bf822601a093f147e5462bece57f127dd15",
+      "source_repository_path": "NotchOrbitPlus/Resources/Plugins/ClipboardLength/manifest.json",
+      "source_commit": "b5e99d868cc4e34754cf827adbd0012c2e129a78"
+    },
+    {
+      "path": "Plugins/ClipboardLength/count.sh",
+      "bytes": 96,
+      "sha256": "344301e34c5c04effb32fc87e622c5493a5fcdac81e2112e6d35afd46d3542a7",
+      "source_repository_path": "NotchOrbitPlus/Resources/Plugins/ClipboardLength/count.sh",
+      "source_commit": "b5e99d868cc4e34754cf827adbd0012c2e129a78"
+    }
+  ],
+  "ci_signing": {
+    "kind": "adhoc",
+    "team_identifier": null,
+    "notarized": false,
+    "notarization_status": "pending_credentials",
+    "codesign_verified": true,
+    "hardened_runtime": false
+  }
+}

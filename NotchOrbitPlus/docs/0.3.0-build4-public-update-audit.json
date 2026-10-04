@@ -1,0 +1,17 @@
+{
+  "verified_at": "2026-10-04T20:42:18.063518+00:00",
+  "authentication_used": false,
+  "channel_url": "https://raw.githubusercontent.com/sknitd/orbit/codex/notch-plus-updates/stable.json",
+  "channel_http_status": 200,
+  "archive_http_status": 200,
+  "source_commit": "b5e99d868cc4e34754cf827adbd0012c2e129a78",
+  "version": "0.3.0",
+  "archive_sha256": "da9461b610ee4e179835f0493b82bfb0517b18b2689fe83b625380cee1421f0c",
+  "archive_bytes": 11261776,
+  "matches_ci_archive": true,
+  "signing": {
+    "kind": "adhoc",
+    "team_identifier": null,
+    "notarized": false
+  }
+}

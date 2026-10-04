@@ -4,15 +4,13 @@ A separate native Mac app with a notch dashboard and the original key-free file-
 
 The current source has **45 dashboard tools**. Its **14 new tools** are Context Rules, Downloads, Commands, Snippets, Translate, Dictation, QR, 2FA Codes, Package Tracker, Habits, Travel Status, Sports Scores, Search and Plugins. Ask Orbit gains local file proposals; Clipboard gains text transforms; File Shelf gains collections, rules and a chosen-folder Orbit Inbox; Weather gains air quality and precipitation detail. The app retains its own `com.sknitd.NotchOrbitPlus` identity, preferences and storage. NotchOrbit and OrbitDrop remain separate apps.
 
-**Expansion verification is pending:** the download and evidence below remain the verified **0.3.0, 31-tool build**. The 45-tool table describes current source, and does not imply that the linked package contains the expansion. New native test results and previews will be recorded after the expanded macOS build succeeds.
-
 The [OmniNotch reference page](https://omninotch.app/) inspected on October 4, 2026 advertises twenty tools and explicitly names nineteen. This app implements those nineteen named areas under the Orbit identity, inherited File Actions, Quick Launcher and Workflows, and the additional tools listed below. See [implemented-features.md](implemented-features.md) and [known-limitations.md](known-limitations.md) for source scope and practical limits.
 
 ## Install and open
 
-[**Download NotchOrbitPlus.app.zip**](https://github.com/sknitd/orbit/raw/497ffa0672eadf61168e0974c99416086b0b2121/NotchOrbitPlus.app.zip) · [SHA-256 checksum](https://github.com/sknitd/orbit/blob/497ffa0672eadf61168e0974c99416086b0b2121/NotchOrbitPlus.app.zip.sha256)
+[**Download NotchOrbitPlus.app.zip**](https://github.com/sknitd/orbit/raw/9f39669d503deacaf1adb19a963eb5f280611c96/NotchOrbitPlus.app.zip) · [SHA-256 checksum](https://github.com/sknitd/orbit/blob/9f39669d503deacaf1adb19a963eb5f280611c96/NotchOrbitPlus.app.zip.sha256)
 
-**Verified macOS build:** 289 tests passed, a universal Release app was built, strict ad hoc signature verification and startup passed, and the ZIP/checksum were independently checked. The package is **not notarized**; hardware, permissions and connected accounts still need acceptance on your Mac.
+**Verified macOS build:** 395 tests passed, a universal Release app was built, strict ad hoc signature verification and startup passed, and the ZIP/checksum were independently checked. The package is **not notarized**; hardware, permissions and connected accounts still need acceptance on your Mac.
 
 The universal app targets **macOS 14 or later**, on Apple Silicon and Intel. Developer tools are not needed to run the packaged app. If this repository is private, sign in to GitHub with access before downloading.
 
@@ -22,14 +20,14 @@ The universal app targets **macOS 14 or later**, on Apple Silicon and Intel. Dev
 4. Enable Input Monitoring if you want automatic Finder-drag file actions. Connected tools request their own access only when you choose Connect, Enable, Pick or Start.
 5. Clipboard history, background monitoring, HUD interception, lyrics lookup, sync and update automation have explicit opt-in controls. Unavailable data and API failures remain visible.
 
-Development packages are ad hoc signed and **not notarized** unless the configured Apple signing pipeline produces a trusted release. If macOS blocks an ad hoc app, try opening it, then use System Settings → Privacy & Security → Open Anyway if offered. Each Mac needs its own permission grants and integration setup.
+Development packages are ad hoc signed and **not notarized** unless the configured Apple signing pipeline produces a trusted release. If macOS blocks an ad hoc app, try opening it, then use System Settings → Privacy & Security → Open Anyway if offered. Each Mac needs its own permission grants and integration setup. Earlier 0.3 packages compare marketing versions only; download and replace the app manually to install this build 4.
 
-The verified 0.3 evidence records source `7dc43a6aec2a4d14657d41186c193b850dcfa43e`, [macOS CI run 37220531371](https://github.com/sknitd/orbit/actions/runs/37220531371), artifact commit `497ffa0672eadf61168e0974c99416086b0b2121`, **123 hosted native tests**, **289 total tests** and **54 native previews**. ZIP size: **8,414,997 bytes**. See [EVALUATION.md](EVALUATION.md) for executed checks and remaining physical-Mac acceptance.
+This is **0.3.0 (build 4)** from source `b5e99d868cc4e34754cf827adbd0012c2e129a78`, [macOS CI run 37232350966](https://github.com/sknitd/orbit/actions/runs/37232350966), artifact commit `9f39669d503deacaf1adb19a963eb5f280611c96`. All **395 tests passed**: 37 shared core, 173 Plus core and 185 hosted native, with zero failures/skips. The build produced **109 native previews**, including all **45 tools**. ZIP size: **11,261,776 bytes**. See [EVALUATION.md](EVALUATION.md) for executed checks and remaining physical-Mac acceptance.
 
 ZIP SHA-256:
 
 ```text
-f258c6fa17c303a088759cd87e6aa12035e451151aabb6cc7afef30c8f3b89fa
+da9461b610ee4e179835f0493b82bfb0517b18b2689fe83b625380cee1421f0c
 ```
 
 ## Tools and requirements
@@ -178,28 +176,34 @@ The independent workflow `.github/workflows/notchorbitplus.yml` uses a real macO
 
 ## Native previews
 
-The preserved verified 31-tool build generated captures of actual native views, including its 31 dashboard modules. New 45-tool captures and test totals are pending the expanded build and are not represented by these older images. Additional images use clearly labeled synthetic fixtures for dated rates, session history, media state, HUD and priorities. The completed 0.3 run generated **54 native PNGs**; the files below are copied unchanged from that artifact. Fixtures are identified by their output names and documentation captions. Rendering does not establish physical-notch placement, hardware permissions or connected accounts.
+The verified build generated **109 actual native PNGs**, including all **45 dashboard views** and new closed-notch states. These copies preserve artifact bytes. Names/captions identify injected fixture data; rendering does not prove real accounts, permissions or physical-notch interaction.
 
-![Screenshot Shelf with explicit capture controls](docs/NotchOrbitPlus-Dashboard-capture.png)
+![Context Rules with observation disabled](docs/NotchOrbitPlus-Context-disabled.png)
 
-![Color Picker with native sampling and saved palettes](docs/NotchOrbitPlus-ColorPicker.png)
+![Ask Orbit editable file proposals, fixture](docs/NotchOrbitPlus-AskOrbitFiles-fixture-preview.png)
 
-![World Clock showing labeled saved-zone fixtures](docs/NotchOrbitPlus-WorldClock-fixture-saved-zones.png)
+![Dictation with injected transcript and measured-level fixture](docs/NotchOrbitPlus-Dictation-fixture-recognized-levels.png)
 
-![Currency conversion using labeled dated-rate fixtures](docs/NotchOrbitPlus-Currency-fixture-dated-rates.png)
+![Local generated and Vision-decoded QR fixture](docs/NotchOrbitPlus-QR-fixture-generated-and-decoded.png)
 
-![Focus Stats using labeled completed-session fixtures](docs/NotchOrbitPlus-FocusStats-fixture-completed-history.png)
+![Snippet library fixture](docs/NotchOrbitPlus-Snippets-fixture-library.png)
 
-![Dark appearance settings fixture](docs/NotchOrbitPlus-Appearance-fixture-dark.png)
+![Seven-week habit history fixture](docs/NotchOrbitPlus-Habits-fixture-seven-weeks.png)
 
-![Per-display and Spaces settings fixture](docs/NotchOrbitPlus-DashboardSettings-fixture-display-spaces.png)
+![Shelf rules awaiting explicit enable](docs/NotchOrbitPlus-ShelfRules-fixture-disabled.png)
 
-![Custom live-priority settings fixture](docs/NotchOrbitPlus-Priority-fixture-custom.png)
+![Travel provider fixture with a gate and no terminal](docs/NotchOrbitPlus-Travel-fixture-gate-without-terminal.png)
 
-![Saved workflow with native drop target](docs/NotchOrbitPlus-Dashboard-workflows.png)
+![Closed-notch dictation waveform fixture](docs/NotchOrbitPlus-Compact-fixture-primary-dictation.png)
 
-![Quick Launcher with local target controls](docs/NotchOrbitPlus-Dashboard-launcher.png)
+![Closed-notch verification-code fixture](docs/NotchOrbitPlus-Compact-fixture-primary-verificationCode.png)
 
-![First-run setup in its native window](docs/NotchOrbitPlus-Onboarding.png)
+![Closed-notch download Reveal fixture](docs/NotchOrbitPlus-Compact-fixture-primary-downloads.png)
+
+![Focus app-hiding preview fixture](docs/NotchOrbitPlus-FocusAppHiding-fixture-preview.png)
+
+![Native workflow drop target](docs/NotchOrbitPlus-Dashboard-workflows.png)
+
+![First-run native tool selection](docs/NotchOrbitPlus-Onboarding.png)
 
 ![Original native file-action semicircle](docs/NotchOrbitPlus-Convert.png)

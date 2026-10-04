@@ -1,0 +1,1333 @@
+{
+  "source_commit": "b5e99d868cc4e34754cf827adbd0012c2e129a78",
+  "outcome": "passed",
+  "inventory": {
+    "shared": 37,
+    "plus": 173,
+    "native": 185
+  },
+  "expected_png_count": 109,
+  "tests": {
+    "shared": {
+      "count": 37,
+      "individual_records": [
+        "ActionResolverTests/testContainersWithoutNativeDecoderAreNotOfferedMediaActions",
+        "ActionResolverTests/testDirectoriesCannotReachRegularFileEngines",
+        "ActionResolverTests/testEmptySelectionHasNoActions",
+        "ActionResolverTests/testExtractionIsLimitedToOneZIP",
+        "ActionResolverTests/testImageBatchSupportsConversionsAndPrivacy",
+        "ActionResolverTests/testMediaAndJSONCapabilitiesDoNotCrossTypes",
+        "ActionResolverTests/testMergeRequiresAtLeastTwoPDFs",
+        "ActionResolverTests/testMixedTypesOfferOnlyUniversalFileOperations",
+        "ActionResolverTests/testRegistryCoversEveryImplementedIdentifierExactlyOnce",
+        "ActionResolverTests/testResolutionOrderIsStableAcrossEquivalentBatches",
+        "ActionResolverTests/testSelectiveWebPPrivacyAndUnsupportedSourceCompressionAreHidden",
+        "ActionResolverTests/testUnavailableCodecIsNeverOffered",
+        "ArchiveSecurityTests/testCentralAndLocalNamesMustAgree",
+        "ArchiveSecurityTests/testEmptyZIPIsValid",
+        "ArchiveSecurityTests/testEncryptedAndUnsupportedCompressionAreRejected",
+        "ArchiveSecurityTests/testEveryTruncatedPrefixFailsWithoutReadingOutsideBuffer",
+        "ArchiveSecurityTests/testExpansionBombAndZIP64ClaimsAreRejected",
+        "ArchiveSecurityTests/testFilenameAliasesAndFileDirectoryConflictsAreRejected",
+        "ArchiveSecurityTests/testHiddenPrefixAndTrailingPayloadAreRejected",
+        "ArchiveSecurityTests/testPKWAREUnixMetadataCannotContainLinkTarget",
+        "ArchiveSecurityTests/testRegularStoredZIPHasAccurateInventory",
+        "ArchiveSecurityTests/testSymbolicLinksSpecialFilesAndPrivilegedModesAreRejected",
+        "ArchiveSecurityTests/testUnsafeExtractionPathsAreRejected",
+        "DropPayloadValidatorTests/testChangedMissingExtraDuplicateOrEmptyPayloadCannotExecutePreview",
+        "DropPayloadValidatorTests/testMatchingBatchPreservesActualDroppedOrder",
+        "DropPayloadValidatorTests/testMissingFilesAreRejectedAndExistingFilesAccepted",
+        "DropPayloadValidatorTests/testRemoteAndForeignHostedFileURLsAreRejected",
+        "DropPayloadValidatorTests/testStandardizedPathsMatchAndCanonicalDuplicatesAreRejected",
+        "RadialGeometryTests/testAngularBoundaryChoosesAdjacentWedge",
+        "RadialGeometryTests/testAnnulusBoundariesAndInactiveGap",
+        "RadialGeometryTests/testCardinalDirectionsUseAppKitCoordinates",
+        "RadialGeometryTests/testCenterAndCornersStayWithinEachDisplay",
+        "RadialGeometryTests/testEveryWedgeCenterForFourSixEightAndTenActions",
+        "RadialGeometryTests/testInvalidAndNonfiniteCoordinatesNeverSelect",
+        "RadialGeometryTests/testOuterRingIsAnchoredToChosenPrimaryWedge",
+        "RadialGeometryTests/testOversizedWheelShrinksToFitSmallVisibleScreen",
+        "RadialGeometryTests/testRetinaPhysicalCoordinatesMapToSameLogicalSelection"
+      ],
+      "evidence_format": "complete parallel XCTest progress inventory; later successful set-e build phases prove command completion"
+    },
+    "plus": {
+      "count": 173,
+      "individual_records": [
+        "AppearancePriorityTests/testAppearanceRoundTripDefaultsSilentAndRejectsUnknownOrOversizedData",
+        "AppearancePriorityTests/testCustomPriorityChangesActualSelectionWhileDefaultRetainsExistingRelativeOrder",
+        "AppearancePriorityTests/testPortableSettingsValidateZonesAndPriorityAndExcludeMacConfiguration",
+        "ContextActivityTests/testCommandFinishMustMatchObservedStartAndPauseDoesNotInventExit",
+        "ContextActivityTests/testCommandMetadataRejectsOversizeUnknownKeysControlTextAndInvalidResults",
+        "ContextActivityTests/testContextUsesStablePriorityAndIgnoresDisabledOrHiddenTools",
+        "ContextActivityTests/testDirectoryPartialHasUnknownBytesAndExistingFinishedFilesDoNotBecomeActivities",
+        "ContextActivityTests/testExplicitDownloadTotalProducesMeasuredProgressAndETAButRejectsInvalidEstimates",
+        "ContextActivityTests/testFinderRuleNeedsActualInjectedDragAndRuleValidationRejectsUnsafeIdentifiers",
+        "ContextActivityTests/testObservedPartialRenameRetainsRealFinalButNeverInventsTotalOrETA",
+        "ContextActivityTests/testUnchangedPreexistingFinalAndRemovedPartialDoNotClaimCompletion",
+        "CoreAssistantFilesTests/testCSVQuotedFieldsRoundTripAndMalformedRowsAreRejected",
+        "CoreAssistantFilesTests/testFilenameAndBoundedTextPlanningPreservesMeaningAndRejectsPaths",
+        "CoreCaptureTests/testAreaClipsToOneDisplayAndRejectsSmallNonfiniteSelections",
+        "CoreCaptureTests/testDurationLimitsAndCaptureIndexRejectTamperedRecords",
+        "CoreCaptureTests/testRecordingFitsH264EvenDimensionsAndKeepsAspect",
+        "CoreCaptureTests/testReversedRetinaAreaUsesTopLeftDisplayCoordinates",
+        "CoreColorPaletteTests/testComponentsRejectNonfiniteAndOutOfRangeValuesIncludingDecodedInput",
+        "CoreColorPaletteTests/testHSLHueSectorsAndAchromaticEndpoints",
+        "CoreColorPaletteTests/testNamesAndCollectionBoundsPreventUnboundedPayloads",
+        "CoreColorPaletteTests/testPaletteExportRoundTripsAndRejectsUnsupportedOrOversizedData",
+        "CoreColorPaletteTests/testPrimaryColorsAndTransparencyFormatDeterministically",
+        "CoreDictationTests/testMeasuredRMSAndWaveformKeepRealLevelsAndBoundMemory",
+        "CoreDictationTests/testTranscriptAndShortcutValidationPreserveRecognizedWords",
+        "CoreLRCLyricsTests/testPlainInstrumentalAndMissingLyricsNeverInventSynchronization",
+        "CoreLRCLyricsTests/testQueryUsesFixedEndpointAndEscapesMetadataWithoutAdditionalParameters",
+        "CoreLRCLyricsTests/testSynchronizedResultPreservesActualTimestampsAndRequiresMatchingMetadata",
+        "CoreLauncherPinsTests/testMalformedShortcutCannotInjectCLIFlagsAndDuplicatesAreRejected",
+        "CoreLauncherPinsTests/testPersistenceReorderingAndSearchKeepOpaqueBookmarksAndIdentities",
+        "CoreQRTests/testDecodedOptionsAndRequestsRejectTamperedInput",
+        "CoreQRTests/testEveryCorrectionAndIntegerScaleRoundTripsWithFourModuleQuietZone",
+        "CoreQRTests/testPayloadPreservesUnicodeWhitespaceAndCountsActualUTF8Bytes",
+        "CoreSystemMediaTests/testAbsentAndMalformedMetadataCannotInventTrackOrProgress",
+        "CoreSystemMediaTests/testRealTimestampRatePositionAndPauseClamp",
+        "CoreTranslationTests/testTranslationRequestValidatesLanguagePairAndPreservesTypedText",
+        "CoreUpdateTests/testAdhocCannotClaimNotarizationOrSigningTeam",
+        "CoreUpdateTests/testChecksumRejectsModifiedDataAndWrongLength",
+        "CoreUpdateTests/testFeedRejectsChangedOriginsPathsProductAndProvenance",
+        "CoreUpdateTests/testStableVersionsCompareNumericallyAndRejectAmbiguity",
+        "CoreUpdateTests/testValidPublishedFeedHasVersionAndPlatformBoundaries",
+        "DashboardBehaviorTests/testDisplayRulesRejectNonfiniteWidthsAndInvalidDisplayIdentities",
+        "DashboardBehaviorTests/testFullscreenPolicyRequiresPermissionAndTheSameDisplay",
+        "DashboardBehaviorTests/testKeyboardNavigationWrapsOnlyThroughVisibleTools",
+        "DeviceNetworkModelsTests/testFocusRequiresAuthorizationAndPreservesUnknownSharedState",
+        "DeviceNetworkModelsTests/testOnlyReportedValidBatteryValuesBecomePercentages",
+        "DeviceNetworkModelsTests/testPerInterfaceRateHandlesResetNewInactiveAndVPNWithoutCombining",
+        "DeviceNetworkModelsTests/testTunnelClassificationDoesNotClaimInternetReachability",
+        "FocusTimerTests/testDeadlineSurvivesPersistenceAndSleepWithoutTickCounting",
+        "FocusTimerTests/testPauseResumePreservesRemainingAcrossLongHiddenInterval",
+        "FocusTimerTests/testRestDoesNotCountAsFocusAndCancelNeverCompletes",
+        "MeetingLiveStatusTests/testCountdownRecoversAcrossSleepAndMeetingEnd",
+        "MeetingLiveStatusTests/testJoinLinksRejectUnsafeSchemesCredentialsLookalikeHostsAndPorts",
+        "MeetingLiveStatusTests/testJoinURLCanComeFromCalendarLocationOrNotes",
+        "MeetingLiveStatusTests/testLiveStatusDiscardsDuplicateBlankInvalidProgressAndRetainsSimultaneousJobs",
+        "MeetingLiveStatusTests/testLiveStatusShowsJobThenMeetingThenFocusThenMusicAndReturnsAfterCompletion",
+        "MeetingLiveStatusTests/testUpcomingPrioritizesOngoingAndFiltersExpiredAllDayAndInvalidRanges",
+        "NewLocalToolsCoreTests/testPluginV1RejectsTraversalPermissionsAndUndeclaredButtons",
+        "NewLocalToolsCoreTests/testSearchRanksTitlesRequiresAllTokensAndMovesSelection",
+        "NewLocalToolsCoreTests/testTransformersPreserveJSONNumbersAndEscapesAndRejectMalformedInput",
+        "NewLocalToolsCoreTests/testURLBase64TextAndTrackingTransformationsHaveActualResults",
+        "NewLocalToolsCoreTests/testVerificationCodesRequireContextAndExpireAtOneMinute",
+        "NotchActivationTests/testEscapeOrFullCancellationCannotReactivateWithoutAnotherMouseDown",
+        "NotchActivationTests/testFreshFileDragNeedsNoModifierAndActivatesOnlyOnce",
+        "NotchActivationTests/testFreshTextDragCannotActivateFileActions",
+        "NotchActivationTests/testHoverWithoutMouseDownAndStaleDragPasteboardCannotActivate",
+        "NotchActivationTests/testLeavingAndReenteringRequiresNewPresentationGeneration",
+        "NotchActivationTests/testMouseUpOnlyKeepsExistingDestinationPendingAndCannotAuthorizeLateInspection",
+        "NotchActivationTests/testNegativeOriginScreenIsChosenFromPointerRatherThanPrimaryScreen",
+        "NotchActivationTests/testOutsideEveryScreenAndZeroSizePanelCannotActivate",
+        "NotchActivationTests/testScreenRemovalAndScreenLayoutChangeInvalidateOldGeneration",
+        "NotchActivationTests/testSecondPasteboardWriterInvalidatesWholeMouseDown",
+        "NotchActivationTests/testTransportTowardLowerOptionsDoesNotCancelPresentation",
+        "NotchDragPayloadTests/testChangedCountChangedFileDuplicatesAndEmptyPayloadAreRejected",
+        "NotchDragPayloadTests/testEquivalentBatchMayArriveInDifferentOrder",
+        "NotchDragPayloadTests/testLocalhostFileHostIsEquivalentToLocalFilePath",
+        "NotchDragPayloadTests/testRemoteURLsForeignFileHostsAndURLDecorationsAreRejected",
+        "NotchGeometryTests/testAboveAnchorEndpointsCenterAndInterRingGapAreNotActions",
+        "NotchGeometryTests/testAngularSeparatorsCannotAccidentallyChooseAnAdjacentAction",
+        "NotchGeometryTests/testFourSixEightAndTenWedgeCentersRunFromLeftToRightBelowAnchor",
+        "NotchGeometryTests/testNonfinitePointsAndInvalidBandsNeverSelect",
+        "NotchGeometryTests/testOuterRingUsesItsActualOptionCount",
+        "NotchGeometryTests/testPrimaryRadialBoundsAreInclusiveAndTheirNeighborsAreInactive",
+        "NotchLayoutTests/testEveryOptionCenterFitsPanelAndAvoidsPhysicalNotch",
+        "NotchLayoutTests/testNegativeOriginsAndVerticallyStackedDisplaysFitTheirOwnVisibleFrame",
+        "NotchLayoutTests/testNotchlessScreenHasTopCenterFallbackAndSafeMenuGap",
+        "NotchLayoutTests/testPhysicalNotchAndMenuBarAreOutsideThePanel",
+        "NotchLayoutTests/testSmallVisibleScreenScalesBothRenderedAndHitTestBands",
+        "NotchLayoutTests/testTransportRegionConnectsActivationTargetToLowestVisibleOption",
+        "OnlineCodexQuotaTests/testHistoricalFallbackKeepsUnknownDurationHonest",
+        "OnlineCodexQuotaTests/testMissingOrInvalidQuotaNeverProducesInventedRemaining",
+        "OnlineCodexQuotaTests/testPublicProtocolSelectsCodexKeyAndIgnoresSensitiveExtras",
+        "OnlineServiceDataTests/testEverySalesProviderNormalizesItsDocumentedEnvelope",
+        "OnlineServiceDataTests/testFXUsesDatedRealBaseDirectionAndExcludesMissingCurrency",
+        "OnlineServiceDataTests/testSalesRejectsErrorsDuplicateIdentitiesAndInvalidMoney",
+        "OnlineServiceDataTests/testStockQuoteDoesNotInventRateLimitedOrMissingData",
+        "OnlineServiceDataTests/testStripeUTCFilteringCaptureMinorUnitsAndRefunds",
+        "OnlineServiceDataTests/testUsageImportsExplicitLimitsMissingQuotaAndStaleness",
+        "OnlineServiceDataTests/testUsageRejectsFutureTimestampsNegativeLimitsAndDuplicateScopes",
+        "OnlineServiceDataTests/testWeatherRequiresSevenCompleteFiniteDays",
+        "OrbitNativeParsersTests/testLyricsMultipleTagsFractionsOffsetAndSelection",
+        "OrbitNativeParsersTests/testShortcutNamesCannotBecomeCLIOptions",
+        "OrbitSystemDeltasTests/testCPUDeltaAndCounterRollover",
+        "OrbitSystemDeltasTests/testNetworkIgnoresResetAndNewInterfaces",
+        "PersonalLibraryTests/testCleanupPlanProtectsOwnSiblingCrossShelfDescendantsAndDirectoryAncestors",
+        "PersonalLibraryTests/testCleanupPlanUsesCanonicalPathsAndRejectsUnknownChildrenAndDirectoryCopies",
+        "PersonalLibraryTests/testHabitGregorianDatesRejectRolloverAndCountLeapDayAcrossMonthBoundary",
+        "PersonalLibraryTests/testHabitLocalDayTimezoneAndTogglePersistenceDoNotCountDuplicateCheckoffs",
+        "PersonalLibraryTests/testIncomingSnippetChangesRetainLocalOnlyDataAndRejectIdentityCollision",
+        "PersonalLibraryTests/testOwnedCleanupPlanExcludesReferencesOriginalAliasesAndForeignPaths",
+        "PersonalLibraryTests/testPortableShelfRulesRoundTripWithoutFilesystemOrEnablementAndBoundTargets",
+        "PersonalLibraryTests/testSnippetBoundsAndMalformedFolderReferencesRejectOriginalPayload",
+        "PersonalLibraryTests/testSnippetSearchFoldsAccentsAndSyncOmitsLocalSecretsAndPrivateFolders",
+        "PersonalLibraryTests/testSyncMigratesVersionTwoAndRetainsConcurrentHabitAndSnippetVariants",
+        "Phase2PlanningDataTests/testCrossCurrencyConversionUsesDatedDecimalRatesAndRejectsMissingCurrencies",
+        "Phase2PlanningDataTests/testDSTGapIsRejectedAndFallBackSelectsFirstOccurrence",
+        "Phase2PlanningDataTests/testFocusHistoryRecordsDeadlineAndFocusDurationOnceWithoutPausedTime",
+        "Phase2PlanningDataTests/testFocusWeekUsesLocalCalendarDaysAcrossSpringDSTAndExcludesNextWeek",
+        "Phase2PlanningDataTests/testGithubParserRejectsMalformedPagesUnsafeLinksAndTraversal",
+        "Phase2PlanningDataTests/testLegacyFocusMigrationRetainsCountWithoutInventingOldDatesOrDurations",
+        "Phase2PlanningDataTests/testMeetingInstantConvertsAcrossDateBoundariesAndFractionalOffsets",
+        "Phase2PlanningDataTests/testZonePreferencesNormalizeForDisplayButStrictSyncValidationDoesNotDiscardInput",
+        "PlatformBehaviorTests/testFocusPreviewExcludesSelfHiddenUnchosenAndDuplicateProcesses",
+        "PlatformBehaviorTests/testFocusRestoreOnlyOwnsSameProcessAndBundleStillHidden",
+        "PlatformBehaviorTests/testFocusSettingsBoundAndValidateIdentifiers",
+        "PlatformBehaviorTests/testLauncherDropRejectsNonAppsRemoteURLsAndDuplicateInput",
+        "PlatformBehaviorTests/testLegacyPriorityMigratesWithoutChangingExistingRelativeOrder",
+        "PlatformBehaviorTests/testNewActivitiesRespectCustomPriorityAndBoundActualWaveform",
+        "PlusIntentValidationTests/testFocusBoundsRejectOverflowAndZero",
+        "PlusIntentValidationTests/testShortcutFilenameCannotTraverseOrHideItsTemporaryFile",
+        "PlusIntentValidationTests/testWorkflowIdentityMustBeCanonicalAndCannotContainArguments",
+        "PlusLocalModelsTests/testAffineTemperatureConversionAndAbsoluteZero",
+        "PlusLocalModelsTests/testCatalogHasAllReferenceToolsAndRetainedFileActionsExactlyOnce",
+        "PlusLocalModelsTests/testInvalidNumberCrossFamilyAndMalformedUnitAreRejected",
+        "PlusLocalModelsTests/testKnownImperialAndMetricLengthAndMass",
+        "PlusLocalModelsTests/testRoundTripsForEveryUnitFamily",
+        "PlusLocalModelsTests/testShelfPersistencePreservesManagedAndOriginalLocationsAndExpirySelection",
+        "PlusLocalModelsTests/testShelfRetentionInclusiveBoundaryAndFutureEntries",
+        "PlusLocalModelsTests/testTaskPersistenceRetainsIdentityCompletionStarAndUnicodeTitle",
+        "PlusLocalModelsTests/testUSAndImperialVolumesAreDistinctAndNauticalSpeedIsExact",
+        "ProviderStatusDataTests/testAQIAndUVAreActualBoundedProviderFieldsAndNullIsAnError",
+        "ProviderStatusDataTests/testAfterShipCurrentSchemaPreservesReportedStatusAndOptionalRecipientLocalETA",
+        "ProviderStatusDataTests/testCalendarTravelCandidatesUseRealEventDepartureAndExcludeAllDayOrUnrelatedText",
+        "ProviderStatusDataTests/testFallbackURLsAndPackageReferencesRejectCredentialsSchemesAndLocalHosts",
+        "ProviderStatusDataTests/testFlightParserKeepsProviderOffsetsAndMissingGateWithoutInventingStatus",
+        "ProviderStatusDataTests/testRainForecastUsesConsecutiveQuarterHoursAndActualNearTermPrecipitation",
+        "ProviderStatusDataTests/testSportsNullScoresStayUnknownAndOnlyInProgressStatusesAreLive",
+        "ShelfLibraryEvaluationTests/testLegacyShelfIndexMigratesWithoutLosingIdentityBookmarkOrManagedLocation",
+        "ShelfLibraryEvaluationTests/testMetadataRoundTripKeepsTheLegacyStateReadable",
+        "ShelfLibraryEvaluationTests/testSearchUsesAllFilenameAndTagTokensWithFavouriteFilteringAndStableOrder",
+        "ShelfLibraryEvaluationTests/testTagNormalizationPreservesReadableOrderAndBoundsDecodedInput",
+        "SyncModelsTests/testConcurrentNotesPreserveBothUnsavedEditsAndExplicitResolutionConverges",
+        "SyncModelsTests/testConcurrentSettingsPreserveVariantsAndNeverIncludeDeviceConfiguration",
+        "SyncModelsTests/testDeletionTombstoneSurvivesStaleSnapshotsAndConcurrentTaskEdit",
+        "SyncModelsTests/testEqualConcurrentValuesMergeIdempotentlyWithoutCreatingSpuriousConflicts",
+        "SyncModelsTests/testOversizedCorruptAndUnsupportedSnapshotsLeaveOriginalUntouched",
+        "SyncModelsTests/testRoundTripAndDistinctDevicesMergeIndependentTaskFields",
+        "SyncPortableLibraryTests/testConcurrentLauncherVariantsRemainUntilExplicitResolution",
+        "SyncPortableLibraryTests/testIndependentWorkflowAndPaletteEditsMergeAcrossDevicesWithoutConflict",
+        "SyncPortableLibraryTests/testInvalidWorkflowOrExcessivePinsCannotMutateExistingSnapshot",
+        "SyncPortableLibraryTests/testPaletteDeletionSurvivesStalePeerAndDoesNotIncludeSamplingHistory",
+        "SyncPortableLibraryTests/testPortableTargetsContainOnlyLogicalIdentifiersAndRejectPaths",
+        "SyncPortableLibraryTests/testVersionOneSnapshotMigratesWithoutResettingMissingNewPreferences",
+        "SystemControlsTests/testHUDDoesNotInventMuteForBrightness",
+        "SystemControlsTests/testLevelsClampStepsAndRejectInvalidHardwareReadings",
+        "SystemControlsTests/testOnlyRecognizedAuxiliaryKeysAndPhasesDecode",
+        "WorkflowPresetTests/testCompressionQualityRejectsNonfiniteAndOutOfRangePersistence",
+        "WorkflowPresetTests/testDimensionLimitsAcceptEndpointsAndRejectInvalidImageBudgets",
+        "WorkflowPresetTests/testLosslessPNGDoesNotAdvertiseAnEffectiveQualityCompressionStep",
+        "WorkflowPresetTests/testOutputNamesRejectSeparatorsControlCharactersAndOversizedUTF8",
+        "WorkflowPresetTests/testRepeatedReorderedOrNonfinalArchiveStepsCannotRun",
+        "WorkflowPresetTests/testSavedFourStagePresetRoundTripsWithoutChangingItsIdentityOrParameters",
+        "WorkflowPresetTests/testValidationTrimsANameWithoutMutatingTheSavedValue",
+        "WorkflowPresetTests/testVideoPresetRoundTripsAndOnlyAllowsCompressionThenOptionalZIP"
+      ],
+      "evidence_format": "complete parallel XCTest progress inventory; later successful set-e build phases prove command completion"
+    },
+    "native": {
+      "count": 185,
+      "failures": 0,
+      "skips": 0,
+      "individual_passed_records": [
+        "AppIntentEvaluationTests/testMemoryFileIsMaterializedOnlyDuringTheExplicitAction",
+        "AppIntentEvaluationTests/testRealFileIsPreservedAndOversizedOrLinkedInputsNeverReachTheAction",
+        "AppIntentEvaluationTests/testShelfIntentPublishesGenericFilesBeforeRemovingPrivateInput",
+        "AppIntentEvaluationTests/testShortcutRegistryAndDashboardActionRequireAnInstalledHandler",
+        "AppearancePriorityEvaluationTests/testActualDashboardSettingsRenderLocalDisplayAndSpacePreferencesWithoutPermissionActions",
+        "AppearancePriorityEvaluationTests/testNativeAppearanceAndPriorityPersistAndRenderWithoutImplicitChanges",
+        "AppearancePriorityEvaluationTests/testSyncRollbackRestoresTypedPreferencesAndExactPriorStoredObjects",
+        "AppearancePriorityEvaluationTests/testUnreadablePreferenceBytesAreRetainedUntilExplicitBackupReset",
+        "AssistantFileActionsEvaluationTests/testActualMarkdownAndPDFReadersKeepOriginalsAndReadableText",
+        "AssistantFileActionsEvaluationTests/testActualScreenshotOCRBatchCreatesConfirmedNamedCopiesWithoutChangingImages",
+        "AssistantFileActionsEvaluationTests/testCancelledGeneratorCannotPublishLateFileProposals",
+        "AssistantFileActionsEvaluationTests/testNamedCopiesThroughParentAliasNeverOverwriteAndUndoRetainsEditedOutput",
+        "AssistantFileActionsEvaluationTests/testRealFileCSVPreviewRendersWithoutLoadingTheOnDeviceModel",
+        "CaptureFilesEvaluationTests/testActualHideCancelsAwaitedScreenshotBeforeScreenCaptureAndPublication",
+        "CaptureFilesEvaluationTests/testDisconnectedVisibilityCancelsQueuedVisibleDeliveryAndCannotReattachAfterDismantle",
+        "CaptureFilesEvaluationTests/testEmptyAndCancelledNativeWriterCannotPublishAPlayableMovie",
+        "CaptureFilesEvaluationTests/testHostedVisibilityDefersPublishedChangesAndStopsPickerOnHideAndTeardown",
+        "CaptureFilesEvaluationTests/testImmediateRecordingHideNeverChecksOrRequestsPermission",
+        "CaptureFilesEvaluationTests/testInvalidatedCaptureGenerationRemovesOnlyItsUnpublishedCopy",
+        "CaptureFilesEvaluationTests/testNativeWriterCreatesDecodableMOVAndExtendsAnUnchangedRealFrame",
+        "CaptureFilesEvaluationTests/testRealPNGBecomesManagedShelfCopyEvenWhenAutoSaveIsOff",
+        "CaptureFilesEvaluationTests/testUnstartedLifecycleNeverRequestsPermissionAndDeniedIntentProducesNoFile",
+        "ClipboardOCREvaluationTests/testCancelledRecognitionOfAValidImageThrowsCancellation",
+        "ClipboardOCREvaluationTests/testCapturedImageRecognizesRealTextThatCanBeSearchedAndCopied",
+        "ClipboardOCREvaluationTests/testClearingAnImageWithPendingRecognitionCannotRestoreHistory",
+        "ClipboardOCREvaluationTests/testInvalidAndOversizedImagesFailWithoutInventedText",
+        "CodexQuotaRunnerTests/testCancellationTerminatesItsOwnPendingSubprocess",
+        "CodexQuotaRunnerTests/testClosedCLIInputProducesAnErrorWithoutCrashingTheApplication",
+        "CodexQuotaRunnerTests/testRealSubprocessUsesOnlyDocumentedQuotaHandshake",
+        "ColorPickerEvaluationTests/testActualColorPickerRendersWithoutSamplingOrPermissionRequests",
+        "ColorPickerEvaluationTests/testActualNSColorConvertsToSRGBAndCopiesEverySupportedFormat",
+        "ColorPickerEvaluationTests/testHiddenPickerIgnoresLateCompletionWithoutOpeningSystemSampler",
+        "ColorPickerEvaluationTests/testSyncPreservesHistoryAndFailedPersistenceLeavesExistingStateUntouched",
+        "ContextActivityEvaluationTests/testCommandListenerRapidHideShowAndDisableEnableHaveDeterministicTeardown",
+        "ContextActivityEvaluationTests/testDisabledServicesNeverStartObservationOrListenerWhenViewsBecomeVisible",
+        "ContextActivityEvaluationTests/testInstalledHelpersReportRealExplicitCommandThroughOwnedPrivateSocket",
+        "ContextActivityEvaluationTests/testPrivateFolderObservationRetainsActualRenameAndNeverDeletesEitherFile",
+        "ContextActivityEvaluationTests/testRealDefaultContextAndActivityViewsRenderWithoutEnablingServices",
+        "DashboardEvaluationTests/testActualAppRegistersEveryToolOnceAndMakesEveryTabSelectable",
+        "DashboardEvaluationTests/testActualWindowControlTabSkipsHiddenToolsAndEscapeCollapses",
+        "DashboardEvaluationTests/testAllActualToolsRenderAtMinimumWidthAndFitTheDisplay",
+        "DashboardEvaluationTests/testBundledUnicodeCatalogContainsCompleteSequencesAndSearchableNames",
+        "DashboardEvaluationTests/testHiddenToolsAndReorderedPreferencesSurviveARealReload",
+        "DashboardEvaluationTests/testOlderSyncedOrderKeepsNewToolsReorderableAndPersistsTheirPositions",
+        "DashboardEvaluationTests/testSuspensionRemovesTheDashboardUntilFileActionsReleaseIt",
+        "DictationEvaluationTests/testActualDriverEventsAndHiddenCancellationPreserveTranscriptAndReportQuickNoteFailure",
+        "DictationEvaluationTests/testCancelledSpeechConsentCannotProceedToMicrophoneOrAudioStart",
+        "DictationEvaluationTests/testConstructionLifecycleAndImmediatelyHiddenStartNeverRequestPermissions",
+        "DictationEvaluationTests/testDictationControlsAndMeasuredLevelFixtureRenderWithoutRealSpeechOrMicrophone",
+        "DictationEvaluationTests/testFailedHoldRevealAndRepeatedHiddenStateCannotStartPermissionOrPublishText",
+        "DictationEvaluationTests/testHoldAppendFailureRetainsFinalTextAndCanceledOrFailedRecognitionNeverAppends",
+        "DictationEvaluationTests/testOptedInHoldReleaseAppendsOnlyOneFinalTranscriptAndManualStartStillRequiresSend",
+        "DictationEvaluationTests/testUnsupportedOnDeviceRecognizerFailsBeforeConsentAndExplicitBackgroundOptInControlsHide",
+        "DistributionEvaluationTests/testActualOnboardingAndUpdateSettingsRenderWithoutInvokingSetupActions",
+        "DistributionEvaluationTests/testUnsignedArchiveCannotReplaceTheRunningAppAndItsBytesRemainIntact",
+        "ExpandedCompactEvaluationTests/testNewActivityFixturesRenderActualClosedNotchAndKeepFileProcessingPrimary",
+        "ExpandedCompactEvaluationTests/testOwnedNativeCompactButtonsRouteTheDisplayedActivityWithoutOpeningOtherTools",
+        "FocusAppHidingEvaluationTests/testAlreadyHiddenSelfAndReusedPIDAreNeverRestoredAsOwnedApps",
+        "FocusAppHidingEvaluationTests/testExplicitFocusHideRestoresOnPauseAndCompletionAndRendersItsPreview",
+        "GithubActionsClientTests/testFullPagesStopAtRepositoryAndRunCapsAndExposeIncompleteCoverage",
+        "GithubActionsClientTests/testOwnedRepositoriesAndRealRunFieldsUseOnlyExplicitAuthenticatedGETs",
+        "GithubActionsClientTests/testPrecancelledClientDoesNotReachInjectedTransport",
+        "HUDLifecycleEvaluationTests/testFreshServicesAndDisabledLifecycleDoNotStartBackgroundMonitoringOrInterception",
+        "HUDLifecycleEvaluationTests/testRealHUDAndCompactViewsRenderExplicitLevelFixturesWithoutHardwareChanges",
+        "LRCLyricsClientTests/testChangedResponseOriginIsRejected",
+        "LRCLyricsClientTests/testLookupStreamsMatchingLyricsAndSendsOnlyPublicMetadata",
+        "LRCLyricsClientTests/testNotFoundAndRateLimitDoNotRetryOrSearch",
+        "LRCLyricsClientTests/testStreamedResponseWithoutLengthStopsAtSizeLimit",
+        "LauncherBookmarkTests/testInstalledApplicationResolvesWithoutLaunchingIt",
+        "LauncherBookmarkTests/testRealFolderBookmarkRoundTripAndMissingTargetReporting",
+        "LauncherBookmarkTests/testRegularFileAndFolderCannotBePinnedAsApplications",
+        "LauncherSyncTests/testInstalledApplicationSyncResolvesLocallyWithoutLaunchingOrExportingBookmark",
+        "LauncherSyncTests/testOpenEditorsBlockChangedSyncedLibrariesAndPreserveSavedOriginals",
+        "LauncherSyncTests/testPortableFolderNeedsExplicitLocalResolutionWithoutInventedPathOrBookmark",
+        "LauncherSyncTests/testUnreadableLauncherOriginalBlocksSyncAndExplicitResetKeepsExactBackup",
+        "LauncherSyncTests/testWrongPropertyTypesBlockEveryPortableStoreAndExplicitResetPreservesOriginal",
+        "LocalProductivityTests/testClipboardImageAndURLRecopyPreserveRealData",
+        "LocalProductivityTests/testClipboardRequiresOptInAndStopsCapturingAfterOptOut",
+        "LocalProductivityTests/testConcealedTransientAndPasswordManagerMarkersAreSkippedBeforeCapture",
+        "LocalProductivityTests/testRemovingManagedShelfCopyPreservesOriginalBytes",
+        "LocalProductivityTests/testRemovingShelfReferenceNeverDeletesSource",
+        "LocalProductivityTests/testSharedStoresSurviveToolViewLifetimeAndLaunchDoesNotOptIn",
+        "MediaModelEvaluationTests/testHiddenOptOutStopsPollingAndShutdownInvalidatesConnectedSession",
+        "MediaModelEvaluationTests/testMissingPlaybackStateAndControlsRemainExplicitAndLyricsRequireSeparateAction",
+        "MediaModelEvaluationTests/testPersistedOptInsAndViewAppearanceNeverConnectOrLookUpLyrics",
+        "MediaRemoteSourceTests/testCancellationBeforeContinuationInstallationWinsOnce",
+        "MediaRemoteSourceTests/testCancellationBeforeReadAvoidsPrivateFrameworkLoad",
+        "MediaRemoteSourceTests/testLatePrivateCallbackCannotResumeTimedOutRequestTwice",
+        "MediaRemoteSourceTests/testMissingSymbolsAndUnknownCommandsFailWithoutPlayback",
+        "MediaRemoteSourceTests/testUnavailableFrameworkFailsGracefullyOnlyAfterExplicitRead",
+        "MeetingCompactEvaluationTests/testActualEventKitProjectionExtractsMeetingLinksFromNotes",
+        "MeetingCompactEvaluationTests/testMeetingInitializationAndRefreshNeverOpenAJoinLink",
+        "MeetingCompactEvaluationTests/testNativeCompactFixturesRenderAllActivitiesAndPriorityTransitions",
+        "MeetingCompactEvaluationTests/testUnsafeOrMissingMeetingLinksAndFailedOpenCannotReportJoined",
+        "MessagesVerificationCodeTests/testOffDefaultAndConcealedCopyDoNotPersistIntoClipboardHistory",
+        "MessagesVerificationCodeTests/testReadOnlyPrivateSQLiteFixtureFiltersAgeOutgoingAndUnrelatedNumbers",
+        "NativeImageTests/testFivePNGResizeOutputsActuallyDecodeAt1600AndRetainOriginals",
+        "NativeImageTests/testInvalidSecondImageRollsBackPublishedFirstOutput",
+        "NativeImageTests/testRealJPEGToWebPDecodesAndPreservesSource",
+        "NativePanelEvaluationTests/testActualNativePanelRendersConvertOptionsWithoutExecutingAnAction",
+        "NativePasteboardTests/testEmptyPasteboardAndStoppedMonitorDoNotAuthorizeActivation",
+        "NativePasteboardTests/testNonFileAndDuplicatePasteboardURLPayloadsCannotBecomeCandidates",
+        "NativePasteboardTests/testRealFileURLPasteboardUsesCurrentContentAndStopsAcceptingAfterRewrite",
+        "NativeVisibilityEvaluationTests/testActualHostingWindowStopsAndResumesThenTeardownCannotRepublishVisible",
+        "NativeVisibilityEvaluationTests/testObservedPublicationsDuringRepeatedActualSwiftUITeardownFinishHidden",
+        "PersonalLibraryEvaluationTests/testActualSnippetsHabitsAndShelfSettingsRenderWithoutProviders",
+        "PersonalLibraryEvaluationTests/testChosenFolderRuleDoesNotImportUntilActualPreviewAndExplicitEnable",
+        "PersonalLibraryEvaluationTests/testCrossShelfCanonicalDescendantAndAncestorReferencesProtectWholeOwnedFolder",
+        "PersonalLibraryEvaluationTests/testExpiredOwnedShelfCopiesRemainUntilConfirmedAndUndoRestoresAfterRelaunch",
+        "PersonalLibraryEvaluationTests/testFailedAutomaticExpiryStaysPausedAcrossRelaunchUntilExplicitRetry",
+        "PersonalLibraryEvaluationTests/testHabitsActuallyPersistDailyToggleAndPreserveCorruptOriginal",
+        "PersonalLibraryEvaluationTests/testInboxActualUniqueCoordinatedCopiesPreserveSourceAndRejectLinks",
+        "PersonalLibraryEvaluationTests/testLateRealIOFailureRollsBackAllNewSyncLibrariesAndAbsentLegacyFiles",
+        "PersonalLibraryEvaluationTests/testOwnSiblingOriginalSurvivesEnabledExpiryRemoveAndConfirmedCleanup",
+        "PersonalLibraryEvaluationTests/testPreviewedEnabledExpiryAutomaticallyRetainsCopiesAndUndoDisablesRulesAcrossRelaunch",
+        "PersonalLibraryEvaluationTests/testRetainedTrashReferenceBlocksUndoImmediatelyAndAfterRelaunch",
+        "PersonalLibraryEvaluationTests/testSnippetsActuallyPersistCopyAndKeepLocalSecretAcrossSharedApply",
+        "PersonalLibraryEvaluationTests/testUnexpectedSiblingsAndDirectoryCopyChildrenAreRetainedByAllRemovalPaths",
+        "PlanningServiceEvaluationTests/testCancelledOlderCurrencyReadCannotOverwriteNewerRates",
+        "PlanningServiceEvaluationTests/testCurrencyReadsOnlyAfterRefreshAndRendersDatedCrossRates",
+        "PlanningServiceEvaluationTests/testMalformedFocusHistorySurvivesViewingShutdownAndInvalidStartUntilExplicitValidBackup",
+        "PlanningServiceEvaluationTests/testNativeFocusCompletionPersistsDeadlineHistoryOnceAndRendersRealStats",
+        "PlanningServiceEvaluationTests/testWorldClockMalformedPreferencesRequireBackupBeforeEditingAndRealRowsRender",
+        "PluginSandboxTests/testBundledSamplesDecodeWithoutRunningOrImportingThem",
+        "PluginSandboxTests/testImporterRejectsSymlinkScriptAndProfileHasNoAmbientUserNetworkAccess",
+        "PluginSandboxTests/testSandboxRunsActualJSONAndDeniesWritingOutsidePluginFolder",
+        "PluginsStateEvaluationTests/testDisablingImmediatelyAfterImportStartsCannotPublishPluginFilesOrDeclarations",
+        "PluginsStateEvaluationTests/testMalformedRegistryBlocksImportsUntilExplicitResetKeepsExactBackup",
+        "PluginsStateEvaluationTests/testRegistryPublicationObstructionRollsBackOnlyTheNewPluginAndKeepsTheObstruction",
+        "ProviderRequestContractTests/testAfterShipUsesCurrentHeaderAndThreePageCapOnExplicitRefresh",
+        "ProviderRequestContractTests/testFlightAndChosenTeamFixturesUseTheirOwnOriginsAndKeysOnlyOnRefresh",
+        "ProviderRequestContractTests/testReadOnlyTransportRejectsMutationAndWrongOriginCredentialBeforeNetwork",
+        "ProviderRequestContractTests/testWeatherExplicitRefreshRequestsActualAQIUVAndQuarterHourRainFields",
+        "ProviderStateEvaluationTests/testCanceledLatePackageResponseCannotPublishAndExplicitRefreshRendersRealDecodedFixture",
+        "ProviderStateEvaluationTests/testPackageSemanticAndWrongTypedOriginalsArePreservedThenBackedUpOnExplicitAdd",
+        "ProviderStateEvaluationTests/testProviderInitializationAndActualViewsNeverReadKeysCalendarOrNetwork",
+        "ProviderStateEvaluationTests/testRefreshImmediatelyHiddenBeforeItsTaskStartsCannotReadAKeyOrStartTransport",
+        "ProviderStateEvaluationTests/testTeamSemanticAndWrongTypedOriginalsArePreservedThenBackedUpOnExplicitAdd",
+        "PublicServiceEvaluationTests/testRealPublicAirQualityResponseDecodesItsDatedAQIUVAndParticleFields",
+        "PublicServiceEvaluationTests/testRealPublicGeocodingResponseDecodesTheBerlinProbe",
+        "PublicServiceEvaluationTests/testRealPublicMinutelyRainResponseDecodesBoundedConsecutiveFifteenMinuteSlots",
+        "PublicServiceEvaluationTests/testRealPublicUSDBasedFXResponseIsDatedAndUsableForConversion",
+        "PublicServiceEvaluationTests/testRealPublicWeatherResponseDecodesSevenAlignedDays",
+        "QRToolEvaluationTests/testExplicitSelectedCaptureScansRealManagedPNGAndCopiesExactPayload",
+        "QRToolEvaluationTests/testGeneratedPreviewRendersAndCancelledLateCaptureCannotReplaceNewerResults",
+        "QRToolEvaluationTests/testInitializationRenderingAndImmediateHideNeverCaptureTheScreen",
+        "QRToolEvaluationTests/testInvalidUnencodedAndCancelledImagesNeverInventPayloadsOrAlterSources",
+        "QRToolEvaluationTests/testRealCoreImagePNGDecodesWithVisionForEveryCorrectionLevelAndKeepsOriginal",
+        "QRToolEvaluationTests/testVisionSurfacesEveryActualCodeIncludingRepeatedPayloads",
+        "ShelfQuickLookEvaluationTests/testRealQuickLookPanelOwnsTheSelectedItemAndRestoresItsResponderChain",
+        "SpotifyArtworkClientTests/testDeclaredAndStreamingLimitsRejectBeforeImageDecode",
+        "SpotifyArtworkClientTests/testExplicitLoadStreamsActualBytesWithoutCredentialsOrStartupRequests",
+        "SpotifyArtworkClientTests/testFinalForeignOriginAndHTTPFailureRemainVisible",
+        "SpotifyArtworkClientTests/testNamedProviderPolicyRejectsLookalikesCredentialsAndUnsafeTransport",
+        "SpotifyArtworkClientTests/testRedirectDelegateOnlyAllowsNamedHTTPSImageHosts",
+        "SyncFolderIOTests/testCorruptLocalLegacyFilePreventsAnyNoteTaskOrMetadataReplacement",
+        "SyncFolderIOTests/testCorruptSharedFileRejectsReadAndPublishWithoutReplacingOriginal",
+        "SyncFolderIOTests/testEmptyFolderAndTwoDeviceCoordinatedPublicationRoundTrip",
+        "SyncFolderIOTests/testFileIdentityMismatchRejectsReadAndPublishPreservingValidOtherDeviceData",
+        "SyncFolderIOTests/testOversizedSharedFileRejectsReadAndPublishWithoutReplacingOriginal",
+        "SyncFolderIOTests/testPublicationRereadsExistingOwnFileAndPreservesConcurrentProviderEdit",
+        "SyncFolderIOTests/testRegularAndDanglingSnapshotSymlinksNeverReplaceTheirTargetsOrLinks",
+        "SyncFolderIOTests/testSymlinkDataDirectoryIsRejectedWithoutWritingThroughIt",
+        "SyncLocalTransactionTests/testFailedFileRecoveryRetainsPrivateOriginalsAndBlocksAnotherTransaction",
+        "SyncLocalTransactionTests/testLateFailureRestoresAbsentFilesAndAbsentDefaultsRatherThanCreatingEmptyValues",
+        "SyncLocalTransactionTests/testLatePaletteWriteFailureRestoresExactExistingFilesAndEveryStore",
+        "TranslationEvaluationTests/testLocalTranslationControlsRenderWithoutAnActiveSessionOrDownload",
+        "TranslationEvaluationTests/testTypedClipboardOutputAndCancelledSessionIdentityWithoutPreparingModels",
+        "UpdateClientEvaluationTests/testDeclaredAndStreamedOversizeAreRejectedWithoutLeavingCacheFiles",
+        "UpdateClientEvaluationTests/testFetchAndStreamedZIPVerifyBytesProgressAndSavedProvenance",
+        "UpdateClientEvaluationTests/testUnexpectedFinalURLAndHTTPFailuresRejectBeforePublication",
+        "UpdateClientEvaluationTests/testWrongChecksumAndTruncatedStreamRemoveOnlyTheirPartialDownloads",
+        "WorkflowExplicitRunTests/testExplicitAwaitForwardsPublicationFailureWithoutSuccessCallbackOrSourceReplacement",
+        "WorkflowExplicitRunTests/testExplicitAwaitPublishesDurableOutputOutsideTemporaryInputAndPreservesPreference",
+        "WorkflowRunnerTests/testCancellationAfterARealStageLeavesExistingOutputAndSourceIntact",
+        "WorkflowRunnerTests/testCustomResizeAndWebPConversionPublishOnlyTheFinalDecodableFile",
+        "WorkflowRunnerTests/testEditingAfterRejectedSavedPresetsPreservesTheirExactPriorBytes",
+        "WorkflowRunnerTests/testExternalSourceReplacementAfterAStageRejectsStaleOutputAndRetainsReplacement",
+        "WorkflowRunnerTests/testFourRealStagesProduceOneCollisionSafeZIPWithResizedJPEGs",
+        "WorkflowRunnerTests/testInvalidSecondInputAndSymbolicSourceRejectWithoutPublishingOrChangingData",
+        "WorkflowRunnerTests/testLatePublicationFailurePreservesTheBlockingFileAndOriginal",
+        "WorkflowRunnerTests/testTwoPathsThroughASymbolicParentCannotDuplicateOnePhysicalInput",
+        "WorkflowRunnerTests/testUnsupportedSecondImageRemovesTheFirstImagesCompletedPrivateStage",
+        "WorkflowVideoTests/testRealMOVCompressionAndZIPPublishPlayableSmallerVideoWithoutReplacingSources",
+        "WorkflowVideoTests/testUnsupportedSecondMOVRollsBackTheFirstRealCompressionAndPreservesBothSources"
+      ],
+      "evidence_format": "individual hosted XCTest started+passed lines and two matching summaries"
+    }
+  },
+  "sdk": {
+    "xcode": "Xcode 26.6\nBuild version 17F113",
+    "macos_sdk": "26.5",
+    "sdk_path": "/Applications/Xcode_26.6.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+    "swift": "Apple Swift version 6.3.3 (swiftlang-6.3.3.1.3 clang-2100.1.1.101)\nTarget: arm64-apple-macosx26.0",
+    "host_architecture": "arm64",
+    "deployment_target": "14.0",
+    "foundation_models_api_typechecked": true,
+    "translation_api_typechecked": true,
+    "on_device_speech_api_typechecked": true,
+    "translation_nonisolated_session_action_typechecked": true,
+    "translation_speech_probe_architectures": [
+      "arm64",
+      "x86_64"
+    ],
+    "translation_speech_probe_codegen_verified": true,
+    "main_actor_bool_binding_codegen_verified": true,
+    "translation_speech_probe_source_sha256": "cb3f1c1a6ba5aae063dbb431d7509602dfe240b190d2c33f55239723b1ab1f8c",
+    "translation_speech_probe_objects": [
+      {
+        "architecture": "arm64",
+        "mach_o_cpu": "0x100000c",
+        "file_type": "MH_OBJECT",
+        "bytes": 102800,
+        "sha256": "174a9a1197f479261b5b2e7f141eddc740d96d6573dfbdf10d5a8490dfde9bb9"
+      },
+      {
+        "architecture": "x86_64",
+        "mach_o_cpu": "0x1000007",
+        "file_type": "MH_OBJECT",
+        "bytes": 99160,
+        "sha256": "9c9a61f905729aa526c4b44db7ccbc7c72659ce10f34e94209f473edb2683abd"
+      }
+    ]
+  },
+  "archive": {
+    "sha256": "da9461b610ee4e179835f0493b82bfb0517b18b2689fe83b625380cee1421f0c",
+    "bytes": 11261776,
+    "version": "0.3.0",
+    "build": "4",
+    "actual_mach_o_slices": [
+      {
+        "cpu": "0x1000007",
+        "minimum_macos": [
+          14,
+          0,
+          0
+        ],
+        "foundation_models_weakly_linked": true,
+        "translation_weakly_linked": true,
+        "embedded_signature_present": true
+      },
+      {
+        "cpu": "0x100000c",
+        "minimum_macos": [
+          14,
+          0,
+          0
+        ],
+        "foundation_models_weakly_linked": true,
+        "translation_weakly_linked": true,
+        "embedded_signature_present": true
+      }
+    ],
+    "notarized": false,
+    "signature": "ad hoc"
+  },
+  "idle": {
+    "sample_count": 11,
+    "mean_cpu_percent": 0.7153581340432876,
+    "sampled_peak_rss_mb": 89.358336,
+    "measurement_seconds": 11.183209667000028,
+    "budgets_recomputed_from_raw_samples": true,
+    "scope": "Owned application process only. RSS excludes WindowServer, GPU allocations and other processes. This is runner idle-launch evidence, not physical Finder/notch performance."
+  },
+  "previews": {
+    "count": 109,
+    "dashboard_count": 45,
+    "records": [
+      {
+        "file": "NotchOrbitPlus-Appearance-fixture-dark.png",
+        "width": 560,
+        "height": 560,
+        "bytes": 29168,
+        "sha256": "bc24cc721563faa1dda9ea5b392dff4693b6401658ff22a44763bf4a3dcd59b1"
+      },
+      {
+        "file": "NotchOrbitPlus-AskOrbitFiles-fixture-preview.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 36224,
+        "sha256": "5a807430507781fb2e8c3f96f0dc5d5c3af319c4f81e743d679ec94797950229"
+      },
+      {
+        "file": "NotchOrbitPlus-ColorPicker.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 38639,
+        "sha256": "b2b1cfbae5589328f165637d4bb760081072bd3d4dc1f7e5c3c9fa6ccb956a17"
+      },
+      {
+        "file": "NotchOrbitPlus-Commands-disabled.png",
+        "width": 560,
+        "height": 500,
+        "bytes": 45305,
+        "sha256": "7f5340cf135d6e10482f0148c24de59d25ed63dc5135c809e0194d4bcaddfb23"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-completed.png",
+        "width": 260,
+        "height": 38,
+        "bytes": 3603,
+        "sha256": "39be8abedc190852b4a5efdd099745458a0b77148ba3482d533faedbb5affc67"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-custom-priority.png",
+        "width": 260,
+        "height": 38,
+        "bytes": 5935,
+        "sha256": "60f0dc79765c447a2f92f4f78a15f3644f607f4e08075862010942b3dae25467"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-hud.png",
+        "width": 260,
+        "height": 38,
+        "bytes": 4930,
+        "sha256": "803ff722b7b2515ae0b02a0cdfb2341ab76966ae0b15906509ed6e88be4245ee"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-idle.png",
+        "width": 260,
+        "height": 38,
+        "bytes": 3263,
+        "sha256": "d02f486f19c6ea4f20097663b9a8d0f9d114a040527ce097032e8111f478a8b2"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-meeting.png",
+        "width": 260,
+        "height": 38,
+        "bytes": 3401,
+        "sha256": "733a5088c1e46949769babef25433431c6994063357f4743171e202e2c4dad2e"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-music.png",
+        "width": 260,
+        "height": 38,
+        "bytes": 3629,
+        "sha256": "7853e13728b16b54c46d9b699705ae39c1b0af02256fbaa49b657def04b44291"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-new-command.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 6500,
+        "sha256": "0df39e70d6218c819c11baf38631c34db6ae9247597d452a5970d18961280a2f"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-new-devices.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 6551,
+        "sha256": "2872d3eb1bf8d0c52c6a1e2fd7f88b9b66f23812b44ebe69442056556383b36e"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-new-dictation.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 6521,
+        "sha256": "d9e8147404a4bd27a903108f1d0cb301f8d12e6c625f7bd061efb0ecfa562015"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-new-downloads.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 6553,
+        "sha256": "a53cea9f28b0b2d2474b80cdaeed09393124df736dc1e7c465d85a78ba7d1d94"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-new-focus.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 6545,
+        "sha256": "45a4c5e449ed2f3ffeb78d26123c322f27673413cd9d8548c9b48a40ebfcf173"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-new-package.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 6608,
+        "sha256": "ad5253ab68ab32f86828b47502c0af0577f394cc45148136823d2a67c0f35682"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-new-sports.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 6571,
+        "sha256": "5fb6faee875b13ff92562c08a839522181ae5c4b7e21acac80e6ec119f98d5be"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-new-status.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 6558,
+        "sha256": "8252b419a88825916f64df7ea0499f9fb694652dd2ef256533cba4e21fda75b4"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-new-travel.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 6560,
+        "sha256": "bd30308bb0f09f562d2aba9d4eb1325e4858b4e482cedc2275b3a0f5986f2835"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-new-verificationCode.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 6546,
+        "sha256": "cd6dd5db99f3926345be15af9f86a42464c58cc57418a9d323e93fc62d8aef19"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-new-weather.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 6594,
+        "sha256": "f1cce3cda3676a2b1ffd92657e16599c9b15e99aeaee8aa3cc7a7488987e902f"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-primary-command.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 5422,
+        "sha256": "aa5f7f60bcfdb8f111570d9f0de5ca7f8679a88aa68bb62aff64361d6c16395f"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-primary-devices.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 6344,
+        "sha256": "5dfb04f9e45adc136b7ff4b1b1237e92da46c91db31d45a1a9bce4e60b44e53a"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-primary-dictation.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 5776,
+        "sha256": "c8d147a1d86e09fb69ab9246511f940eb402085bf6d5e7baf135e2aa7735a881"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-primary-downloads.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 6364,
+        "sha256": "072cb2f8d4d7230fc84809572ec405053f165920f848b8f0a6cc929bd96d2432"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-primary-focus.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 5577,
+        "sha256": "ce68d720ec6297e18f7cb6f5ea27e4339dd33a10e8d1162811c637bda2809315"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-primary-package.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 6431,
+        "sha256": "136fd8daa9ca4a1f66e87cc102c93419d86529b40253cfe24a85be0128cc1cf2"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-primary-sports.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 6687,
+        "sha256": "ae2d0c93be58ffe549cc66bff20bcdb00dcbac594c5f3db56ccd15190e595f3f"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-primary-status.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 6570,
+        "sha256": "29fded2dbec405bf635dc0cd571e079881b780c5b3ae900e20a2bcda51121866"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-primary-travel.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 6524,
+        "sha256": "32b265229aa58e83ddaf6b16f629bce464b758178739e132af457a8be0e50237"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-primary-verificationCode.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 6220,
+        "sha256": "2513738d8f9ff968c8f0d2aba7a3426edec00e52952c6232479d7745f193c68f"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-primary-weather.png",
+        "width": 320,
+        "height": 48,
+        "bytes": 6120,
+        "sha256": "52d851fa5f12b2184edc726d4408d0af638fe6151380b01bb55ed7d153adecf4"
+      },
+      {
+        "file": "NotchOrbitPlus-Compact-fixture-processing.png",
+        "width": 260,
+        "height": 38,
+        "bytes": 5179,
+        "sha256": "9251a4b1b6f01e1adfd4e1a2f8e350bd56641b54dd042e20d015e213b81e4d83"
+      },
+      {
+        "file": "NotchOrbitPlus-Context-disabled.png",
+        "width": 560,
+        "height": 500,
+        "bytes": 48858,
+        "sha256": "cb73d2b1d1b747372e72954609432231872bdcdb69b27c1410b10c063860c818"
+      },
+      {
+        "file": "NotchOrbitPlus-Convert.png",
+        "width": 620,
+        "height": 310,
+        "bytes": 45920,
+        "sha256": "281b2f61807f7178b6e30982927005860ab764db2019c499849210dacb6b127a"
+      },
+      {
+        "file": "NotchOrbitPlus-Currency-fixture-dated-rates.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 29028,
+        "sha256": "fc23c06535a702f57610ab20780d808310fc5ccf2ea69b41d1538ec56ae3fdb1"
+      },
+      {
+        "file": "NotchOrbitPlus-Currency-fixture-unrefreshed.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 22212,
+        "sha256": "49b1d934128ce5210ede0feacf2f7eaf11f9094a396a11ae264eaa72f63743db"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-aiUsage.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 56072,
+        "sha256": "abb309c45dab6cb9015d8cb2bf06b91acd64855a4f856b4c4e321be079f7a317"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-assistant.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 29354,
+        "sha256": "aca09b230dcf99e765f20ec20c2179f7983f8c5879ec80c83629f2a033c0a5a1"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-calendar.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 47307,
+        "sha256": "9c9ccc44625abff763532fa943e784fc1e9d7a8f380eb758338f7cba0b6d8600"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-capture.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 46045,
+        "sha256": "2804412b49d005c80c3bc287672f90e36bc6b6e99e3a848a0232c3ab8285dff0"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-clipboard.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 29978,
+        "sha256": "a557542b6410e101cb3334e70685211617c091f53ecf8101ccac814a3bbd0a7f"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-colorPicker.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 41919,
+        "sha256": "05ab8e68c575662d1af1ae8978e0208be043b805ad71ab0044fb1625055d2f41"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-commands.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 52215,
+        "sha256": "c307c40aac6100875de78877d56807046146e8ae8d56a4296496babec1ccbc6b"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-context.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 51438,
+        "sha256": "edd6067812198b10e5ae320ea3a7e3596e226d0671c929cf85b3dd796229e655"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-converter.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 36574,
+        "sha256": "d8803194013c3d509bc596f7c87c85fb587cf4a859993a183674eacac538ff3d"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-devices.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 44122,
+        "sha256": "af637d5c9b6384f187f70413d5c10604b91dd65887e1f6501bbf72bb670eb938"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-dictation.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 54130,
+        "sha256": "ec78a5c51e28c4c59a364be04fcd1d51d2eefda5d90a632633e58ef81e40098d"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-downloads.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 45244,
+        "sha256": "2bba6fdad6a77485a4abc3894aa57371ea2b00835d87ec88cf70a6fece6eef34"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-emoji.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 96005,
+        "sha256": "0e53d98c2ad9b6e581a69160599ef5befd117dd78b263672d06a31dd6db56962"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-fileActions.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 41582,
+        "sha256": "25a0ac6503ede82315c92db92774f3cb365a7ae4c7e2c7737a29bc163c6667ca"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-fileShelf.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 42987,
+        "sha256": "5e30e6eb36afa192054c98a86ee07fc086b12f59531e9d09d5c7216983d71c9f"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-focusStats.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 38427,
+        "sha256": "cdec1ce31a9909ad1abc00dc764c73bdb0477aa0e526de2979bb0a05ee936d94"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-githubActions.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 35434,
+        "sha256": "b5f5a7c4b3c9805409b302265adee4d733d895a26071b0a0a28468e7445fdf0b"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-globalSearch.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 25168,
+        "sha256": "bc8a3812c72c61e0c733d2f15cf7c806eefb671638853c07be0fb8c3e8425154"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-habits.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 28882,
+        "sha256": "1d1bf2f3fee333573810ad1fa9fd3625dbf9d5a3ec5de98bec77350d57ff18ed"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-hud.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 40659,
+        "sha256": "723e91195226192502969d2b10f9c9aae20e941308ea0c6684ebd83af5044725"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-launcher.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 32100,
+        "sha256": "8e9aff756a2aee3acfa78762222817b0f03408144eab6e5ede3a73f3fae3ddf1"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-mirror.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 25670,
+        "sha256": "f4e9ad0d1484d983d8cdcedd0e6f1931cbba9fd242ae8eb4901f70175b0ad3bc"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-network.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 50721,
+        "sha256": "8454b4a5b7b26e8ef0cb88fb2f16fc1b164572b48b79eed8622ac548ce4d9a79"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-nowPlaying.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 48266,
+        "sha256": "84c8cc5888cf52fbeccc19bb7d6f1e5a9c13c34d11245185da7fe40401ec09ac"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-packageTracker.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 35396,
+        "sha256": "e136c06927aa9efdcfdeb51433ed298f8b1fa7514774206ceb2b7a1ad17e678f"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-plugins.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 36126,
+        "sha256": "6ff38d8361eb73d1dd24e018353ffc5ade462132bfdda65e0b722763305dc5a2"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-qr.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 42733,
+        "sha256": "af420c04f8495180ded439c88ff3336802253d1512d0d283a95f5919ffbda4b1"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-quickNote.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 23660,
+        "sha256": "0628ac5d63d4dfda30a73fb51a41ad1635b5a2526b5ec11131b4abe131f36ea5"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-reminders.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 27451,
+        "sha256": "78a364cd00f917b2b0ced9a4326460fcd8f9404e9a28467051d02c920e10c0aa"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-sales.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 51815,
+        "sha256": "db20b6cc7e43cc25d3f2efecad1f512b207273b7b95d0c0de496892eeaf3bea2"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-shortcuts.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 28507,
+        "sha256": "5f43fe7397071c5355e4745edf5614b0bb8ec49caee2f5452a01e8326439aea3"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-snippets.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 25928,
+        "sha256": "78e9bd8604cc36ef9a2f6358149b3b24a1cd957eded05f32ae12e406332ba504"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-sportsScores.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 36223,
+        "sha256": "ef0abeadf357ec5d815324b890e5f41d1f85910e6eed64b34423e1aac6cf998b"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-status.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 53041,
+        "sha256": "081d5cb2d2a08d5e865a2cac26b6e5d03c4000544e1733188d24b98cfad2f386"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-stocks.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 41299,
+        "sha256": "a7630ece991559c1fc7a05a05d690b54905e13835d65c8620ca6b90528e1455d"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-system.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 40592,
+        "sha256": "431c78ebe8434d69b7b3eb19637992d26a8cbd5d48e850c06c7119cc3092066e"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-teleprompter.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 33178,
+        "sha256": "5f4eab6a5adfcb2e790cca2191f368354c4eb97cc362e61df89e187e0da000a0"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-timers.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 41180,
+        "sha256": "6904a0ff1d8fce4b316ec9728c1c1073a1e824e8e8e73054c81eb0d1a4a99931"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-todos.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 25762,
+        "sha256": "757a19991a1da6ca2d629a35a262a42f41f1c697c37fb774d9b92efd323388e0"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-translate.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 36273,
+        "sha256": "090d10e42186fc9e846c49763f1ec081b348815ccf010cb67ebffaccb234729a"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-travelStatus.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 39915,
+        "sha256": "10c2b06b100375fd8964cd1b6b80cb86e1ac934511cbeb07634f50c3f25f2507"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-verificationCodes.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 47872,
+        "sha256": "8b490666108915c2124566ed39f408680d482c76912159f872c94b90e8158db7"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-weather.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 41564,
+        "sha256": "319cdc76244128fa5eb9957b09eab2aaaee402c8be7b092e68bd428a5c422dad"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-workflows.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 51515,
+        "sha256": "782827122aab948adae91527af1674af8fa87f41dd68eebe27be5158a9235bba"
+      },
+      {
+        "file": "NotchOrbitPlus-Dashboard-worldClock.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 32195,
+        "sha256": "3143a59a90b4cf44b8e57cd6e4a775727fc21c06d074b18195d2927f1d5a4596"
+      },
+      {
+        "file": "NotchOrbitPlus-DashboardSettings-fixture-display-spaces.png",
+        "width": 560,
+        "height": 760,
+        "bytes": 73429,
+        "sha256": "a3ea7cca61f813085336650cfe71c2669414195b76ba63f388f1cbbc3ef34655"
+      },
+      {
+        "file": "NotchOrbitPlus-Dictation-fixture-recognized-levels.png",
+        "width": 560,
+        "height": 560,
+        "bytes": 56419,
+        "sha256": "79e9478973323dd2b23df07337a696a53bbcb2115aae0f88170f2473893e0252"
+      },
+      {
+        "file": "NotchOrbitPlus-Dictation-fixture-unstarted.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 45156,
+        "sha256": "e3369ad28f9fcd235b96a19b0b56d72309699f8c45a5a9040a78bb24cf450516"
+      },
+      {
+        "file": "NotchOrbitPlus-Distribution.png",
+        "width": 560,
+        "height": 560,
+        "bytes": 47300,
+        "sha256": "bac115f5b943fa946a1e615067fb110f66382e4cfc94a5c4f6a871b5c5536fc3"
+      },
+      {
+        "file": "NotchOrbitPlus-Downloads-disabled.png",
+        "width": 560,
+        "height": 500,
+        "bytes": 42841,
+        "sha256": "cd74430e10f2d329a7682657840d691d89df83fd3afa187ac6920d0b1c02c49a"
+      },
+      {
+        "file": "NotchOrbitPlus-FocusAppHiding-fixture-preview.png",
+        "width": 560,
+        "height": 560,
+        "bytes": 38202,
+        "sha256": "eaae702a524e61744b94a1ab1d2522d7b029db92464fb92d31e8803a8c1fb4b9"
+      },
+      {
+        "file": "NotchOrbitPlus-FocusStats-fixture-completed-history.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 30751,
+        "sha256": "6b7d5855e0c3ed5d534b63499daa0bdad5adc6b7e8f5e49bb44f1e51d2d8b139"
+      },
+      {
+        "file": "NotchOrbitPlus-HUD-fixture-brightness.png",
+        "width": 320,
+        "height": 64,
+        "bytes": 5472,
+        "sha256": "68b36fc4eee3d8bc756c98fa5c4d57648b6e481862bec0d51a919a11fa5124c4"
+      },
+      {
+        "file": "NotchOrbitPlus-HUD-fixture-muted.png",
+        "width": 320,
+        "height": 64,
+        "bytes": 5066,
+        "sha256": "a6e0125472db7405beaf1073d6bd0540b46cd74932bba08cdfc05f8738d70da9"
+      },
+      {
+        "file": "NotchOrbitPlus-HUD-fixture-volume.png",
+        "width": 320,
+        "height": 64,
+        "bytes": 5187,
+        "sha256": "564fd503c09b33e10755867beb873b67d055b5db88ffdb1bcdaf5450b85fa00f"
+      },
+      {
+        "file": "NotchOrbitPlus-Habits-fixture-seven-weeks.png",
+        "width": 560,
+        "height": 480,
+        "bytes": 23014,
+        "sha256": "91bed8f3759d0e0378a2592a42c3a269749e47ec7c40adbbc8313a67a2979809"
+      },
+      {
+        "file": "NotchOrbitPlus-Media-fixture-restricted-controls.png",
+        "width": 560,
+        "height": 680,
+        "bytes": 68465,
+        "sha256": "7966f665f695d909cfd806736388b188ee6ba0af542d0f6bee5d24b0f705f0ec"
+      },
+      {
+        "file": "NotchOrbitPlus-Media-fixture-unconnected.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 52335,
+        "sha256": "636d6063eba369cfe09cae2bad20d6ff4db4fe932be2ecb7d38f1625b9fc9424"
+      },
+      {
+        "file": "NotchOrbitPlus-Onboarding.png",
+        "width": 560,
+        "height": 560,
+        "bytes": 45728,
+        "sha256": "35074b1a2906846224e154dfe762c49ff180eccbff26713e4d493d2246c48b73"
+      },
+      {
+        "file": "NotchOrbitPlus-Package-fixture-disconnected.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 33426,
+        "sha256": "0a3ac727e325b021db27f9301603c804181cf8516ecf5804038025528ba7a29c"
+      },
+      {
+        "file": "NotchOrbitPlus-Package-fixture-provider-response.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 41843,
+        "sha256": "b83d451be8027054a3530e2db2beaaa9c0a8c2ade7ee724936c1249aed9dbe55"
+      },
+      {
+        "file": "NotchOrbitPlus-Plugins-fixture-preserved-registry.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 37713,
+        "sha256": "4eaf64b98ac03f4d7254c3990aeb88dad3757faa031630918eb18b1afcb90c0c"
+      },
+      {
+        "file": "NotchOrbitPlus-Priority-fixture-custom.png",
+        "width": 560,
+        "height": 560,
+        "bytes": 43673,
+        "sha256": "2027b4159c99b47132ebd3473dad3489e0383ea241480ed22971099c0cf590c4"
+      },
+      {
+        "file": "NotchOrbitPlus-QR-fixture-generated-and-decoded.png",
+        "width": 560,
+        "height": 560,
+        "bytes": 48855,
+        "sha256": "22edf94f3de9daede700230f920e8662991467bb9b6f1039b48f327d8d96fb9f"
+      },
+      {
+        "file": "NotchOrbitPlus-QR-fixture-unstarted.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 34212,
+        "sha256": "01bc7ddcf4481cdf5317e458d3ce9a48d58f15733ee003c143455a58dd6b2b03"
+      },
+      {
+        "file": "NotchOrbitPlus-ShelfRules-fixture-disabled.png",
+        "width": 560,
+        "height": 480,
+        "bytes": 46500,
+        "sha256": "a956bcc712423fa8ef0fe13ae541bcaf259d422340194fff62f40b3c5e82aadb"
+      },
+      {
+        "file": "NotchOrbitPlus-Snippets-fixture-library.png",
+        "width": 560,
+        "height": 480,
+        "bytes": 28648,
+        "sha256": "583741d43a0dc86b8e2004a3a6e13f95c63e50a63a89c8819309dd08cccde435"
+      },
+      {
+        "file": "NotchOrbitPlus-Sports-fixture-disconnected.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 36212,
+        "sha256": "e493b375a9a364e5502ef161663962db4771528303363b45f8dc030761c9b12a"
+      },
+      {
+        "file": "NotchOrbitPlus-Translate-fixture-unstarted.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 30117,
+        "sha256": "60d719cbd3b70c8b140f069317539eace78db0546fe15fbf00a0918d452f5636"
+      },
+      {
+        "file": "NotchOrbitPlus-Travel-fixture-disconnected.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 38701,
+        "sha256": "57f2d815a1144e225e1c542b41932bd1eae8d6ce320e3f0833f435da59109741"
+      },
+      {
+        "file": "NotchOrbitPlus-Travel-fixture-gate-without-terminal.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 47068,
+        "sha256": "9d8c070725e7793759ee3c7aeb164c2011c8a7af011e33a1d5f9a6878d61c0ff"
+      },
+      {
+        "file": "NotchOrbitPlus-WorldClock-fixture-saved-zones.png",
+        "width": 560,
+        "height": 440,
+        "bytes": 31188,
+        "sha256": "57d57c4f8bb4e2f2a7c900ce36414a2dc3f4021074d5dffd76011542f2d2398a"
+      }
+    ],
+    "new_compact_primary_secondary_cases": {
+      "command": "command",
+      "dictation": "dictation",
+      "downloads": "downloads",
+      "package": "package",
+      "sports": "sports",
+      "travel": "travel",
+      "verificationCode": "verificationCode",
+      "weather": "weather"
+    },
+    "compact_declared_kinds": [
+      "brightness",
+      "command",
+      "devices",
+      "dictation",
+      "downloads",
+      "focus",
+      "hud",
+      "meeting",
+      "music",
+      "package",
+      "processing",
+      "sports",
+      "status",
+      "travel",
+      "verificationCode",
+      "volume",
+      "weather"
+    ],
+    "compact_primary_fixture_kinds": [
+      "command",
+      "devices",
+      "dictation",
+      "downloads",
+      "focus",
+      "hud",
+      "meeting",
+      "music",
+      "package",
+      "processing",
+      "sports",
+      "status",
+      "travel",
+      "verificationCode",
+      "weather"
+    ],
+    "missing_compact_kind_fixtures": [],
+    "missing_compact_primary_fixtures": [],
+    "scope": "Actual stored native renders; source-defined fixtures are not live accounts/hardware. Visual clipping/readability still needs manual review."
+  },
+  "public_services": {
+    "count": 5,
+    "all_http_200": true,
+    "api_credentials_used": false,
+    "native_decoding_evidence": "all five source-declared PublicServiceEvaluationTests individually passed"
+  },
+  "total_tests": 395,
+  "run_id": "37232350966",
+  "limitations": [
+    "Native hosted tests and source-defined fixtures are not interactive Finder/notch/hardware/account acceptance.",
+    "Parallel Core test logs contain complete Testing records, not separate individual passed lines.",
+    "PNG structure/content checks do not establish clipping, keyboard/VoiceOver behavior or readability."
+  ]
+}

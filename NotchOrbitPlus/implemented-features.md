@@ -1,6 +1,6 @@
 # NotchOrbitPlus implemented features
 
-The current source registers **45 dashboard tools**, including **14 new tools** beyond the previously verified 31-tool package. It retains its own `com.sknitd.NotchOrbitPlus` identity, macOS 14 minimum and universal arm64/x86_64 build. OrbitDrop and NotchOrbit remain separate applications. This file describes source behavior; [EVALUATION.md](EVALUATION.md) records executed build evidence. The existing download and screenshots retain their previous verified scope until the expanded macOS run succeeds.
+The current source registers **45 dashboard tools**, including **14 new tools** beyond the previously verified 31-tool package. It retains its own `com.sknitd.NotchOrbitPlus` identity, macOS 14 minimum and universal arm64/x86_64 build. OrbitDrop and NotchOrbit remain separate applications. This file describes source behavior; [EVALUATION.md](EVALUATION.md) records executed build evidence. The source-matched expanded build passed 395 tests and produced 109 native previews; remaining hardware/account acceptance is recorded separately.
 
 ## Local assistant, translation, dictation and QR
 
