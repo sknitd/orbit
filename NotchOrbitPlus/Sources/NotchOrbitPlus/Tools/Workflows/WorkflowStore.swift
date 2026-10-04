@@ -47,7 +47,7 @@ final class WorkflowStore: ObservableObject {
             }
             try persist(next); presets = next; selectedPresetID = valid.id; error = nil
             return true
-        } catch { error = error.localizedDescription; return false }
+        } catch { self.error = error.localizedDescription; return false }
     }
     func remove(_ id: UUID) {
         guard !isRunning else { return }
@@ -56,14 +56,14 @@ final class WorkflowStore: ObservableObject {
             try persist(next); presets = next
             if selectedPresetID == id { selectedPresetID = next.first?.id }
             error = nil
-        } catch { error = error.localizedDescription }
+        } catch { self.error = error.localizedDescription }
     }
     func move(_ id: UUID, by offset: Int) {
         guard !isRunning, let index = presets.firstIndex(where: { $0.id == id }), presets.indices.contains(index + offset) else { return }
         do {
             var next = presets; next.swapAt(index, index + offset)
             try persist(next); presets = next; error = nil
-        } catch { error = error.localizedDescription }
+        } catch { self.error = error.localizedDescription }
     }
     private func persist(_ values: [WorkflowPreset]) throws {
         // Retain unreadable prior bytes before an explicit user edit replaces them.
@@ -93,22 +93,25 @@ final class WorkflowStore: ObservableObject {
         isRunning = true; progress = 0; error = nil; outputURLs = []
         status = "Starting \(preset.name)…"
         task = Task { @MainActor [weak self] in
+            // A stable actor reference is Sendable. Keep this run's owner alive
+            // until completion/rollback; clear its task in both terminal paths.
+            guard let store = self else { return }
             do {
-                let result = try await WorkflowRunner.perform(preset: preset, urls: urls, outputDirectory: directory) { fraction, text in
-                    Task { @MainActor [weak self] in
-                        guard let self, self.generation == token, self.isRunning else { return }
-                        self.progress = fraction; self.status = text
+                let result = try await WorkflowRunner.perform(preset: preset, urls: urls, outputDirectory: directory) { [store] fraction, text in
+                    Task { @MainActor [store] in
+                        guard store.generation == token, store.isRunning else { return }
+                        store.progress = fraction; store.status = text
                     }
                 }
-                guard let self, self.generation == token else { return }
-                self.outputURLs = result.outputs; self.progress = 1
-                self.status = "Saved \(result.outputs.count) workflow output\(result.outputs.count == 1 ? "" : "s")."
-                self.isRunning = false; self.task = nil; self.onCompleted?(result)
+                guard store.generation == token else { return }
+                store.outputURLs = result.outputs; store.progress = 1
+                store.status = "Saved \(result.outputs.count) workflow output\(result.outputs.count == 1 ? "" : "s")."
+                store.isRunning = false; store.task = nil; store.onCompleted?(result)
             } catch {
-                guard let self, self.generation == token else { return }
-                self.isRunning = false; self.task = nil; self.progress = 0
-                if error is CancellationError { self.status = "Cancelled; workflow outputs were rolled back." }
-                else { self.error = error.localizedDescription; self.status = "Workflow failed; no outputs were kept." }
+                guard store.generation == token else { return }
+                store.isRunning = false; store.task = nil; store.progress = 0
+                if error is CancellationError { store.status = "Cancelled; workflow outputs were rolled back." }
+                else { store.error = error.localizedDescription; store.status = "Workflow failed; no outputs were kept." }
             }
         }
         return true
