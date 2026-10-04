@@ -32,7 +32,7 @@ The independent evaluator inspected the captures for clipping and readability. A
 - The Release app stayed running through startup and 11 idle samples. Measured mean CPU was **0.09254%** and sampled peak RSS **47.26784 MB**, below the configured 3% / 250 MB limits.
 - This finite idle check used `--smoke`: actual menu bar, isolated preview defaults, monitoring disabled, no preferences window or target-app action. It excludes WindowServer/GPU memory and does not establish active gesture performance or performance on every Mac.
 
-Machine-readable evidence: [validation summary](docs/validation-summary.json), [package metadata](docs/package-metadata.json), [SDK inventory](docs/sdk-inventory.json), [binary metadata](docs/binary-metadata.json), [signature](docs/code-signature.txt) and [idle samples](docs/idle-performance.json). Full logs and ZIP are retained in the immutable [result commit](https://github.com/sknitd/orbit/tree/b43e13edb99503527d37639a792f7fa01bca6ae2).
+Machine-readable evidence: [independent agent audit](docs/independent-evaluation.json), [validation summary](docs/validation-summary.json), [package metadata](docs/package-metadata.json), [SDK inventory](docs/sdk-inventory.json), [binary metadata](docs/binary-metadata.json), [signature](docs/code-signature.txt) and [idle samples](docs/idle-performance.json). Full logs and ZIP are retained in the immutable [result commit](https://github.com/sknitd/orbit/tree/b43e13edb99503527d37639a792f7fa01bca6ae2).
 
 ## Source provenance and isolation
 
