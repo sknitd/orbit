@@ -6,7 +6,7 @@ The dashboard now has **22 tools**, including Quick Launcher and saved Workflows
 
 ## Install and open
 
-[**Download NotchOrbitPlus.app.zip**](https://github.com/sknitd/orbit/raw/fd634cffb5e5cdac27235355dcaef539de6350fb/NotchOrbitPlus.app.zip) · [SHA-256 checksum](https://github.com/sknitd/orbit/blob/fd634cffb5e5cdac27235355dcaef539de6350fb/NotchOrbitPlus.app.zip.sha256)
+[**Download NotchOrbitPlus.app.zip**](https://github.com/sknitd/orbit/raw/33b34fdbbdb8770046b69861aa1f0ea375338aec/NotchOrbitPlus.app.zip) · [SHA-256 checksum](https://github.com/sknitd/orbit/blob/33b34fdbbdb8770046b69861aa1f0ea375338aec/NotchOrbitPlus.app.zip.sha256)
 
 The universal app targets **macOS 14 or later**, on Apple Silicon and Intel. Developer tools are not needed to run it. If this repository is private, sign in to GitHub with access before downloading.
 
@@ -18,12 +18,12 @@ The universal app targets **macOS 14 or later**, on Apple Silicon and Intel. Dev
 
 The development app is ad hoc signed and **not notarized**. If macOS blocks it, try opening it, then use System Settings → Privacy & Security → Open Anyway if offered. Each Mac needs its own permission grants and integration setup. Developer tools are not required to run the packaged app.
 
-This is version **0.1.0**, built from source `872ea4eab4fbec98d81d622b6100d41cdf5a71ab` by [macOS CI run 37198489083](https://github.com/sknitd/orbit/actions/runs/37198489083). All **115 tests passed**: 37 shared core, 54 NotchOrbitPlus core and 24 hosted native tests, with no failures or skips. Universal Release compilation, strict signature verification and startup checks passed. Native tests rendered all twenty dashboard tools; public weather and foreign-exchange responses were fetched and decoded successfully. See [EVALUATION.md](EVALUATION.md) for evidence and remaining Mac/account checks.
+This is version **0.2.0**, built from source `c7ed6f4a36342ea1ec6fb7a57eefab0c67aef7ce` by [macOS CI run 37209047295](https://github.com/sknitd/orbit/actions/runs/37209047295). All **180 tests passed**: 37 shared core, 84 NotchOrbitPlus core and 59 hosted native tests, with no failures or skips. Universal Release compilation, strict signature verification and startup checks passed. The build produced 30 native previews, including all 22 tools and five labeled closed-notch fixtures. Public weather/foreign-exchange responses and the published update feed/package were verified. See [EVALUATION.md](EVALUATION.md) for evidence and remaining Mac/account checks.
 
 ZIP SHA-256:
 
 ```text
-e478befe9db4cc4bd4d171c3378015c204a4c62acd19366945a96e6f9fb05e4a
+c667dc2a5111db1255659503863c8af673753d13ea31c9737ca8bb6e83d0f280
 ```
 
 ## Tools and requirements
@@ -111,12 +111,18 @@ The independent workflow `.github/workflows/notchorbitplus.yml` uses a real macO
 
 ## Native previews
 
-These are captures of the actual native panels from the verified build. They show the dashboard's converter, file shelf and note editor, followed by the inherited file-action semicircle. Interactive Finder dragging and physical-notch placement still need Mac acceptance.
+These are captures of the actual native views from the verified build. Dashboard previews use the minimum 560-point width. The processing strip is a labeled fixture demonstrating real production rendering; it does not show a user's active files or accounts. Interactive Finder dragging and physical-notch placement still need Mac acceptance.
 
-![Converter in the NotchOrbitPlus dashboard](docs/NotchOrbitPlus-Dashboard-converter.png)
+![Quick Launcher with native pin controls](docs/NotchOrbitPlus-Dashboard-launcher.png)
 
-![File Shelf with its visible native drop area](docs/NotchOrbitPlus-Dashboard-fileShelf.png)
+![Saved resize, conversion, compression and ZIP workflow with native drop target](docs/NotchOrbitPlus-Dashboard-workflows.png)
 
-![Quick Note multiline editor](docs/NotchOrbitPlus-Dashboard-quickNote.png)
+![Closed-notch processing status, labeled test fixture](docs/NotchOrbitPlus-Compact-fixture-processing.png)
+
+![File Shelf with its native drop area, search and favourites](docs/NotchOrbitPlus-Dashboard-fileShelf.png)
+
+![First-run setup in its native window](docs/NotchOrbitPlus-Onboarding.png)
+
+![Update settings in their native window](docs/NotchOrbitPlus-Distribution.png)
 
 ![NotchOrbitPlus native file-action semicircle](docs/NotchOrbitPlus-Convert.png)

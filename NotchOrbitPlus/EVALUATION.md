@@ -1,45 +1,52 @@
 # NotchOrbitPlus evaluation
 
-NotchOrbitPlus is separate from NotchOrbit and OrbitDrop. Its twenty dashboard entries cover the nineteen explicitly named OmniNotch tools plus inherited file transformations. The public reference was captured through macOS CI on October 4, 2026; no proprietary code or OmniNotch branded assets were copied.
+NotchOrbitPlus is separate from NotchOrbit and OrbitDrop. Its 22 dashboard entries comprise the nineteen explicitly named OmniNotch reference areas, inherited File Actions, Quick Launcher and Workflows. The public reference was inspected on October 4, 2026; no proprietary code or OmniNotch branded assets were copied. The comparison records implemented scope, not complete parity with the reference product.
 
 ## Verified build
 
-[Run 37198489083](https://github.com/sknitd/orbit/actions/runs/37198489083) succeeded for source `872ea4eab4fbec98d81d622b6100d41cdf5a71ab`. The immutable [artifact commit](https://github.com/sknitd/orbit/tree/fd634cffb5e5cdac27235355dcaef539de6350fb) contains the app ZIP, checksum, build status, complete logs, SDK inventory, package verification, public responses and all 21 native PNGs.
+[Run 37209047295](https://github.com/sknitd/orbit/actions/runs/37209047295) succeeded for source `c7ed6f4a36342ea1ec6fb7a57eefab0c67aef7ce`. The immutable [artifact commit](https://github.com/sknitd/orbit/tree/33b34fdbbdb8770046b69861aa1f0ea375338aec) contains the app ZIP, checksum, build status, complete logs, SDK inventory, package verification, public responses and all 30 native PNGs.
 
 | Check | Result |
 | --- | --- |
 | Shared portable core | 37 passed |
-| NotchOrbitPlus portable core | 54 passed |
-| Hosted native tests | 24 passed, zero failures/skips |
-| Total | **115 passed** |
+| NotchOrbitPlus portable core | 84 passed |
+| Hosted native tests | 59 passed, zero failures/skips |
+| Total | **180 passed** |
 | Build SDK | Xcode 26.6 / macOS SDK 26.5 / Swift 6.3.3; arm64 macOS 26 runner |
-| Release package | Version 0.1.0; `com.sknitd.NotchOrbitPlus`; arm64 and x86_64 |
+| Release package | Version 0.2.0; `com.sknitd.NotchOrbitPlus`; arm64 and x86_64 |
 | Minimum OS | macOS 14.0 in the plist and both Mach-O slices |
-| FoundationModels | Genuine public API compiled; actual weak load command in both slices |
-| Signing and startup | Strict ad hoc signature verification and three-second startup check passed |
-| Native renders | Twenty actual dashboard tool views at the 560-point minimum width plus the file-action semicircle |
-| Public HTTP checks | Open-Meteo city search and seven-day forecast, and Frankfurter USD rates: three HTTP 200 responses, decoded by production Swift models |
+| FoundationModels | Public API compiled; actual weak load command in both slices |
+| Signing/startup | Strict ad hoc signature verification and three-second Release startup passed |
+| Native renders | 22 actual dashboard views at 560×440, five labeled compact fixtures, onboarding/update settings at 560×560, and the inherited file-action semicircle |
+| Public services | Open-Meteo city search/forecast and Frankfurter USD rates: three HTTP 200 responses decoded by production Swift models |
+| Published updates | Anonymous stable feed and its archive returned HTTP 200; source, size and SHA-256 matched this CI package |
 
-The 5,122,034-byte [ZIP](https://github.com/sknitd/orbit/raw/fd634cffb5e5cdac27235355dcaef539de6350fb/NotchOrbitPlus.app.zip) has SHA-256 `e478befe9db4cc4bd4d171c3378015c204a4c62acd19366945a96e6f9fb05e4a`. Its identity, resources, architecture/deployment commands and weak FoundationModels links were independently inspected after retrieval. Darwin signing and launch results come from the actual macOS runner; Linux cannot execute those checks. Intel and macOS 14 runtime acceptance was not separately performed.
+The 6,470,829-byte [ZIP](https://github.com/sknitd/orbit/raw/33b34fdbbdb8770046b69861aa1f0ea375338aec/NotchOrbitPlus.app.zip) has SHA-256 `c667dc2a5111db1255659503863c8af673753d13ea31c9737ca8bb6e83d0f280`. Independent retrieval checked ZIP integrity, executable permissions, bundle identity/resources, both architectures, deployment commands and weak FoundationModels links. Signing and startup results come from the actual macOS runner. Linux cannot perform these Darwin checks. Intel and macOS 14 runtime acceptance was not separately performed.
 
-Portable tests cover inherited activation/geometry/payload boundaries, deadline-based focus timers, conversion, shelf retention and local models, lyric timestamps, safe Shortcut arguments, CPU/network deltas, provider normalization, usage validation, public weather/stock schemas, dated foreign-exchange conversion and Codex quota windows.
+Independent visual review checked the native dashboard and compact captures. Setup captures retain the actual native window background; they are not edited composites. Compact music/meeting/progress states use clearly labeled fixtures, not connected user accounts. Rendering and startup do not establish physical-notch behavior.
 
-Native tests exercise genuine image/file transformations, named pasteboards and confidential-marker/image/link handling, clipboard opt-in and hidden lifecycle, and managed shelf copies that preserve original file bytes. Dashboard tests instantiate the production twenty-module factory, check settings/order/visibility, safe display geometry and suspension, validate all 3,944 official Unicode emoji and licenses, and render the real native views. Independent visual review found collapsed editor/list viewports; the final captures confirm usable Quick Note, Clipboard, To-Dos and File Shelf areas, including a visible empty shelf drop target. All twenty final dashboard captures use the minimum 560-point setting; older narrower preferences are clamped to keep provider tools inside the panel.
+## Evidence for the additions
 
-Three native Codex tests launch actual temporary subprocesses and verify the exact documented initialization/quota handshake, closed-input error without SIGPIPE termination, and cancellation that terminates only the owned child. The strict closed-channel test passed in 0.098 seconds, handshake in 0.135 seconds and cancellation in 0.386 seconds. These are protocol fixtures, not authenticated subscription reads or model calls.
+| Addition | Executed evidence and practical limit |
+| --- | --- |
+| Live notch status and meetings | Core priority/countdown/link validation; four native tests exercise actual EventKit event projection, explicit Join, unsafe/open-failure handling and five compact states. No real user calendar or playback account was connected. |
+| Quick Launcher | Three native tests resolve real folder/application bookmarks, report missing targets and reject invalid app pins without launching them. Portable tests validate stored pins and Shortcut identifiers. |
+| Saved drop workflows | Nine native tests run real resize/conversion/compression/batch-ZIP engines, decode results, verify collision handling and preserve sources through cancellation, partial failure, symlinks and concurrent replacement. Physical Finder drop remains manual acceptance. |
+| File Shelf | Metadata migration/search/favourites tests and a real Quick Look panel test verify selected-file ownership and responder restoration; managed-copy tests preserve original bytes. |
+| Clipboard OCR | Four native tests recognize actual image text, search/copy it, reject invalid/oversized images and cancel without resurrecting deleted history. Existing pasteboard/confidential-marker/opt-in tests also pass. |
+| Optional sync | Causal-merge/settings tests and eight native coordinated-file tests exercise two device identities, corrupt/oversized files, symlinks, concurrent publication and local-data preservation. Two physical Macs and cloud-provider delivery were not tested. |
+| First-run setup and updates | Actual onboarding/update views render without invoking setup actions. Four native production HTTP-client tests use isolated transport fixtures for streamed ZIP verification, checksum/size/HTTP failures and cleanup. A native installer test rejects an unsigned candidate without replacing the running app. The published public channel/archive were separately fetched and verified. Trusted signed installation and notarization remain unverified. |
 
-The public probes used Berlin coordinates without account credentials at `2026-10-04T11:22:30.563322+00:00`. Frankfurter's returned rate date was `2026-10-02`, retained explicitly rather than represented as today's trading rates. All three native production-decoder checks ran and passed; none were skipped.
+Sync is off until a shared folder is selected and enabled. It shares notes, tasks and an allowlist of dashboard/opening settings; account credentials, clipboard, shelf files and launcher bookmarks stay local. Folder data is readable to whoever can access that folder. Cross-Mac delivery depends on the chosen folder provider.
 
-## Feature scope and remaining acceptance
+All update automation starts off. This ad hoc build can check/download verified updates for manual installation. Automatic installation requires a trusted Developer ID signed running application and a same-team notarized update. The signing/notarization pipeline is implemented, but the CI credential-presence report confirms Apple signing/notary credentials are absent. This package is **not notarized**.
 
-The reference's marketing count is twenty; its visible text/HTML explicitly names nineteen. The app adds its existing File Actions as the twentieth entry. These material differences remain:
+## Remaining scope and Mac acceptance
 
-- AI Usage supports an explicit live Codex quota read through the installed CLI's documented `account/rateLimits/read` protocol, with initialization only and no model/thread/turn/tool calls. Other providers use selected normalized local reports. Automatic signed-in account collection for Claude, Cursor, Copilot and Grok is not implemented; credentials are not extracted. The protocol is pinned to public `openai/codex` commit `afb436df8b70bb5bc57b86d9a3e829968988cd21`. Live user-account acceptance remains pending.
-- Now Playing supports Music and Spotify through public Automation. Synced lyrics require a local timestamped LRC file. System-wide player discovery, browser playback and automatic lyrics are not claimed.
-- Ask Orbit uses genuine weak-linked FoundationModels and requires an eligible macOS 26+ Apple Intelligence configuration. Unsupported systems show availability information. Model inference on eligible hardware remains untested.
-- Stocks requires the user's Alpha Vantage credential; quote delay and intraday access depend on its plan. Weather uses Open-Meteo rather than WeatherKit. Public weather and FX were verified; credentialed stock refresh was not.
-- Sales requires each user's read-authorized merchant credentials. Seven real read-only adapters and schema/currency fixtures are implemented, but authenticated accounts, scopes, complete pagination and merchant totals remain unverified. The UI labels current UTC creation-day gross paid amounts, available order-attached refunds, bounded ten-page coverage, dated USD conversion and missing currencies. These are not net revenue or refunds processed today.
+- AI Usage supports explicit live Codex quota through a selected installed CLI's documented `account/rateLimits/read` protocol. Other providers use normalized imported reports. Native subprocess tests validate the handshake and cancellation with fixtures, not authenticated subscription reads. No model/thread/turn/tool calls or credential extraction occur.
+- Now Playing supports Music/Spotify through Automation and imported timestamped LRC lyrics. System-wide discovery, browser playback and automatic lyrics are not implemented.
+- Ask Orbit uses weak-linked FoundationModels and requires eligible macOS 26+ Apple Intelligence. Model inference on eligible hardware remains untested.
+- Stocks requires the user's Alpha Vantage credential and plan. Public weather and FX were verified; credentialed stock refresh was not. FX preserves the provider's returned rate date.
+- Sales has seven read-only adapters and schema/currency tests, but real account credentials/scopes/totals are unverified. It labels current UTC creation-day gross paid amounts, available order-attached refunds, ten-page coverage and dated USD conversion; these are not net revenue or refunds processed today.
 
-Interactive acceptance must be performed on a real Mac: physical-notch/notchless layout, Retina/secondary displays, hover/click/delay, Cmd-Control-N, pinning and tool order/hiding, camera start/stop/permission denial, Music/Spotify controls and imported lyrics, Calendar permission/event reads, Reminders permission/reads/completion, AirDrop recipients, shelf retention and dragging, clipboard confidential sources, sleep recovery, teleprompter scrolling, installed shortcut execution and provider refresh/errors/rate limits. Measure idle CPU/memory, responsiveness, VoiceOver, Reduce Motion, Spaces and fullscreen behavior. Native rendering, temporary-file tests and startup smoke do not establish these results.
-
-The app is ad hoc signed and not notarized. Developer ID signing and Apple notarization are unavailable from current repository credentials. Each Mac requires its own permission grants and provider setup.
+Real-Mac acceptance remains for physical-notch/notchless and secondary-display geometry; Finder dragging; hover/click/delay and keyboard toggle; camera, Calendar, Reminders and Automation consent; Music/Spotify playback; AirDrop/Quick Look interactions; installed app/Shortcut launching; two-Mac sync and provider conflicts; login registration; notarized updates and recovery; sleep/Spaces/fullscreen; VoiceOver/Reduce Motion and idle CPU/memory. Each Mac needs its own permission grants and integration setup. Native rendering, temporary-file tests and startup smoke do not establish these results.
