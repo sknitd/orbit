@@ -6,7 +6,7 @@ import XCTest
 @MainActor
 enum NativeFeatureEvaluation {
     static func render(_ view: AnyView, named name: String, size: NSSize = NSSize(width: 560, height: 440),
-                       appearance: NSAppearance? = nil) async throws {
+                       appearance: NSAppearance? = nil, beforeCapture: (@MainActor () throws -> Void)? = nil) async throws {
         let window = NSWindow(contentRect: NSRect(origin: .zero, size: size),
                               styleMask: [.titled, .closable], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
@@ -18,6 +18,7 @@ enum NativeFeatureEvaluation {
         window.makeKeyAndOrderFront(nil)
         try await Task.sleep(for: .milliseconds(250))
         host.layoutSubtreeIfNeeded(); host.displayIfNeeded()
+        try beforeCapture?()
         let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
         host.cacheDisplay(in: host.bounds, to: bitmap)
         let png = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))

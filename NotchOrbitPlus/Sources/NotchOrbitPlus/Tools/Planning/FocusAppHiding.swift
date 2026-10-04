@@ -108,12 +108,20 @@ final class FocusAppHidingStore: ObservableObject {
         for candidate in candidates {
             if !unhideApp(candidate.processID) { failed.append(candidate); error = "macOS could not restore \(candidate.bundleID). Try Restore Apps again." }
         }
-        owned = failed; hiddenCount = failed.count
+        // Recovery retains the identity acquired before hiding, including its original state.
+        // A live snapshot is only evidence that this same process still needs restoring.
+        owned = owned.filter { saved in
+            failed.contains { $0.processID == saved.processID && $0.bundleID == saved.bundleID && $0.launchDate == saved.launchDate }
+        }
+        hiddenCount = owned.count
         persistRecovery()
+        if !blocked && failed.isEmpty { error = nil }
     }
     private func persistRecovery() {
         guard !blocked else { return }
         if owned.isEmpty { defaults.removeObject(forKey: Self.recoveryKey) }
+        else if let prior = defaults.data(forKey: Self.recoveryKey),
+                (try? JSONDecoder().decode([FocusAppSnapshot].self, from: prior)) == owned { return }
         else if let bytes = try? JSONEncoder().encode(owned) { defaults.set(bytes, forKey: Self.recoveryKey) }
     }
     func shutdown() { subscription?.cancel(); subscription = nil; restore(); active = false }

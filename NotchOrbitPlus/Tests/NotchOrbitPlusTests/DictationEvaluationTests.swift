@@ -171,11 +171,18 @@ final class DictationEvaluationTests: XCTestCase, @unchecked Sendable {
 
     @MainActor
     func testDictationControlsAndMeasuredLevelFixtureRenderWithoutRealSpeechOrMicrophone() async throws {
+        let unstartedFixture = DictationFixture()
+        let unstartedStore = DictationToolStore(driver: unstartedFixture.driver, speechPermission: { true }, microphonePermission: { true })
+        try await NativeFeatureEvaluation.render(AnyView(DictationToolView(store: unstartedStore)),
+                                                named: "NotchOrbitPlus-Dictation-fixture-unstarted.png")
+        XCTAssertEqual(unstartedFixture.started, 0); XCTAssertFalse(unstartedStore.shortcutEnabled)
+        unstartedStore.shutdown()
+        // Closing the first hosted window intentionally sends a deferred
+        // hidden callback. A new store prevents that old host from stopping
+        // this separate live fixture before its capture.
         let fixture = DictationFixture()
         let store = DictationToolStore(driver: fixture.driver, speechPermission: { true }, microphonePermission: { true })
-        try await NativeFeatureEvaluation.render(AnyView(DictationToolView(store: store)),
-                                                named: "NotchOrbitPlus-Dictation-fixture-unstarted.png")
-        XCTAssertEqual(fixture.started, 0); XCTAssertFalse(store.shortcutEnabled)
+        defer { store.shutdown() }
         store.setVisible(true); store.start()
         try await NativeFeatureEvaluation.waitUntil("Injected listening fixture") { store.isListening }
         let events = try XCTUnwrap(fixture.events)
@@ -184,9 +191,15 @@ final class DictationEvaluationTests: XCTestCase, @unchecked Sendable {
             events(.level(value)); try await Task.sleep(for: .milliseconds(60))
         }
         try await NativeFeatureEvaluation.render(AnyView(DictationToolView(store: store)),
-                                                named: "NotchOrbitPlus-Dictation-fixture-recognized-levels.png")
+            named: "NotchOrbitPlus-Dictation-fixture-recognized-levels.png", size: NSSize(width: 560, height: 560),
+            beforeCapture: {
+                XCTAssertTrue(store.isListening)
+                XCTAssertEqual(store.transcript, "Recognized fixture text ready for Quick Note.")
+                XCTAssertEqual(store.waveform, [0.02, 0.15, 0.35, 0.22, 0.08, 0.4, 0.31])
+                XCTAssertEqual(store.amplitude, 0.31)
+                XCTAssertEqual(fixture.cancelled, 0)
+            })
         XCTAssertEqual(fixture.started, 1)
-        store.shutdown()
     }
 }
 

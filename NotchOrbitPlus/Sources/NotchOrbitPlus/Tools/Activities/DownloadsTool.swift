@@ -5,17 +5,34 @@ import NotchCore
 enum DownloadFolderReader {
     static func read(_ folder: URL) throws -> [DownloadFileObservation] {
         try Task.checkCancellation()
-        let keys: Set<URLResourceKey> = [.isRegularFileKey, .isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey, .contentModificationDateKey]
-        let files = try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: Array(keys), options: [.skipsHiddenFiles])
-        guard files.count <= 2_048 else { throw CommandActivityError.invalid("This folder has more than 2,048 visible entries; choose a smaller tracking folder.") }
-        return try files.compactMap { url in
+        guard folder.isFileURL else { throw CommandActivityError.invalid("Choose a local tracking folder.") }
+        // Resolve the existing parent once. On macOS, standardizing a path through
+        // /var or another alias can change after its leaf is renamed or removed.
+        // Snapshot keys must remain identical when that leaf no longer exists.
+        let parent = URL(fileURLWithPath: folder.path, isDirectory: true).resolvingSymlinksInPath().standardizedFileURL
+        let names = try FileManager.default.contentsOfDirectory(atPath: parent.path).filter { !$0.hasPrefix(".") }
+        guard names.count <= 2_048 else { throw CommandActivityError.invalid("This folder has more than 2,048 visible entries; choose a smaller tracking folder.") }
+        return try names.compactMap { name in
             try Task.checkCancellation()
-            let values = try url.resourceValues(forKeys: keys)
-            guard values.isSymbolicLink != true, values.isRegularFile == true || (values.isDirectory == true && url.pathExtension.lowercased() == "download") else { return nil }
-            let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
-            return .init(url: url, identity: String(describing: attributes[.systemFileNumber] ?? url.path),
-                         bytes: values.isRegularFile == true ? values.fileSize.map(Int64.init) : nil,
-                         modifiedAt: values.contentModificationDate ?? .distantPast, isDirectory: values.isDirectory == true)
+            // Fresh lexical URLs/attributes also avoid enumerated resource caches.
+            let url = parent.appendingPathComponent(name, isDirectory: false)
+            let attributes: [FileAttributeKey: Any]
+            do { attributes = try FileManager.default.attributesOfItem(atPath: url.path) }
+            catch let error as NSError where error.domain == NSCocoaErrorDomain &&
+                (error.code == NSFileNoSuchFileError || error.code == NSFileReadNoSuchFileError) {
+                // A browser may rename a child between enumeration and metadata read.
+                // The next scan can match the final file; disappearing entries are absent.
+                return nil
+            }
+            let type = attributes[.type] as? FileAttributeType
+            let regular = type == .typeRegular
+            let directory = type == .typeDirectory
+            guard regular || (directory && url.pathExtension.lowercased() == "download") else { return nil }
+            let device = String(describing: attributes[.systemNumber] ?? "unknown")
+            let inode = String(describing: attributes[.systemFileNumber] ?? url.path)
+            return .init(url: url, identity: "\(device):\(inode)",
+                         bytes: regular ? (attributes[.size] as? NSNumber)?.int64Value : nil,
+                         modifiedAt: attributes[.modificationDate] as? Date ?? .distantPast, isDirectory: directory)
         }
     }
 }

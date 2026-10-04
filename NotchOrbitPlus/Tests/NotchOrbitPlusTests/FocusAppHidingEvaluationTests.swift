@@ -62,9 +62,15 @@ final class FocusAppHidingEvaluationTests: XCTestCase {
         XCTAssertNotNil(store.error, "Reset must retain a failed restore warning")
         XCTAssertEqual(defaults.data(forKey: FocusAppHidingStore.recoveryKey), recovery,
             "An app macOS refused to restore must retain its persisted recovery ownership")
+        XCTAssertEqual(try JSONDecoder().decode([FocusAppSnapshot].self, from: recovery),
+            [.init(processID: 4101, bundleID: "com.example.Editor", hidden: false, launchDate: launchDate)])
+        store.restore()
+        XCTAssertEqual(defaults.data(forKey: FocusAppHidingStore.recoveryKey), recovery,
+            "A failed retry must preserve the original ownership record byte-for-byte")
         allowRestore = true; store.restore()
         XCTAssertEqual(store.hiddenCount, 0)
         XCTAssertNil(defaults.object(forKey: FocusAppHidingStore.recoveryKey))
+        XCTAssertNil(store.error, "A successful explicit restore clears its resolved failure")
     }
 
     @MainActor

@@ -6,6 +6,16 @@ struct PlusPluginPackage: Sendable {
     let manifest: CorePluginManifest
     let scripts: [String: Data]
 }
+struct PlusPluginProcessFailure: LocalizedError, Sendable {
+    let status: Int32
+    let terminatedBySignal: Bool
+    let diagnostic: String
+    var errorDescription: String? {
+        let cause = terminatedBySignal ? "signal \(status)" : "status \(status)"
+        let detail = diagnostic.isEmpty ? "" : "\nSandbox diagnostic: \(diagnostic)"
+        return "Plugin command or sandbox exited with \(cause). No output was applied.\(detail)"
+    }
+}
 enum PlusPluginFolderIO {
     static func readRegistry(_ folder: URL) throws -> Data {
         let descriptor = open(folder.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
@@ -58,13 +68,20 @@ enum PlusPluginSandbox {
             return "\"" + path.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
         }
         let root = try literal(folder.resolvingSymlinksInPath().path)
+        // Newer dyld loads the shared cache from the sealed OS cryptex.
+        // Seatbelt checks the resolved Preboot path as well as its OS alias.
+        let runtimeAliases = ["/System/Library", "/usr/lib", "/System/Cryptexes/OS/System/Library", "/System/Cryptexes/OS/usr/lib"]
+        let runtimePaths = Set(runtimeAliases.flatMap { path in
+            [path, URL(fileURLWithPath: path, isDirectory: true).resolvingSymlinksInPath().path]
+        }).sorted()
+        let runtimeFilters = try runtimePaths.map { "(subpath \(try literal($0)))" }.joined(separator: " ")
         var profile = """
         (version 1)
         (deny default)
         (allow process-exec (literal "/bin/sh"))
         (allow sysctl-read)
-        (allow file-read* (subpath "/System/Library") (subpath "/usr/lib") (literal "/bin/sh") (subpath \(root)))
-        (allow file-map-executable (subpath "/System/Library") (subpath "/usr/lib") (literal "/bin/sh"))
+        (allow file-read* \(runtimeFilters) (literal "/bin/sh") (subpath \(root)))
+        (allow file-map-executable \(runtimeFilters) (literal "/bin/sh"))
         """
         for folder in readFolders { profile += "\n(allow file-read* (subpath \(try literal(folder.resolvingSymlinksInPath().path))))" }
         if writable { profile += "\n(allow file-write* (subpath \(root)))" }
@@ -114,7 +131,16 @@ final class PlusPluginProcess: @unchecked Sendable {
         lock.lock(); let cancelled = self.cancelled; let timeout = timedOut; lock.unlock()
         if timeout { throw CorePluginError.invalid("Plugin command exceeded the five-second limit and was stopped.") }
         if cancelled { throw CancellationError() }
-        guard child.terminationStatus == 0 else { throw CorePluginError.invalid("Plugin command or sandbox exited with status \(child.terminationStatus). No output was applied.") }
+        guard child.terminationStatus == 0 else {
+            // Keep launcher/dyld errors visible for supported-runtime failures;
+            // output remains bounded and is never applied on failure.
+            let raw = String(decoding: data.prefix(4_096), as: UTF8.self)
+            let diagnostic = String(raw.unicodeScalars.filter {
+                !CharacterSet.controlCharacters.contains($0) || $0 == "\n" || $0 == "\t"
+            }).trimmingCharacters(in: .whitespacesAndNewlines)
+            throw PlusPluginProcessFailure(status: child.terminationStatus,
+                terminatedBySignal: child.terminationReason == .uncaughtSignal, diagnostic: diagnostic)
+        }
         return data
     }
     func cancel() {

@@ -69,7 +69,8 @@ final class AppearancePriorityEvaluationTests: XCTestCase {
             XCTFail("Settings rendering must not select or transform files")
         }), preferences: preferences)
         defer { controller.stop() }
-        XCTAssertEqual(preferences.registeredTools.count, 31)
+        XCTAssertEqual(preferences.registeredTools.count, 45)
+        XCTAssertEqual(Set(preferences.registeredTools.map(\.id)), Set(PlusTool.allCases.map(\.rawValue)))
         XCTAssertNil(controller.frame)
         let rulesBefore = preferences.displayRules
         try await NativeFeatureEvaluation.render(AnyView(DashboardSettingsView(preferences: preferences)),
@@ -95,9 +96,20 @@ final class AppearancePriorityEvaluationTests: XCTestCase {
         XCTAssertNil(defaults.data(forKey: PlusAppearanceStore.defaultsKey))
         XCTAssertNil(defaults.data(forKey: PlusLivePriorityStore.defaultsKey))
         XCTAssertFalse(appearance.settings.dropSound)
+        let legacyOrder: [LiveNotchKind] = [.music, .hud, .processing, .meeting, .focus, .devices, .status]
+        let legacyBytes = try JSONSerialization.data(withJSONObject: ["order": legacyOrder.map(\.rawValue)])
+        defaults.set(legacyBytes, forKey: PlusLivePriorityStore.defaultsKey)
+        let migrated = PlusLivePriorityStore(defaults: defaults, onChange: { changes += 1 })
+        let migratedOrder = legacyOrder + LiveNotchKind.defaultOrder.filter { !legacyOrder.contains($0) }
+        XCTAssertNil(migrated.error)
+        XCTAssertEqual(migrated.priorityOrder, migratedOrder)
+        XCTAssertEqual(try migrated.exportSyncSettings().order, migratedOrder)
+        XCTAssertEqual(defaults.data(forKey: PlusLivePriorityStore.defaultsKey), legacyBytes,
+                       "Reading a complete legacy order migrates its UI without rewriting its original bytes")
         let chosen = CoreAppearancePreferences(theme: .dark, accent: .teal, dropSound: false)
         try appearance.applySynced(chosen)
-        let order: [LiveNotchKind] = [.music, .hud, .processing, .meeting, .focus, .devices, .status]
+        let order: [LiveNotchKind] = [.music, .hud, .processing, .meeting, .focus, .devices, .status,
+                                    .weather, .sports, .package, .downloads, .command, .verificationCode, .dictation, .travel]
         try priority.applySynced(.init(order: order))
         XCTAssertEqual(appearance.preferredColorScheme, .dark)
         XCTAssertEqual(appearance.panelAppearance?.name, .darkAqua)

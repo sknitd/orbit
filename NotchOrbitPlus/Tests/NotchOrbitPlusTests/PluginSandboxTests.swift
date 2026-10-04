@@ -23,6 +23,11 @@ final class PluginSandboxTests: XCTestCase, @unchecked Sendable {
         XCTAssertTrue(profile.contains("(deny default)")); XCTAssertFalse(profile.contains("network"))
         XCTAssertFalse(profile.contains("process-fork")); XCTAssertFalse(profile.contains("file-write"))
         XCTAssertFalse(profile.contains(FileManager.default.homeDirectoryForCurrentUser.path))
+        let cryptexRuntime = URL(fileURLWithPath: "/System/Cryptexes/OS/usr/lib", isDirectory: true).resolvingSymlinksInPath().path
+        XCTAssertTrue(profile.contains("(subpath \"\(cryptexRuntime)\")"), "dyld's sealed OS runtime must remain readable through its resolved path")
+        XCTAssertFalse(profile.contains("(subpath \"/System/Cryptexes/OS\")"))
+        XCTAssertFalse(profile.contains("(subpath \"/System/Volumes/Preboot\")"))
+        XCTAssertTrue(profile.contains("(allow process-exec (literal \"/bin/sh\"))"))
     }
     func testSandboxRunsActualJSONAndDeniesWritingOutsidePluginFolder() async throws {
         guard PlusPluginSandbox.available else { throw XCTSkip("macOS sandbox-exec unavailable; production fails closed") }
@@ -33,10 +38,16 @@ final class PluginSandboxTests: XCTestCase, @unchecked Sendable {
         let declaration = try CorePluginManifest.decode(manifest())
         let data = try await PlusPluginProcess().run(folder: plugin, command: declaration.commands[0], grants: [], readFolders: [], clipboard: nil)
         XCTAssertEqual(try CorePluginOutput.decode(data, manifest: declaration).items[0].text, "Actual shell fixture")
-        let outside = directory.appendingPathComponent("original.txt"); let original = Data("preserved original".utf8); try original.write(to: outside)
+        let outside = directory.appendingPathComponent("original.txt"); let original = Data("preserved original\n".utf8); try original.write(to: outside)
         try Data("if printf changed > '\(outside.path)'; then printf ALLOWED; else printf BLOCKED; fi".utf8).write(to: script)
         let denied = try await PlusPluginProcess().run(folder: plugin, command: declaration.commands[0], grants: [], readFolders: [], clipboard: nil)
         XCTAssertTrue(String(decoding: denied, as: UTF8.self).contains("BLOCKED"))
+        XCTAssertEqual(try Data(contentsOf: outside), original)
+        try Data("if IFS= read -r value < '\(outside.path)'; then printf 'ALLOWED:%s' \"$value\"; else printf BLOCKED; fi".utf8).write(to: script)
+        let deniedRead = try await PlusPluginProcess().run(folder: plugin, command: declaration.commands[0], grants: [], readFolders: [], clipboard: nil)
+        XCTAssertTrue(String(decoding: deniedRead, as: UTF8.self).contains("BLOCKED"))
+        let grantedRead = try await PlusPluginProcess().run(folder: plugin, command: declaration.commands[0], grants: [.selectedFolderRead], readFolders: [directory], clipboard: nil)
+        XCTAssertEqual(String(decoding: grantedRead, as: UTF8.self), "ALLOWED:preserved original")
         XCTAssertEqual(try Data(contentsOf: outside), original)
     }
     private func fixtureDirectory() throws -> URL {

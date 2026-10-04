@@ -133,11 +133,8 @@ struct LiveCompactContent: View {
                         .accessibilityLabel("Open \(primary.title): \(primary.detail)")
                 } else { primaryLabel(primary) }
                 if let action = primary.action, let onActivityAction {
-                    Button { onActivityAction(primary) } label: {
-                        Image(systemName: action == .copyVerificationCode ? "doc.on.doc" : "folder")
-                    }.buttonStyle(.plain)
-                        .help(action == .copyVerificationCode ? "Copy one-time code" : "Reveal completed download")
-                        .accessibilityLabel(action == .copyVerificationCode ? "Copy one-time code" : "Reveal completed download")
+                    CompactActivityActionButton(status: primary, action: action, perform: onActivityAction)
+                        .frame(width: 24, height: 24)
                 }
                 ForEach(Array(ordered.dropFirst().prefix(2))) { activity in
                     Image(systemName: activity.kind.symbol).font(.system(size: 9)).foregroundStyle(.secondary)
@@ -188,5 +185,50 @@ struct LiveCompactContent: View {
                     .accessibilityValue("\(Int(progress * 100)) percent")
             }
         }.contentShape(Rectangle())
+    }
+}
+
+/// A real AppKit control keeps the small icon action independently discoverable
+/// and pressable by accessibility clients inside the hosted compact content.
+@MainActor
+private struct CompactActivityActionButton: NSViewRepresentable {
+    let status: LiveNotchStatus
+    let action: LiveNotchAction
+    let perform: @MainActor (LiveNotchStatus) -> Void
+    private var label: String { action == .copyVerificationCode ? "Copy one-time code" : "Reveal completed download" }
+    private var identifier: String { action == .copyVerificationCode ? "NotchOrbitPlus.compact.copyVerificationCode" : "NotchOrbitPlus.compact.revealFile" }
+
+    func makeCoordinator() -> Coordinator { Coordinator(status: status, perform: perform) }
+    func makeNSView(context: Context) -> NSButton {
+        let button = NSButton(title: "", target: context.coordinator, action: #selector(Coordinator.press(_:)))
+        button.isBordered = false
+        button.bezelStyle = .regularSquare
+        button.imagePosition = .imageOnly
+        button.contentTintColor = .white
+        button.setContentHuggingPriority(.required, for: .horizontal)
+        updateNSView(button, context: context)
+        return button
+    }
+    func updateNSView(_ button: NSButton, context: Context) {
+        context.coordinator.status = status
+        context.coordinator.perform = perform
+        let image = NSImage(systemSymbolName: action == .copyVerificationCode ? "doc.on.doc" : "folder", accessibilityDescription: label)
+        image?.isTemplate = true
+        image?.size = NSSize(width: 14, height: 14)
+        button.image = image
+        button.toolTip = label
+        button.identifier = NSUserInterfaceItemIdentifier(identifier)
+        button.setAccessibilityIdentifier(identifier)
+        button.setAccessibilityLabel(label)
+        button.setAccessibilityElement(true)
+    }
+    @MainActor
+    final class Coordinator: NSObject {
+        var status: LiveNotchStatus
+        var perform: @MainActor (LiveNotchStatus) -> Void
+        init(status: LiveNotchStatus, perform: @escaping @MainActor (LiveNotchStatus) -> Void) {
+            self.status = status; self.perform = perform
+        }
+        @objc func press(_ sender: NSButton) { perform(status) }
     }
 }

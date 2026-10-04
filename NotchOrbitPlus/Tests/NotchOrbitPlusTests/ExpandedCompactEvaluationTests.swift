@@ -42,13 +42,13 @@ final class ExpandedCompactEvaluationTests: XCTestCase {
 
     @MainActor
     func testOwnedNativeCompactButtonsRouteTheDisplayedActivityWithoutOpeningOtherTools() async throws {
-        let cases: [(LiveNotchStatus, String)] = [
+        let cases: [(LiveNotchStatus, String, String)] = [
             (.init(id: "verification:8472", kind: .verificationCode, title: "847291", detail: "Fixture only · 42s",
-                   toolID: "verificationCodes", action: .copyVerificationCode), "Copy one-time code"),
+                   toolID: "verificationCodes", action: .copyVerificationCode), "Copy one-time code", "NotchOrbitPlus.compact.copyVerificationCode"),
             (.init(id: "download:fixture-complete", kind: .downloads, title: "Archive.zip", detail: "Fixture completed file",
-                   toolID: "downloads", action: .revealFile), "Reveal completed download")
+                   toolID: "downloads", action: .revealFile), "Reveal completed download", "NotchOrbitPlus.compact.revealFile")
         ]
-        for (status, label) in cases {
+        for (status, label, identifier) in cases {
             var routed: [LiveNotchStatus] = [], opens = 0
             let size = NSSize(width: 320, height: 48)
             let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.titled, .closable], backing: .buffered, defer: false)
@@ -60,7 +60,11 @@ final class ExpandedCompactEvaluationTests: XCTestCase {
             defer { window.close() }
             try await Task.sleep(for: .milliseconds(150))
             host.layoutSubtreeIfNeeded(); host.displayIfNeeded()
-            let button = try XCTUnwrap(accessibleElement(labeled: label, below: host), "The actual native compact action must expose its accessible control")
+            let button = try XCTUnwrap(nativeActionButton(identifier: identifier, below: host), "The actual compact action must expose its native control")
+            XCTAssertTrue(button.isAccessibilityElement())
+            XCTAssertEqual(button.accessibilityRole(), .button)
+            XCTAssertEqual(button.accessibilityLabel(), label)
+            XCTAssertEqual(button.accessibilityIdentifier(), identifier)
             XCTAssertTrue(button.accessibilityPerformPress())
             try await NativeFeatureEvaluation.waitUntil("The owned native action routes its displayed fixture", condition: { routed.count == 1 })
             XCTAssertEqual(routed, [status], "Copy/Reveal must route the displayed record, not an unrelated current item")
@@ -69,11 +73,14 @@ final class ExpandedCompactEvaluationTests: XCTestCase {
     }
 
     @MainActor
-    private func accessibleElement(labeled label: String, below object: Any, depth: Int = 0) -> (any NSAccessibilityProtocol)? {
-        guard depth < 20, let element = object as? any NSAccessibilityProtocol else { return nil }
-        if element.accessibilityLabel() == label { return element }
-        for child in element.accessibilityChildren() ?? [] {
-            if let found = accessibleElement(labeled: label, below: child, depth: depth + 1) { return found }
+    private func nativeActionButton(identifier: String, below view: NSView, depth: Int = 0) -> NSButton? {
+        guard depth < 40 else { return nil }
+        if let button = view as? NSButton, button.identifier?.rawValue == identifier { return button }
+        // Hosting/bridge views need not formally adopt NSAccessibilityProtocol.
+        // Traverse the actual owned native views, then verify the control's public
+        // accessibility identity, role and real press behavior above.
+        for child in view.subviews {
+            if let found = nativeActionButton(identifier: identifier, below: child, depth: depth + 1) { return found }
         }
         return nil
     }
