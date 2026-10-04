@@ -1,0 +1,10 @@
+Building for debugging...
+[0/7] /Users/runner/work/orbit/orbit/.build/arm64-apple-macosx/debug/OrbitCorePackageTests.derived/runner.swift
+[1/7] Write sources
+[4/7] Write swift-version-7974D3F7F03D5E95.txt
+[6/12] Compiling OrbitCore Models.swift
+[7/12] Compiling OrbitCore RadialGeometry.swift
+[8/12] Compiling OrbitCore ActionResolver.swift
+[9/12] Compiling OrbitCore DropPayloadValidator.swift
+[10/12] Emitting module OrbitCore
+[11/13] Compiling OrbitCore ZIPInspector.swift
