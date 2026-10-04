@@ -1,0 +1,3 @@
+module NotchCore {
+    header "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/include/NotchCore-Swift.h"
+}

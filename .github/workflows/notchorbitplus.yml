@@ -1,0 +1,115 @@
+name: Build and test NotchOrbitPlus
+on:
+  push:
+    branches: [main, codex/orbitdrop, codex/notch-plus]
+    paths:
+      - 'NotchOrbitPlus/**'
+      - 'Sources/OrbitCore/**'
+      - 'Sources/OrbitDrop/AppModel.swift'
+      - 'Sources/OrbitDrop/Engines/**'
+      - 'Sources/OrbitDrop/WebPBridge.h'
+      - 'Scripts/prepare-webp.sh'
+      - '.github/workflows/notchorbitplus.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: notchorbitplus-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  sdk:
+    runs-on: macos-26
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify genuine SDK and public FoundationModels API
+        run: bash NotchOrbitPlus/Scripts/check-sdk.sh
+      - name: Upload SDK inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NotchOrbitPlus-SDK-${{ github.sha }}
+          path: NotchOrbitPlus/build/sdk-inventory.json
+  macos:
+    needs: sdk
+    runs-on: macos-26
+    timeout-minutes: 40
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+      NOTCHORBITPLUS_EVAL_DIR: '${{ github.workspace }}/NotchOrbitPlus/build/evaluation'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare build tools
+        run: command -v cmake || brew install cmake
+      - name: Test and build NotchOrbitPlus
+        id: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p NotchOrbitPlus/build
+          {
+            swift test --parallel
+            bash NotchOrbitPlus/Scripts/build.sh
+          } 2>&1 | tee NotchOrbitPlus/build/build.log
+      - name: Upload application and evaluation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NotchOrbitPlus-macOS-${{ github.sha }}
+          path: |
+            NotchOrbitPlus/dist/NotchOrbitPlus.app.zip
+            NotchOrbitPlus/dist/NotchOrbitPlus.app.zip.sha256
+            NotchOrbitPlus/build/build.log
+            NotchOrbitPlus/build/launch-smoke.log
+            NotchOrbitPlus/build/package-verification.json
+            NotchOrbitPlus/build/sdk-inventory.json
+            NotchOrbitPlus/build/evaluation/*.png
+            NotchOrbitPlus/build/DerivedData/Logs/Test/*.xcresult
+      - name: Preserve NotchOrbitPlus result for Git retrieval
+        if: always()
+        env:
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          SOURCE_COMMIT: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_dir="$(mktemp -d)"
+          cp NotchOrbitPlus/build/build.log "$report_dir/build.log" || true
+          if [[ -f NotchOrbitPlus/build/launch-smoke.log ]]; then
+            cp NotchOrbitPlus/build/launch-smoke.log "$report_dir/"
+          fi
+          if [[ -f NotchOrbitPlus/build/package-verification.json ]]; then
+            cp NotchOrbitPlus/build/package-verification.json "$report_dir/"
+          fi
+          if [[ -f NotchOrbitPlus/build/sdk-inventory.json ]]; then
+            cp NotchOrbitPlus/build/sdk-inventory.json "$report_dir/"
+          fi
+          if [[ -d NotchOrbitPlus/build/evaluation ]]; then
+            mkdir -p "$report_dir/evaluation"
+            cp NotchOrbitPlus/build/evaluation/*.png "$report_dir/evaluation/" || true
+          fi
+          if [[ "$BUILD_OUTCOME" == success && -f NotchOrbitPlus/dist/NotchOrbitPlus.app.zip ]]; then
+            cp NotchOrbitPlus/dist/NotchOrbitPlus.app.zip NotchOrbitPlus/dist/NotchOrbitPlus.app.zip.sha256 "$report_dir/"
+          fi
+          python3 - "$report_dir" <<'PY'
+          import json, os, pathlib, sys
+          pathlib.Path(sys.argv[1], 'build-status.json').write_text(json.dumps({
+            'product': 'NotchOrbitPlus', 'source_directory': 'NotchOrbitPlus',
+            'outcome': os.environ['BUILD_OUTCOME'], 'source_commit': os.environ['SOURCE_COMMIT'],
+            'runner': 'macos-26', 'run_id': os.environ['GITHUB_RUN_ID'],
+            'native_notch_drag_acceptance': 'requires interactive Mac validation'
+          }, indent=2) + '\n')
+          PY
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git checkout --orphan "codex/notch-plus-builds/run-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          git rm -rf --ignore-unmatch .
+          cp -R "$report_dir/"* .
+          git add --force build.log build-status.json
+          if [[ -f launch-smoke.log ]]; then git add --force launch-smoke.log; fi
+          if [[ -f package-verification.json ]]; then git add --force package-verification.json; fi
+          if [[ -f sdk-inventory.json ]]; then git add --force sdk-inventory.json; fi
+          if [[ -d evaluation ]]; then git add --force evaluation; fi
+          if [[ -f NotchOrbitPlus.app.zip ]]; then git add --force NotchOrbitPlus.app.zip NotchOrbitPlus.app.zip.sha256; fi
+          git commit -m "NotchOrbitPlus build results for ${SOURCE_COMMIT}"
+          git push origin HEAD

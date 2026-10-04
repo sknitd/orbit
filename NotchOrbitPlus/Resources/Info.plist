@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleName</key><string>NotchOrbitPlus</string>
+<key>CFBundleDisplayName</key><string>NotchOrbitPlus</string>
+<key>CFBundleIdentifier</key><string>com.sknitd.NotchOrbitPlus</string>
+<key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleShortVersionString</key><string>0.1.0</string>
+<key>CFBundleVersion</key><string>1</string>
+<key>CFBundleIconFile</key><string>AppIcon</string>
+<key>LSMinimumSystemVersion</key><string>14.0</string>
+<key>LSUIElement</key><true/>
+<key>NSHighResolutionCapable</key><true/>
+<key>NSPrincipalClass</key><string>NSApplication</string>
+<key>NSInputMonitoringUsageDescription</key><string>NotchOrbitPlus observes file drag gestures to reveal local actions near the notch.</string>
+<key>NSCameraUsageDescription</key><string>NotchOrbit Plus uses the camera only when you start Mirror; audio is not captured.</string>
+<key>NSAppleEventsUsageDescription</key><string>Connect Music or Spotify to show and control playback in Now Playing.</string>
+<key>NSCalendarsFullAccessUsageDescription</key><string>NotchOrbitPlus shows the calendar events you choose to access in your notch.</string>
+<key>NSRemindersFullAccessUsageDescription</key><string>NotchOrbitPlus shows your reminders and lets you mark them complete.</string>
+</dict></plist>

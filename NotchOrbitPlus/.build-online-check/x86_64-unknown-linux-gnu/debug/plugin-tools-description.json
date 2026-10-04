@@ -1,0 +1,1047 @@
+{
+  "builtTestProducts" : [
+    {
+      "binaryPath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.xctest",
+      "packagePath" : "/workspace/orbit/NotchOrbitPlus",
+      "productName" : "NotchCorePackageTests"
+    }
+  ],
+  "copyCommands" : {
+
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+    "NotchCorePackageDiscoveredTests"
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.NotchCore-x86_64-unknown-linux-gnu-debug.module" : {
+      "executable" : "/workspace/toolchains/swift-6.2-RELEASE-ubuntu24.04/usr/bin/swiftc",
+      "fileList" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/sources",
+      "importPath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/FocusTimer.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/NotchActivation.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/NotchGeometry.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OnlineFXRates.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OnlineServiceData.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OnlineWeatherStocks.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OrbitNativeParsers.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OrbitSystemDeltas.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/PlusTool.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/swift-version-8BC5B6E923D2A08.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "NotchCore",
+      "moduleOutputPath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/Modules/NotchCore.swiftmodule",
+      "objects" : [
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/FocusTimer.swift.o",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/NotchActivation.swift.o",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/NotchGeometry.swift.o",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineFXRates.swift.o",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineServiceData.swift.o",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineWeatherStocks.swift.o",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OrbitNativeParsers.swift.o",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OrbitSystemDeltas.swift.o",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/PlusTool.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "x86_64-unknown-linux-gnu",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j4",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/include/NotchCore-Swift.h",
+        "-swift-version",
+        "6",
+        "-g",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "notchorbitplus",
+        "-Xcc",
+        "-fno-omit-frame-pointer"
+      ],
+      "outputFileMapPath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/FocusTimer.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/NotchActivation.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/NotchGeometry.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineFXRates.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineServiceData.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineWeatherStocks.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OrbitNativeParsers.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OrbitSystemDeltas.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/PlusTool.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/Modules/NotchCore.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/FocusTimer.swift",
+        "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/NotchActivation.swift",
+        "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/NotchGeometry.swift",
+        "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OnlineFXRates.swift",
+        "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OnlineServiceData.swift",
+        "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OnlineWeatherStocks.swift",
+        "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OrbitNativeParsers.swift",
+        "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OrbitSystemDeltas.swift",
+        "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/PlusTool.swift"
+      ],
+      "tempsPath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.NotchCorePackageDiscoveredTests-x86_64-unknown-linux-gnu-debug.module" : {
+      "executable" : "/workspace/toolchains/swift-6.2-RELEASE-ubuntu24.04/usr/bin/swiftc",
+      "fileList" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.build/sources",
+      "importPath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.derived/NotchCoreTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.derived/all-discovered-tests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/swift-version-8BC5B6E923D2A08.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/Modules/NotchCoreTests.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "NotchCorePackageDiscoveredTests",
+      "moduleOutputPath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/Modules/NotchCorePackageDiscoveredTests.swiftmodule",
+      "objects" : [
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.build/NotchCoreTests.swift.o",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.build/all-discovered-tests.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "x86_64-unknown-linux-gnu",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j4",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.build/include/NotchCorePackageDiscoveredTests-Swift.h",
+        "-g",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "notchorbitplus",
+        "-Xcc",
+        "-fno-omit-frame-pointer"
+      ],
+      "outputFileMapPath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.build/NotchCoreTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.build/all-discovered-tests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/Modules/NotchCorePackageDiscoveredTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.derived/NotchCoreTests.swift",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.derived/all-discovered-tests.swift"
+      ],
+      "tempsPath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.NotchCorePackageTests-x86_64-unknown-linux-gnu-debug.module" : {
+      "executable" : "/workspace/toolchains/swift-6.2-RELEASE-ubuntu24.04/usr/bin/swiftc",
+      "fileList" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.build/sources",
+      "importPath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.derived/runner.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/swift-version-8BC5B6E923D2A08.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/Modules/NotchCoreTests.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/Modules/NotchCorePackageDiscoveredTests.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "NotchCorePackageTests",
+      "moduleOutputPath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/Modules/NotchCorePackageTests.swiftmodule",
+      "objects" : [
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.build/runner.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "x86_64-unknown-linux-gnu",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j4",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.build/include/NotchCorePackageTests-Swift.h",
+        "-g",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "notchorbitplus",
+        "-Xcc",
+        "-fno-omit-frame-pointer"
+      ],
+      "outputFileMapPath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/Modules/NotchCorePackageTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.derived/runner.swift"
+      ],
+      "tempsPath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.NotchCoreTests-x86_64-unknown-linux-gnu-debug.module" : {
+      "executable" : "/workspace/toolchains/swift-6.2-RELEASE-ubuntu24.04/usr/bin/swiftc",
+      "fileList" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/sources",
+      "importPath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/FocusTimerTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/NotchActivationTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/NotchDragPayloadTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/NotchGeometryTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/NotchLayoutTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/OnlineServiceDataTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/OrbitNativeParsersTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/OrbitSystemDeltasTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/PlusLocalModelsTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/swift-version-8BC5B6E923D2A08.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/Modules/NotchCore.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "NotchCoreTests",
+      "moduleOutputPath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/Modules/NotchCoreTests.swiftmodule",
+      "objects" : [
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/FocusTimerTests.swift.o",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/NotchActivationTests.swift.o",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/NotchDragPayloadTests.swift.o",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/NotchGeometryTests.swift.o",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/NotchLayoutTests.swift.o",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/OnlineServiceDataTests.swift.o",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/OrbitNativeParsersTests.swift.o",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/OrbitSystemDeltasTests.swift.o",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/PlusLocalModelsTests.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "x86_64-unknown-linux-gnu",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j4",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-swift-version",
+        "6",
+        "-g",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "notchorbitplus",
+        "-Xcc",
+        "-fno-omit-frame-pointer"
+      ],
+      "outputFileMapPath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/FocusTimerTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/NotchActivationTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/NotchDragPayloadTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/NotchGeometryTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/NotchLayoutTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/OnlineServiceDataTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/OrbitNativeParsersTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/OrbitSystemDeltasTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/PlusLocalModelsTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/Modules/NotchCoreTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/FocusTimerTests.swift",
+        "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/NotchActivationTests.swift",
+        "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/NotchDragPayloadTests.swift",
+        "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/NotchGeometryTests.swift",
+        "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/NotchLayoutTests.swift",
+        "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/OnlineServiceDataTests.swift",
+        "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/OrbitNativeParsersTests.swift",
+        "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/OrbitSystemDeltasTests.swift",
+        "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/PlusLocalModelsTests.swift"
+      ],
+      "tempsPath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build",
+      "wholeModuleOptimization" : false
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "NotchCore" : [
+      "/workspace/toolchains/swift-6.2-RELEASE-ubuntu24.04/usr/bin/swiftc",
+      "-module-name",
+      "NotchCore",
+      "-package-name",
+      "notchorbitplus",
+      "-c",
+      "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/FocusTimer.swift",
+      "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/NotchActivation.swift",
+      "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/NotchGeometry.swift",
+      "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OnlineFXRates.swift",
+      "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OnlineServiceData.swift",
+      "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OnlineWeatherStocks.swift",
+      "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OrbitNativeParsers.swift",
+      "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OrbitSystemDeltas.swift",
+      "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/PlusTool.swift",
+      "-I",
+      "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/Modules",
+      "-target",
+      "x86_64-unknown-linux-gnu",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j4",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/include/NotchCore-Swift.h",
+      "-swift-version",
+      "6",
+      "-g",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "notchorbitplus",
+      "-Xcc",
+      "-fno-omit-frame-pointer",
+      "-driver-use-frontend-path",
+      "/workspace/toolchains/swift-6.2-RELEASE-ubuntu24.04/usr/bin/swiftc"
+    ],
+    "NotchCorePackageDiscoveredTests" : [
+      "/workspace/toolchains/swift-6.2-RELEASE-ubuntu24.04/usr/bin/swiftc",
+      "-module-name",
+      "NotchCorePackageDiscoveredTests",
+      "-package-name",
+      "notchorbitplus",
+      "-c",
+      "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.derived/NotchCoreTests.swift",
+      "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.derived/all-discovered-tests.swift",
+      "-I",
+      "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/Modules",
+      "-target",
+      "x86_64-unknown-linux-gnu",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j4",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.build/include/NotchCorePackageDiscoveredTests-Swift.h",
+      "-g",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "notchorbitplus",
+      "-Xcc",
+      "-fno-omit-frame-pointer",
+      "-driver-use-frontend-path",
+      "/workspace/toolchains/swift-6.2-RELEASE-ubuntu24.04/usr/bin/swiftc"
+    ],
+    "NotchCorePackageTests" : [
+      "/workspace/toolchains/swift-6.2-RELEASE-ubuntu24.04/usr/bin/swiftc",
+      "-module-name",
+      "NotchCorePackageTests",
+      "-package-name",
+      "notchorbitplus",
+      "-c",
+      "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.derived/runner.swift",
+      "-I",
+      "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/Modules",
+      "-target",
+      "x86_64-unknown-linux-gnu",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j4",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.build/include/NotchCorePackageTests-Swift.h",
+      "-g",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "notchorbitplus",
+      "-Xcc",
+      "-fno-omit-frame-pointer",
+      "-driver-use-frontend-path",
+      "/workspace/toolchains/swift-6.2-RELEASE-ubuntu24.04/usr/bin/swiftc"
+    ],
+    "NotchCoreTests" : [
+      "/workspace/toolchains/swift-6.2-RELEASE-ubuntu24.04/usr/bin/swiftc",
+      "-module-name",
+      "NotchCoreTests",
+      "-package-name",
+      "notchorbitplus",
+      "-c",
+      "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/FocusTimerTests.swift",
+      "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/NotchActivationTests.swift",
+      "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/NotchDragPayloadTests.swift",
+      "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/NotchGeometryTests.swift",
+      "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/NotchLayoutTests.swift",
+      "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/OnlineServiceDataTests.swift",
+      "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/OrbitNativeParsersTests.swift",
+      "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/OrbitSystemDeltasTests.swift",
+      "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/PlusLocalModelsTests.swift",
+      "-I",
+      "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/Modules",
+      "-target",
+      "x86_64-unknown-linux-gnu",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j4",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-swift-version",
+      "6",
+      "-g",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "notchorbitplus",
+      "-Xcc",
+      "-fno-omit-frame-pointer",
+      "-driver-use-frontend-path",
+      "/workspace/toolchains/swift-6.2-RELEASE-ubuntu24.04/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "NotchCore" : [
+
+    ],
+    "NotchCorePackageDiscoveredTests" : [
+      "NotchCoreTests",
+      "NotchCore"
+    ],
+    "NotchCorePackageTests" : [
+      "NotchCorePackageDiscoveredTests",
+      "NotchCoreTests",
+      "NotchCore"
+    ],
+    "NotchCoreTests" : [
+      "NotchCore"
+    ]
+  },
+  "testDiscoveryCommands" : {
+    "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.derived/all-discovered-tests.swift" : {
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/FocusTimerTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/NotchActivationTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/NotchDragPayloadTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/NotchGeometryTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/NotchLayoutTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/OnlineServiceDataTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/OrbitNativeParsersTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/OrbitSystemDeltasTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/PlusLocalModelsTests.swift.o"
+        }
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.derived/NotchCoreTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.derived/all-discovered-tests.swift"
+        }
+      ]
+    }
+  },
+  "testEntryPointCommands" : {
+    "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.derived/runner.swift" : {
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/Modules/NotchCorePackageDiscoveredTests.swiftmodule"
+        }
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.derived/runner.swift"
+        }
+      ]
+    }
+  },
+  "traitConfiguration" : {
+    "default" : {
+
+    }
+  },
+  "writeCommands" : {
+    "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/FocusTimer.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/NotchActivation.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/NotchGeometry.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OnlineFXRates.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OnlineServiceData.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OnlineWeatherStocks.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OrbitNativeParsers.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OrbitSystemDeltas.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/PlusTool.swift"
+        }
+      ],
+      "outputFilePath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/sources"
+    },
+    "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.derived/NotchCoreTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.derived/all-discovered-tests.swift"
+        }
+      ],
+      "outputFilePath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.build/sources"
+    },
+    "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.derived/runner.swift"
+        }
+      ],
+      "outputFilePath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.build/sources"
+    },
+    "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/FocusTimer.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/NotchActivation.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/NotchCore.swiftmodule.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/NotchGeometry.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineFXRates.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineServiceData.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineWeatherStocks.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OrbitNativeParsers.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OrbitSystemDeltas.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/PlusTool.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.build/NotchCorePackageDiscoveredTests.swiftmodule.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.build/NotchCoreTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageDiscoveredTests.build/all-discovered-tests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.build/NotchCorePackageTests.swiftmodule.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/FocusTimerTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/NotchActivationTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/NotchCoreTests.swiftmodule.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/NotchDragPayloadTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/NotchGeometryTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/NotchLayoutTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/OnlineServiceDataTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/OrbitNativeParsersTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/OrbitSystemDeltasTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/PlusLocalModelsTests.swift.o"
+        }
+      ],
+      "outputFilePath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.product/Objects.LinkFileList"
+    },
+    "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/FocusTimerTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/NotchActivationTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/NotchDragPayloadTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/NotchGeometryTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/NotchLayoutTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/OnlineServiceDataTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/OrbitNativeParsersTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/OrbitSystemDeltasTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/orbit/NotchOrbitPlus/Tests/NotchCoreTests/PlusLocalModelsTests.swift"
+        }
+      ],
+      "outputFilePath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCoreTests.build/sources"
+    },
+    "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/swift-version-8BC5B6E923D2A08.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/workspace/toolchains/swift-6.2-RELEASE-ubuntu24.04/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/swift-version-8BC5B6E923D2A08.txt"
+    }
+  }
+}

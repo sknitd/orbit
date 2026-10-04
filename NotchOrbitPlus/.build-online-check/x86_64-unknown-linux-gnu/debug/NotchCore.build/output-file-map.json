@@ -1,0 +1,68 @@
+{
+  "": {
+    "swift-dependencies": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/master.swiftdeps"
+  },
+  "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/FocusTimer.swift": {
+    "dependencies": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/FocusTimer.d",
+    "object": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/FocusTimer.swift.o",
+    "swiftmodule": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/FocusTimer~partial.swiftmodule",
+    "swift-dependencies": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/FocusTimer.swiftdeps",
+    "diagnostics": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/FocusTimer.dia"
+  },
+  "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/NotchActivation.swift": {
+    "dependencies": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/NotchActivation.d",
+    "object": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/NotchActivation.swift.o",
+    "swiftmodule": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/NotchActivation~partial.swiftmodule",
+    "swift-dependencies": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/NotchActivation.swiftdeps",
+    "diagnostics": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/NotchActivation.dia"
+  },
+  "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/NotchGeometry.swift": {
+    "dependencies": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/NotchGeometry.d",
+    "object": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/NotchGeometry.swift.o",
+    "swiftmodule": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/NotchGeometry~partial.swiftmodule",
+    "swift-dependencies": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/NotchGeometry.swiftdeps",
+    "diagnostics": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/NotchGeometry.dia"
+  },
+  "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OnlineFXRates.swift": {
+    "dependencies": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineFXRates.d",
+    "object": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineFXRates.swift.o",
+    "swiftmodule": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineFXRates~partial.swiftmodule",
+    "swift-dependencies": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineFXRates.swiftdeps",
+    "diagnostics": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineFXRates.dia"
+  },
+  "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OnlineServiceData.swift": {
+    "dependencies": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineServiceData.d",
+    "object": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineServiceData.swift.o",
+    "swiftmodule": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineServiceData~partial.swiftmodule",
+    "swift-dependencies": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineServiceData.swiftdeps",
+    "diagnostics": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineServiceData.dia"
+  },
+  "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OnlineWeatherStocks.swift": {
+    "dependencies": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineWeatherStocks.d",
+    "object": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineWeatherStocks.swift.o",
+    "swiftmodule": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineWeatherStocks~partial.swiftmodule",
+    "swift-dependencies": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineWeatherStocks.swiftdeps",
+    "diagnostics": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OnlineWeatherStocks.dia"
+  },
+  "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OrbitNativeParsers.swift": {
+    "dependencies": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OrbitNativeParsers.d",
+    "object": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OrbitNativeParsers.swift.o",
+    "swiftmodule": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OrbitNativeParsers~partial.swiftmodule",
+    "swift-dependencies": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OrbitNativeParsers.swiftdeps",
+    "diagnostics": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OrbitNativeParsers.dia"
+  },
+  "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/OrbitSystemDeltas.swift": {
+    "dependencies": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OrbitSystemDeltas.d",
+    "object": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OrbitSystemDeltas.swift.o",
+    "swiftmodule": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OrbitSystemDeltas~partial.swiftmodule",
+    "swift-dependencies": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OrbitSystemDeltas.swiftdeps",
+    "diagnostics": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/OrbitSystemDeltas.dia"
+  },
+  "/workspace/orbit/NotchOrbitPlus/Sources/NotchCore/PlusTool.swift": {
+    "dependencies": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/PlusTool.d",
+    "object": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/PlusTool.swift.o",
+    "swiftmodule": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/PlusTool~partial.swiftmodule",
+    "swift-dependencies": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/PlusTool.swiftdeps",
+    "diagnostics": "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCore.build/PlusTool.dia"
+  }
+}

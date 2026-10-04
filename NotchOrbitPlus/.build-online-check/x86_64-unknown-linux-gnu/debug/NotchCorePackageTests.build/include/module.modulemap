@@ -1,0 +1,3 @@
+module NotchCorePackageTests {
+    header "/workspace/orbit/NotchOrbitPlus/.build-online-check/x86_64-unknown-linux-gnu/debug/NotchCorePackageTests.build/include/NotchCorePackageTests-Swift.h"
+}
