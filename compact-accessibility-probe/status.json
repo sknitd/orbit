@@ -1,0 +1,469 @@
+{
+  "checks" : [
+    {
+      "host_tree" : [
+        {
+          "children" : 1,
+          "declared_actions" : [
+
+          ],
+          "depth" : 0,
+          "formal_protocol" : true,
+          "identifier" : "(nil)",
+          "label" : "(nil)",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXGroup",
+          "type" : "SwiftUI.NSHostingView<SwiftUI.ModifiedContent<main.LiveCompactContent, SwiftUI._FrameLayout>>"
+        },
+        {
+          "children" : 0,
+          "declared_actions" : [
+
+          ],
+          "depth" : 1,
+          "formal_protocol" : true,
+          "identifier" : "NotchOrbitPlus.compact.copyVerificationCode",
+          "label" : "Copy one-time code",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXButton",
+          "type" : "main.(unknown context at $10404684c).CompactActivityNativeButton"
+        }
+      ],
+      "identifier" : "NotchOrbitPlus.compact.copyVerificationCode",
+      "native_button_found" : true,
+      "native_element" : true,
+      "native_exact_route" : true,
+      "native_identifier" : true,
+      "native_label" : true,
+      "native_press" : true,
+      "native_role" : true,
+      "outcome" : "passed",
+      "semantic_exact_route" : true,
+      "semantic_found" : true,
+      "semantic_label" : "Copy one-time code",
+      "semantic_press" : true,
+      "semantic_role" : "AXButton",
+      "synthetic_fixture" : true,
+      "unignored_host_tree" : [
+        {
+          "children" : 1,
+          "declared_actions" : [
+
+          ],
+          "depth" : 0,
+          "formal_protocol" : true,
+          "identifier" : "(nil)",
+          "label" : "(nil)",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXGroup",
+          "type" : "SwiftUI.NSHostingView<SwiftUI.ModifiedContent<main.LiveCompactContent, SwiftUI._FrameLayout>>"
+        },
+        {
+          "children" : 0,
+          "declared_actions" : [
+
+          ],
+          "depth" : 1,
+          "formal_protocol" : true,
+          "identifier" : "NotchOrbitPlus.compact.copyVerificationCode",
+          "label" : "Copy one-time code",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXButton",
+          "type" : "main.(unknown context at $10404684c).CompactActivityNativeButton"
+        }
+      ],
+      "window_tree" : [
+        {
+          "children" : 10,
+          "declared_actions" : [
+            "AXRaise"
+          ],
+          "depth" : 0,
+          "formal_protocol" : true,
+          "identifier" : "(nil)",
+          "label" : "",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXWindow",
+          "type" : "NSWindow"
+        },
+        {
+          "children" : 0,
+          "declared_actions" : [
+
+          ],
+          "depth" : 1,
+          "formal_protocol" : false,
+          "identifier" : "(nil)",
+          "label" : "(nil)",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : false,
+          "modern_press" : false,
+          "role" : "AXStaticText",
+          "type" : "NSAccessibilityReparentingCellProxy"
+        },
+        {
+          "children" : 0,
+          "declared_actions" : [
+            "AXPress"
+          ],
+          "depth" : 1,
+          "formal_protocol" : true,
+          "identifier" : "(nil)",
+          "label" : "(nil)",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXButton",
+          "type" : "_NSThemeWidgetCell"
+        },
+        {
+          "children" : 2,
+          "declared_actions" : [
+            "AXPress",
+            "AXShowMenu"
+          ],
+          "depth" : 1,
+          "formal_protocol" : true,
+          "identifier" : "(nil)",
+          "label" : "(nil)",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXButton",
+          "type" : "_NSThemeZoomWidgetCell"
+        },
+        {
+          "children" : 0,
+          "declared_actions" : [
+
+          ],
+          "depth" : 2,
+          "formal_protocol" : true,
+          "identifier" : "(nil)",
+          "label" : "(nil)",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXGroup",
+          "type" : "NSThemeWidgetZoomMenuRemoteView"
+        },
+        {
+          "children" : 0,
+          "declared_actions" : [
+            "AXPress"
+          ],
+          "depth" : 1,
+          "formal_protocol" : true,
+          "identifier" : "(nil)",
+          "label" : "(nil)",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXButton",
+          "type" : "_NSThemeCloseWidgetCell"
+        },
+        {
+          "children" : 1,
+          "declared_actions" : [
+
+          ],
+          "depth" : 1,
+          "formal_protocol" : true,
+          "identifier" : "(nil)",
+          "label" : "(nil)",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXGroup",
+          "type" : "SwiftUI.NSHostingView<SwiftUI.ModifiedContent<main.LiveCompactContent, SwiftUI._FrameLayout>>"
+        },
+        {
+          "children" : 0,
+          "declared_actions" : [
+
+          ],
+          "depth" : 2,
+          "formal_protocol" : true,
+          "identifier" : "NotchOrbitPlus.compact.copyVerificationCode",
+          "label" : "Copy one-time code",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXButton",
+          "type" : "main.(unknown context at $10404684c).CompactActivityNativeButton"
+        },
+        {
+          "children" : 0,
+          "declared_actions" : [
+
+          ],
+          "depth" : 1,
+          "formal_protocol" : false,
+          "identifier" : "(nil)",
+          "label" : "(nil)",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : false,
+          "modern_press" : false,
+          "role" : "AXStaticText",
+          "type" : "NSAccessibilityReparentingCellProxy"
+        }
+      ]
+    },
+    {
+      "host_tree" : [
+        {
+          "children" : 1,
+          "declared_actions" : [
+
+          ],
+          "depth" : 0,
+          "formal_protocol" : true,
+          "identifier" : "(nil)",
+          "label" : "(nil)",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXGroup",
+          "type" : "SwiftUI.NSHostingView<SwiftUI.ModifiedContent<main.LiveCompactContent, SwiftUI._FrameLayout>>"
+        },
+        {
+          "children" : 0,
+          "declared_actions" : [
+
+          ],
+          "depth" : 1,
+          "formal_protocol" : true,
+          "identifier" : "NotchOrbitPlus.compact.revealFile",
+          "label" : "Reveal completed download",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXButton",
+          "type" : "main.(unknown context at $10404684c).CompactActivityNativeButton"
+        }
+      ],
+      "identifier" : "NotchOrbitPlus.compact.revealFile",
+      "native_button_found" : true,
+      "native_element" : true,
+      "native_exact_route" : true,
+      "native_identifier" : true,
+      "native_label" : true,
+      "native_press" : true,
+      "native_role" : true,
+      "outcome" : "passed",
+      "semantic_exact_route" : true,
+      "semantic_found" : true,
+      "semantic_label" : "Reveal completed download",
+      "semantic_press" : true,
+      "semantic_role" : "AXButton",
+      "synthetic_fixture" : true,
+      "unignored_host_tree" : [
+        {
+          "children" : 1,
+          "declared_actions" : [
+
+          ],
+          "depth" : 0,
+          "formal_protocol" : true,
+          "identifier" : "(nil)",
+          "label" : "(nil)",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXGroup",
+          "type" : "SwiftUI.NSHostingView<SwiftUI.ModifiedContent<main.LiveCompactContent, SwiftUI._FrameLayout>>"
+        },
+        {
+          "children" : 0,
+          "declared_actions" : [
+
+          ],
+          "depth" : 1,
+          "formal_protocol" : true,
+          "identifier" : "NotchOrbitPlus.compact.revealFile",
+          "label" : "Reveal completed download",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXButton",
+          "type" : "main.(unknown context at $10404684c).CompactActivityNativeButton"
+        }
+      ],
+      "window_tree" : [
+        {
+          "children" : 10,
+          "declared_actions" : [
+            "AXRaise"
+          ],
+          "depth" : 0,
+          "formal_protocol" : true,
+          "identifier" : "(nil)",
+          "label" : "",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXWindow",
+          "type" : "NSWindow"
+        },
+        {
+          "children" : 0,
+          "declared_actions" : [
+
+          ],
+          "depth" : 1,
+          "formal_protocol" : false,
+          "identifier" : "(nil)",
+          "label" : "(nil)",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : false,
+          "modern_press" : false,
+          "role" : "AXStaticText",
+          "type" : "NSAccessibilityReparentingCellProxy"
+        },
+        {
+          "children" : 0,
+          "declared_actions" : [
+            "AXPress"
+          ],
+          "depth" : 1,
+          "formal_protocol" : true,
+          "identifier" : "(nil)",
+          "label" : "(nil)",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXButton",
+          "type" : "_NSThemeWidgetCell"
+        },
+        {
+          "children" : 2,
+          "declared_actions" : [
+            "AXPress",
+            "AXShowMenu"
+          ],
+          "depth" : 1,
+          "formal_protocol" : true,
+          "identifier" : "(nil)",
+          "label" : "(nil)",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXButton",
+          "type" : "_NSThemeZoomWidgetCell"
+        },
+        {
+          "children" : 0,
+          "declared_actions" : [
+
+          ],
+          "depth" : 2,
+          "formal_protocol" : true,
+          "identifier" : "(nil)",
+          "label" : "(nil)",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXGroup",
+          "type" : "NSThemeWidgetZoomMenuRemoteView"
+        },
+        {
+          "children" : 0,
+          "declared_actions" : [
+            "AXPress"
+          ],
+          "depth" : 1,
+          "formal_protocol" : true,
+          "identifier" : "(nil)",
+          "label" : "(nil)",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXButton",
+          "type" : "_NSThemeCloseWidgetCell"
+        },
+        {
+          "children" : 1,
+          "declared_actions" : [
+
+          ],
+          "depth" : 1,
+          "formal_protocol" : true,
+          "identifier" : "(nil)",
+          "label" : "(nil)",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXGroup",
+          "type" : "SwiftUI.NSHostingView<SwiftUI.ModifiedContent<main.LiveCompactContent, SwiftUI._FrameLayout>>"
+        },
+        {
+          "children" : 0,
+          "declared_actions" : [
+
+          ],
+          "depth" : 2,
+          "formal_protocol" : true,
+          "identifier" : "NotchOrbitPlus.compact.revealFile",
+          "label" : "Reveal completed download",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : true,
+          "modern_press" : true,
+          "role" : "AXButton",
+          "type" : "main.(unknown context at $10404684c).CompactActivityNativeButton"
+        },
+        {
+          "children" : 0,
+          "declared_actions" : [
+
+          ],
+          "depth" : 1,
+          "formal_protocol" : false,
+          "identifier" : "(nil)",
+          "label" : "(nil)",
+          "legacy_attribute_getter" : true,
+          "legacy_press" : true,
+          "modern_children_getter" : false,
+          "modern_press" : false,
+          "role" : "AXStaticText",
+          "type" : "NSAccessibilityReparentingCellProxy"
+        }
+      ]
+    }
+  ],
+  "outcome" : "passed"
+}

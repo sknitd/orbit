@@ -1,0 +1,38 @@
+{
+  "product": "NotchOrbitPlus",
+  "bundle_identifier": "com.sknitd.NotchOrbitPlus",
+  "version": "0.3.0",
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "ad hoc",
+  "signing_team_identifier": null,
+  "notarized": false,
+  "notarization_status": "pending_credentials",
+  "codesign_verified": true,
+  "startup_smoke_seconds": 3,
+  "foundation_models_weak_linked": true,
+  "translation_weak_linked": true,
+  "bundled_plugin_samples_verified": [
+    "HelloOrbit",
+    "ClipboardLength"
+  ],
+  "bundled_command_helpers_verified": [
+    "orbit-notify",
+    "orbit-run"
+  ],
+  "minimum_macos": "14.0",
+  "idle_performance": {
+    "outcome": "passed",
+    "warmup_seconds": 8,
+    "measurement_seconds": 11.183209667000028,
+    "mean_cpu_percent": 0.7153581340432876,
+    "sampled_peak_rss_mb": 89.358336,
+    "budgets": {
+      "mean_cpu_percent": 3.0,
+      "sampled_peak_rss_mb": 250.0
+    },
+    "evidence_file": "idle-performance.json"
+  }
+}

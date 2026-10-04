@@ -1,0 +1,10 @@
+/Users/runner/work/orbit/orbit/NotchOrbitPlus/Scripts/CompactAccessibilityProbe.swift:44:80: warning: expression implicitly coerced from 'Any?' to 'Any'
+42 |                 "host_tree": CompactAccessibilityFixture.tree(below: host),
+43 |                 "window_tree": CompactAccessibilityFixture.tree(below: window),
+44 |                 "unignored_host_tree": CompactAccessibilityFixture.tree(below: unignored)]
+   |                                                                                |- warning: expression implicitly coerced from 'Any?' to 'Any'
+   |                                                                                |- note: provide a default value to avoid this warning
+   |                                                                                |- note: force-unwrap the value to avoid this warning
+   |                                                                                `- note: explicitly cast to 'Any' with 'as Any' to silence this warning
+45 |             let semantic = CompactAccessibilityFixture.action(identifier: identifier, below: host)
+46 |                 ?? CompactAccessibilityFixture.action(identifier: identifier, below: window)

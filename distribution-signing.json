@@ -1,0 +1,8 @@
+{
+  "kind": "adhoc",
+  "team_identifier": null,
+  "notarized": false,
+  "notarization_status": "pending_credentials",
+  "codesign_verified": true,
+  "hardened_runtime": false
+}
