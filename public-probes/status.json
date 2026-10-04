@@ -1,0 +1,50 @@
+{
+  "fetched_at": "2026-10-04T19:08:36.242145+00:00",
+  "purpose": "Live public endpoint evidence, separate from test fixtures",
+  "test_location": "Berlin, public city coordinates",
+  "api_credentials_used": false,
+  "all_validated": true,
+  "results": [
+    {
+      "id": "weather-geocoding",
+      "url": "https://geocoding-api.open-meteo.com/v1/search?name=Berlin&count=1&language=en&format=json",
+      "http_status": 200,
+      "validated": true,
+      "response_file": "weather-geocoding.json",
+      "elapsed_seconds": 0.71
+    },
+    {
+      "id": "weather-forecast",
+      "url": "https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.405&current=temperature_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=7",
+      "http_status": 200,
+      "validated": true,
+      "response_file": "weather-forecast.json",
+      "elapsed_seconds": 0.678
+    },
+    {
+      "id": "weather-air-quality",
+      "url": "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=52.52&longitude=13.405&current=us_aqi,uv_index,pm2_5&timezone=GMT&timeformat=unixtime",
+      "http_status": 200,
+      "validated": true,
+      "response_file": "weather-air-quality.json",
+      "elapsed_seconds": 0.677
+    },
+    {
+      "id": "weather-minutely-rain",
+      "url": "https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.405&minutely_15=precipitation&forecast_minutely_15=8&timezone=GMT&timeformat=unixtime",
+      "http_status": 200,
+      "validated": true,
+      "response_file": "weather-minutely-rain.json",
+      "elapsed_seconds": 0.631
+    },
+    {
+      "id": "fx-usd",
+      "url": "https://api.frankfurter.dev/v1/latest?base=USD",
+      "http_status": 200,
+      "validated": true,
+      "response_file": "fx-usd.json",
+      "provider_date": "2026-10-02",
+      "elapsed_seconds": 0.058
+    }
+  ]
+}
