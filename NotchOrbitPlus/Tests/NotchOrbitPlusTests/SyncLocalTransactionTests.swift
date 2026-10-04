@@ -141,7 +141,8 @@ final class SyncLocalTransactionTests: XCTestCase {
             }) { error in recovery = (error as? PlusSyncLocalApplyFailure)?.recoveryDirectory }
             let directory = try XCTUnwrap(recovery)
             XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("quick-note.txt")), noteBytes)
-            XCTAssertEqual(try PlusSyncLocalTransaction.pendingRecovery(in: root), directory)
+            let discovered = try XCTUnwrap(PlusSyncLocalTransaction.pendingRecovery(in: root))
+            XCTAssertEqual(discovered.resolvingSymlinksInPath(), directory.resolvingSymlinksInPath())
             XCTAssertThrowsError(try transaction(root, defaults), "No further local sync transaction may begin before recovery")
             XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("quick-note.txt")), noteBytes)
             XCTAssertTrue(FileManager.default.fileExists(atPath: directory.appendingPathComponent("defaults.plist").path))

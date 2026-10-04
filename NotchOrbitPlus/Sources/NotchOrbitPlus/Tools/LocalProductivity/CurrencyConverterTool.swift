@@ -83,7 +83,8 @@ struct CurrencyConverterToolView: View {
             HStack {
                 TextField("Amount", text: $store.input).textFieldStyle(.roundedBorder)
                 Picker("From", selection: $store.from) { ForEach(store.currencies, id: \.self) { Text($0).tag($0) } }.frame(width: 120)
-                Button { store.swap() } label: { Image(systemName: "arrow.left.arrow.right") }.help("Swap currencies and invert result")
+                Button { store.swap() } label: { Image(systemName: "arrow.left.arrow.right") }
+                    .help("Swap currencies and invert result").accessibilityLabel("Swap currencies and invert result")
                 Picker("To", selection: $store.to) { ForEach(store.currencies, id: \.self) { Text($0).tag($0) } }.frame(width: 120)
             }
             if let result = store.resultText {

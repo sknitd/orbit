@@ -17,8 +17,7 @@ struct CaptureToolVisibility: NSViewRepresentable {
         view.checkVisibility()
     }
     static func dismantleNSView(_ view: CaptureVisibilityView, coordinator: ()) {
-        view.stopObserving()
-        view.hiddenAction?()
+        view.dismantle()
     }
 }
 
@@ -26,12 +25,17 @@ struct CaptureToolVisibility: NSViewRepresentable {
 final class CaptureVisibilityView: NSView {
     var visibleAction: (() -> Void)?
     var hiddenAction: (() -> Void)?
-    private var wasVisible: Bool?
+    private var observedVisible: Bool?
+    private var deliveredVisible: Bool?
     private var visibilityTimer: Timer?
+    private var delivery: Task<Void, Never>?
+    private var revision = UUID()
+    private var isDismantled = false
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         stopObserving()
+        guard !isDismantled else { return }
         if let window {
             NotificationCenter.default.addObserver(self, selector: #selector(checkVisibility),
                 name: NSWindow.didChangeOcclusionStateNotification, object: window)
@@ -57,13 +61,38 @@ final class CaptureVisibilityView: NSView {
         NotificationCenter.default.removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
     }
-    @objc private func windowClosing() {
-        wasVisible = false; hiddenAction?()
+    /// SwiftUI may call dismantle while its graph has an exclusive mutation.
+    /// Queue the final stop after that stack unwinds and permanently reject revival.
+    func dismantle() {
+        guard !isDismantled else { return }
+        isDismantled = true
+        stopObserving()
+        enqueueVisibility(false, force: true)
     }
+    @objc private func windowClosing() { enqueueVisibility(false) }
     @objc func checkVisibility() {
-        let visible = window?.isVisible == true && window?.isOnActiveSpace == true && !isHiddenOrHasHiddenAncestor
-        guard visible != wasVisible else { return }
-        wasVisible = visible
-        if visible { visibleAction?() } else { hiddenAction?() }
+        guard !isDismantled else { return }
+        enqueueVisibility(actualVisibility)
+    }
+    private var actualVisibility: Bool {
+        !isDismantled && window?.isVisible == true && window?.isOnActiveSpace == true && !isHiddenOrHasHiddenAncestor
+    }
+    private func enqueueVisibility(_ visible: Bool, force: Bool = false) {
+        guard observedVisible != visible || force else { return }
+        observedVisible = visible
+        let token = UUID(); revision = token
+        delivery?.cancel()
+        // A strong reference keeps the final hidden callback alive through teardown.
+        // Cancellation/revision checks discard obsolete visible notifications.
+        delivery = Task { @MainActor [self] in
+            await Task.yield()
+            guard !Task.isCancelled, revision == token else { return }
+            delivery = nil
+            let current = actualVisibility
+            observedVisible = current
+            guard deliveredVisible != current || force else { return }
+            deliveredVisible = current
+            if current { visibleAction?() } else { hiddenAction?() }
+        }
     }
 }

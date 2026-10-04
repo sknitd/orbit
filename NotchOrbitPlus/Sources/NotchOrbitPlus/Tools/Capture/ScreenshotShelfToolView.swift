@@ -49,7 +49,7 @@ struct ScreenshotShelfToolView: View {
             if store.isWorking || store.isRecording { Button("Cancel and Discard") { store.cancel() } }
             Text(store.status).font(.caption).foregroundStyle(.secondary)
             if let error = store.error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
-            Text("Screen Recording access is requested only when you start. Hiding this tool stops an active recording. Captures stay on this Mac unless you share them.")
+            Text("Screen Recording access is requested only when you start. Hiding this tool stops active capture. Captures stay on this Mac unless you share them.")
                 .font(.caption).foregroundStyle(.secondary)
             if let latest = store.history.first {
                 Divider()

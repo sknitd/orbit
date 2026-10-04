@@ -4,6 +4,8 @@ import CoreGraphics
 import CoreMedia
 import CoreVideo
 import ImageIO
+import SwiftUI
+import Combine
 import XCTest
 import NotchCore
 @testable import NotchOrbitPlus
@@ -119,6 +121,78 @@ final class CaptureFilesEvaluationTests: NativeImageFixtureCase, @unchecked Send
         store.shutdown(); shelf.shutdown()
     }
 
+    @MainActor
+    func testHostedVisibilityDefersPublishedChangesAndStopsPickerOnHideAndTeardown() async throws {
+        let shelf = FileShelfToolStore(managedDirectory: fixtureDirectory.appendingPathComponent("HostedShelf"), persistState: false)
+        var permissionChecks = 0; var permissionRequests = 0; var samples = 0
+        let capture = ScreenshotShelfStore(shelf: shelf, persistState: false,
+            permissionCheck: { permissionChecks += 1; return false },
+            permissionRequest: { permissionRequests += 1; return false })
+        let picker = ColorPickerStore(persistHistory: false, sampling: { _ in samples += 1 })
+        let state = CaptureHostedVisibilityState()
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 260, height: 140),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        let host = NSHostingView(rootView: CaptureHostedVisibilityFixture(state: state, picker: picker, capture: capture))
+        window.contentView = host
+        defer { window.close(); capture.shutdown(); picker.shutdown(); shelf.shutdown() }
+        window.makeKeyAndOrderFront(nil)
+        try await waitForVisibility { state.visibleCount > 0 }
+        XCTAssertEqual(permissionChecks, 0); XCTAssertEqual(permissionRequests, 0)
+        picker.pick(); XCTAssertTrue(picker.isPicking)
+        window.orderOut(nil)
+        try await waitForVisibility { !picker.isPicking && state.hiddenCount > 0 }
+        XCTAssertTrue(picker.history.isEmpty)
+
+        let previousVisible = state.visibleCount
+        window.makeKeyAndOrderFront(nil)
+        try await waitForVisibility { state.visibleCount > previousVisible }
+        picker.pick(); XCTAssertTrue(picker.isPicking)
+        let previousHidden = state.hiddenCount
+        state.isMounted = false
+        host.layoutSubtreeIfNeeded()
+        // Updating/dismantling NSViewRepresentable must not publish synchronously.
+        XCTAssertEqual(state.hiddenCount, previousHidden)
+        try await waitForVisibility { state.hiddenCount > previousHidden && !picker.isPicking }
+        let finalVisible = state.visibleCount
+        try await Task.sleep(for: .milliseconds(80))
+        XCTAssertEqual(state.visibleCount, finalVisible, "A dismantled visibility view cannot revive")
+        XCTAssertEqual(samples, 2)
+        XCTAssertEqual(permissionChecks, 0); XCTAssertEqual(permissionRequests, 0)
+        XCTAssertTrue(capture.history.isEmpty); XCTAssertTrue(shelf.items.isEmpty)
+    }
+
+    @MainActor
+    func testDisconnectedVisibilityCancelsQueuedVisibleDeliveryAndCannotReattachAfterDismantle() async throws {
+        var visible = 0; var hidden = 0
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 180, height: 100),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        let view = CaptureVisibilityView()
+        view.visibleAction = { visible += 1 }; view.hiddenAction = { hidden += 1 }
+        window.contentView = view
+        window.makeKeyAndOrderFront(nil)
+        view.checkVisibility()
+        view.removeFromSuperview()
+        CaptureToolVisibility.dismantleNSView(view, coordinator: ())
+        XCTAssertEqual(visible, 0); XCTAssertEqual(hidden, 0, "Teardown callbacks must be deferred")
+        try await waitForVisibility { hidden == 1 }
+        XCTAssertEqual(visible, 0, "An obsolete visible delivery must be discarded")
+        window.contentView = view
+        view.checkVisibility()
+        try await Task.sleep(for: .milliseconds(80))
+        XCTAssertEqual(visible, 0); XCTAssertEqual(hidden, 1)
+    }
+
+    @MainActor
+    private func waitForVisibility(_ condition: @MainActor () -> Bool) async throws {
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(2))
+        while !condition(), clock.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertTrue(condition(), "Expected native visibility delivery before timeout")
+    }
+
     func testNativeWriterCreatesDecodableMOVAndExtendsAnUnchangedRealFrame() async throws {
         let output = fixtureDirectory.appendingPathComponent("unchanged.mov")
         let writer = try CaptureMovieWriter(url: output, width: 64, height: 48)
@@ -172,4 +246,28 @@ final class CaptureFilesEvaluationTests: NativeImageFixtureCase, @unchecked Send
 @MainActor
 private final class CaptureHideFixture {
     weak var store: ScreenshotShelfStore?
+}
+
+@MainActor
+private final class CaptureHostedVisibilityState: ObservableObject {
+    @Published var isMounted = true
+    @Published var visibleCount = 0
+    @Published var hiddenCount = 0
+}
+
+@MainActor
+private struct CaptureHostedVisibilityFixture: View {
+    @ObservedObject var state: CaptureHostedVisibilityState
+    @ObservedObject var picker: ColorPickerStore
+    let capture: ScreenshotShelfStore
+    var body: some View {
+        VStack {
+            Text("Visible \(state.visibleCount), hidden \(state.hiddenCount), picking \(picker.isPicking.description)")
+            if state.isMounted {
+                Color.clear.frame(width: 20, height: 20).background(CaptureToolVisibility(
+                    onVisible: { state.visibleCount += 1; capture.setVisible(true) },
+                    onHidden: { state.hiddenCount += 1; picker.shutdown(); capture.setVisible(false) }))
+            }
+        }.frame(width: 260, height: 140)
+    }
 }

@@ -14,9 +14,11 @@ struct FocusStatsToolView: View {
         VStack(alignment: .leading, spacing: 10) {
             LocalToolError(message: service.historyError)
             HStack {
-                Button { move(-7) } label: { Image(systemName: "chevron.left") }.help("Previous week")
+                Button { move(-7) } label: { Image(systemName: "chevron.left") }
+                    .help("Previous week").accessibilityLabel("Previous week")
                 if let first = days.first { Text("Week of \(first.date.formatted(date: .abbreviated, time: .omitted))").font(.headline) }
-                Button { move(7) } label: { Image(systemName: "chevron.right") }.help("Next week")
+                Button { move(7) } label: { Image(systemName: "chevron.right") }
+                    .help("Next week").accessibilityLabel("Next week")
                 Spacer()
                 Button("This Week") { weekDate = Date() }
             }
