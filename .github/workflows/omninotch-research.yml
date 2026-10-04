@@ -1,0 +1,48 @@
+name: Read public OmniNotch feature reference
+on:
+  push:
+    branches: [codex/orbitdrop]
+    paths: ['.github/workflows/omninotch-research.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  research:
+    runs-on: macos-15
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read user-provided public reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_dir="$(mktemp -d)"
+          curl --fail --location --max-time 45 --silent --show-error https://omninotch.app/ --output "$report_dir/website.html"
+          python3 - "$report_dir" <<'PY'
+          from pathlib import Path
+          from html.parser import HTMLParser
+          import json,sys
+          root=Path(sys.argv[1])
+          class Read(HTMLParser):
+              def __init__(self): super().__init__(); self.skip=0; self.text=[]; self.links=[]
+              def handle_starttag(self,tag,attrs):
+                  if tag in ('script','style'): self.skip+=1
+                  for key,value in attrs:
+                      if key in ('href','src'): self.links.append(value)
+              def handle_endtag(self,tag):
+                  if tag in ('script','style'): self.skip=max(0,self.skip-1)
+              def handle_data(self,data):
+                  if not self.skip and data.strip(): self.text.append(data.strip())
+          p=Read(); p.feed((root/'website.html').read_text())
+          (root/'website.txt').write_text('\n'.join(p.text)+'\n')
+          (root/'links.json').write_text(json.dumps(p.links,indent=2)+'\n')
+          (root/'source.json').write_text(json.dumps({'url':'https://omninotch.app/','purpose':'User-requested feature research'},indent=2)+'\n')
+          PY
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git checkout --orphan "codex/omninotch-reference/run-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          git rm -rf --ignore-unmatch .
+          cp "$report_dir/"* .
+          git add website.html website.txt links.json source.json
+          git commit -m 'Record public OmniNotch feature reference'
+          git push origin HEAD
