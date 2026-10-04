@@ -37,7 +37,7 @@ enum CompactAccessibilityProbe {
             window.makeKeyAndOrderFront(nil)
             try? await Task.sleep(for: .milliseconds(200))
             host.layoutSubtreeIfNeeded(); host.displayIfNeeded()
-            let unignored = NSAccessibility.unignoredDescendant(host)
+            let unignored = NSAccessibility.unignoredDescendant(of: host)
             var item: [String: Any] = ["identifier": identifier, "synthetic_fixture": true,
                 "host_tree": CompactAccessibilityFixture.tree(below: host),
                 "window_tree": CompactAccessibilityFixture.tree(below: window),
