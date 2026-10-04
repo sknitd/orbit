@@ -461,8 +461,8 @@ final class FileShelfToolStore: ObservableObject {
     }
     private func retainInTrash(_ removed: [FileShelfItem]) throws {
         guard !removed.isEmpty, removed.allSatisfy({ item in items.contains(where: { $0.id == item.id }) }) else { throw CocoaError(.fileNoSuchFile) }
-        let root = try trashRoot(), record = ShelfTrashRecord(id: UUID(), removedAt: Date(), entries: removed.map { .init(item: $0, metadata: info(for: $0)) })
         let folders = try removed.compactMap { item -> (UUID, URL)? in try ownedFolder(for: item).map { (item.id, $0) } }
+        let root = try trashRoot(), record = ShelfTrashRecord(id: UUID(), removedAt: Date(), entries: removed.map { .init(item: $0, metadata: info(for: $0)) })
         let batch = root.appendingPathComponent(record.id.uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: batch, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
         let recordBytes = try JSONEncoder().encode(record)
@@ -491,6 +491,8 @@ final class FileShelfToolStore: ObservableObject {
     }
     private func loadLastTrash() {
         do {
+            guard let managedDirectory,
+                  try PlusSyncFolderIO.hasNode(managedDirectory.appendingPathComponent("ShelfTrash", isDirectory: true)) else { return }
             let root = try trashRoot()
             let folders = try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey])
             guard folders.count <= 1_000 else { return }

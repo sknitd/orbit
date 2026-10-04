@@ -168,11 +168,13 @@ final class PersonalLibraryEvaluationTests: NativeImageFixtureCase, @unchecked S
         try assertAllFolderRemovalPathsRefused(store, item: item)
         XCTAssertEqual(try Data(contentsOf: referenceURL), bytes); XCTAssertEqual(try Data(contentsOf: original), bytes)
         let ancestorReference = FileShelfItem(originalURL: managed)
+        let originalDirectoryEntries = try FileManager.default.contentsOfDirectory(atPath: managed.path).sorted()
         let ancestorStore = FileShelfToolStore(managedDirectory: managed, persistState: false,
             archive: .init(state: .init(items: [item, ancestorReference], retention: .week)), onPortableChange: {})
         defer { ancestorStore.shutdown() }
         try assertAllFolderRemovalPathsRefused(ancestorStore, item: item)
         XCTAssertEqual(try Data(contentsOf: copy), bytes)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: managed.path).sorted(), originalDirectoryEntries)
         XCTAssertEqual(try FileManager.default.destinationOfSymbolicLink(atPath: alias.path), managed.path)
     }
 
