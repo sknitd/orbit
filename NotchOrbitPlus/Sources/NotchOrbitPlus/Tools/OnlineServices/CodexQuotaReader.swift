@@ -21,10 +21,17 @@ enum OnlineCodexQuotaReader {
         defer { try? FileManager.default.removeItem(at: workingDirectory) }
         process.currentDirectoryURL = workingDirectory
         var environment = ProcessInfo.processInfo.environment
-        environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+        let inheritedPath = environment["PATH"] ?? ""
+        environment["PATH"] = [executable.deletingLastPathComponent().path, resolved.deletingLastPathComponent().path,
+            "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin", inheritedPath].joined(separator: ":")
         process.environment = environment
         let input = Pipe(), output = Pipe()
         process.standardInput = input; process.standardOutput = output; process.standardError = FileHandle.nullDevice
+        // An old or failed CLI can close stdin before initialize is sent.
+        // Receive EPIPE as a thrown write error instead of terminating the app.
+        guard fcntl(input.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1) == 0 else {
+            throw OnlineServiceError.message("Could not protect the Codex protocol channel.")
+        }
         let descriptor = output.fileHandleForReading.fileDescriptor
         let originalFlags = fcntl(descriptor, F_GETFL)
         guard originalFlags >= 0, fcntl(descriptor, F_SETFL, originalFlags | O_NONBLOCK) == 0 else {
