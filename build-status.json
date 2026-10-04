@@ -1,0 +1,7 @@
+{
+  "outcome": "success",
+  "source_commit": "e8e0af1a46dee78c8209b6808d940b8577b80159",
+  "runner": "macos-15",
+  "run_id": "37196519646",
+  "native_drag_acceptance": "requires interactive Mac validation"
+}
