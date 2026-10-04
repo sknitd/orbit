@@ -55,19 +55,18 @@ struct ChromeHistoryReader: ChromeHistoryReading {
         guard info.isRegularFile == true, info.isSymbolicLink != true else { throw ChromeHistoryError.invalidFile }
         guard let size = info.fileSize, size >= 100 else { throw ChromeHistoryError.invalidDatabase }
         guard Int64(size) <= maximumFileBytes else { throw ChromeHistoryError.oversizedFile }
-        let identity = try sourceIdentity(file)
+        let identity = try sourceIdentity(file.path)
         // SQLite NOFOLLOW rejects symlinks in parent components too. Resolve
         // supported parent aliases (including macOS /var -> /private/var), but
         // preserve and revalidate the final leaf rather than resolving it.
-        let databaseFile = file.deletingLastPathComponent().resolvingSymlinksInPath().standardizedFileURL
-            .appendingPathComponent(file.lastPathComponent, isDirectory: false)
-        guard try sourceIdentity(databaseFile) == identity else { throw ChromeHistoryError.invalidFile }
+        let databasePath = try canonicalDatabasePath(file)
+        guard try sourceIdentity(databasePath) == identity else { throw ChromeHistoryError.invalidFile }
 
         var database: OpaquePointer?
-        let code = sqlite3_open_v2(databaseFile.path, &database, SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_NOFOLLOW, nil)
+        let code = sqlite3_open_v2(databasePath, &database, SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_NOFOLLOW, nil)
         guard code == SQLITE_OK, let database else { if let database { sqlite3_close_v2(database) }; throw mappedError(code, cancellation: cancellation) }
         defer { sqlite3_close_v2(database) }
-        guard try sourceIdentity(databaseFile) == identity else { throw ChromeHistoryError.invalidFile }
+        guard try sourceIdentity(databasePath) == identity else { throw ChromeHistoryError.invalidFile }
         guard sqlite3_db_readonly(database, "main") == 1 else { throw ChromeHistoryError.invalidDatabase }
         sqlite3_busy_timeout(database, 750)
         sqlite3_limit(database, SQLITE_LIMIT_LENGTH, 64 * 1024)
@@ -118,9 +117,19 @@ struct ChromeHistoryReader: ChromeHistoryReading {
     }
 
     private struct SourceIdentity: Equatable { let device: Int64; let inode: UInt64 }
-    private static func sourceIdentity(_ file: URL) throws -> SourceIdentity {
+    private static func canonicalDatabasePath(_ file: URL) throws -> String {
+        let leaf = file.lastPathComponent
+        guard !leaf.isEmpty, leaf != ".", leaf != "..", !leaf.contains("/"), !leaf.utf8.contains(0),
+              let parent = realpath(file.deletingLastPathComponent().path, nil) else { throw ChromeHistoryError.invalidFile }
+        defer { free(parent) }
+        // Retain the authoritative POSIX result as text: a URL standardization
+        // roundtrip can map Darwin's /private/var back to a symlinked /var path.
+        let canonicalParent = String(cString: parent)
+        return canonicalParent == "/" ? "/" + leaf : canonicalParent + "/" + leaf
+    }
+    private static func sourceIdentity(_ path: String) throws -> SourceIdentity {
         var value = stat()
-        guard lstat(file.path, &value) == 0 else { throw ChromeHistoryError.databaseUnavailable(SQLITE_CANTOPEN) }
+        guard lstat(path, &value) == 0 else { throw ChromeHistoryError.databaseUnavailable(SQLITE_CANTOPEN) }
         // lstat checks the final directory entry itself, so a direct History
         // symlink remains refused even when its parent is a supported alias.
         guard value.st_mode & mode_t(S_IFMT) == mode_t(S_IFREG) else { throw ChromeHistoryError.invalidFile }
