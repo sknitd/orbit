@@ -23,11 +23,12 @@ Version 0.3.0 keeps its own `com.sknitd.NotchOrbitPlus` identity, macOS 14 minim
 
 ## Interaction and polish
 
-- Every dashboard tool participates in visibility, order and onboarding selection. Hidden native views stop sampling/capture unless their explicit background-monitoring setting permits it.
+- Every dashboard tool participates in visibility, order and onboarding selection. Hidden native views stop sampling/capture unless their explicit background-monitoring setting permits it. Retained-window observers defer and coalesce callbacks outside SwiftUI graph updates; dismantling cancels obsolete visible delivery and stops observers.
 - Closed-notch priorities are editable across processing, HUD, meetings, timers, music, devices and status. Invalid stored orders remain preserved and can be reset with a backup.
 - Per-display enabled/width settings, All Spaces/Current Space placement, and opt-in fullscreen hiding are implemented. Fullscreen hiding reads the actual focused window's Accessibility fullscreen attribute and affects only its matching display.
 - System/light/dark theme, accent colors and optional drop/workflow sound are local preferences, with portable appearance choices eligible for sync.
 - Optional shared-folder sync adds logical launcher targets, workflow presets, palettes, appearance, priorities and world zones to notes/tasks/dashboard settings. Bookmarks, credentials and clipboard remain local. Synced folders require resolution on each Mac; concurrent variants remain available for explicit resolution. All syncing Macs need 0.3.0 for the new version-2 snapshots.
+- Multi-store sync apply snapshots original local files, defaults and store memory before changing them. A failed apply rolls all stores back; a failed rollback retains a private recovery directory and blocks further sync until recovery.
 - Five AppIntents expose Start Focus, Add File to Shelf, Run Workflow, Toggle Dashboard and Capture Screenshot. File inputs are bounded and scoped; workflow output files can pass to the next Shortcut action.
 - Dashboard Tab navigation, arrow-key tab navigation, Control-Tab/Control-Shift-Tab tool switching, Escape collapse, VoiceOver labels and Reduce Motion handling are implemented. Interactive assistive-technology acceptance remains separate.
 - Smoke launch samples real idle CPU and RSS after warmup, records raw intervals/budgets in `idle-performance.json` and fails when the configured budget is exceeded.

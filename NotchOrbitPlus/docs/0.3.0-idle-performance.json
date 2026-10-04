@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "product": "NotchOrbitPlus",
+  "pid": 17025,
+  "measured_at": "2026-10-04T17:33:58.365050+00:00",
+  "source_commit": "7dc43a6aec2a4d14657d41186c193b850dcfa43e",
+  "configuration": "Release launch with default local setup; harness enables no tool, account, permission, playback, or network action.",
+  "scope": "Owned application process only. RSS excludes WindowServer, GPU allocations and other processes. This is runner idle-launch evidence, not physical Finder/notch performance.",
+  "startup_check_seconds": 3,
+  "warmup_seconds": 8,
+  "sample_interval_seconds": 1,
+  "measurement_intervals": 10,
+  "budgets": {
+    "mean_cpu_percent": 3.0,
+    "sampled_peak_rss_mb": 250.0
+  },
+  "cpu_method": "Delta of ps cumulative application CPU time divided by measured monotonic wall time; 100% means one fully occupied CPU core.",
+  "memory_method": "ps resident set in KiB, converted to decimal MB (1 MB = 1,000,000 bytes).",
+  "samples": [
+    {
+      "elapsed_seconds": 8.848689332999982,
+      "cumulative_cpu_seconds": 0.48,
+      "rss_kib": 85200,
+      "rss_mb": 87.2448,
+      "interval_cpu_percent": null
+    },
+    {
+      "elapsed_seconds": 10.000475666,
+      "cumulative_cpu_seconds": 0.48,
+      "rss_kib": 85200,
+      "rss_mb": 87.2448,
+      "interval_cpu_percent": 0.0
+    },
+    {
+      "elapsed_seconds": 11.114717499999983,
+      "cumulative_cpu_seconds": 0.48,
+      "rss_kib": 80400,
+      "rss_mb": 82.3296,
+      "interval_cpu_percent": 0.0
+    },
+    {
+      "elapsed_seconds": 12.240398625000012,
+      "cumulative_cpu_seconds": 0.49,
+      "rss_kib": 80400,
+      "rss_mb": 82.3296,
+      "interval_cpu_percent": 0.8883510416859621
+    },
+    {
+      "elapsed_seconds": 13.346448875000021,
+      "cumulative_cpu_seconds": 0.49,
+      "rss_kib": 80400,
+      "rss_mb": 82.3296,
+      "interval_cpu_percent": 0.0
+    },
+    {
+      "elapsed_seconds": 14.392753832999972,
+      "cumulative_cpu_seconds": 0.49,
+      "rss_kib": 80400,
+      "rss_mb": 82.3296,
+      "interval_cpu_percent": 0.0
+    },
+    {
+      "elapsed_seconds": 15.469492290999995,
+      "cumulative_cpu_seconds": 0.49,
+      "rss_kib": 80400,
+      "rss_mb": 82.3296,
+      "interval_cpu_percent": 0.0
+    },
+    {
+      "elapsed_seconds": 16.616652499999987,
+      "cumulative_cpu_seconds": 0.49,
+      "rss_kib": 80400,
+      "rss_mb": 82.3296,
+      "interval_cpu_percent": 0.0
+    },
+    {
+      "elapsed_seconds": 17.767394707999983,
+      "cumulative_cpu_seconds": 0.49,
+      "rss_kib": 80352,
+      "rss_mb": 82.280448,
+      "interval_cpu_percent": 0.0
+    },
+    {
+      "elapsed_seconds": 18.915264707999995,
+      "cumulative_cpu_seconds": 0.49,
+      "rss_kib": 80352,
+      "rss_mb": 82.280448,
+      "interval_cpu_percent": 0.0
+    },
+    {
+      "elapsed_seconds": 19.930032874999995,
+      "cumulative_cpu_seconds": 0.49,
+      "rss_kib": 80352,
+      "rss_mb": 82.280448,
+      "interval_cpu_percent": 0.0
+    }
+  ],
+  "startup_passed": true,
+  "measurement_seconds": 11.081343542000013,
+  "mean_cpu_percent": 0.09024176501791913,
+  "sampled_peak_rss_mb": 87.2448,
+  "cpu_budget_passed": true,
+  "rss_budget_passed": true,
+  "outcome": "passed"
+}

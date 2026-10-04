@@ -1,0 +1,40 @@
+{
+  "source_commit": "7dc43a6aec2a4d14657d41186c193b850dcfa43e",
+  "version": "0.3.0",
+  "archive_sha256": "f258c6fa17c303a088759cd87e6aa12035e451151aabb6cc7afef30c8f3b89fa",
+  "archive_bytes": 8414997,
+  "mach_o_slices": [
+    {
+      "cpu": "0x1000007",
+      "minimum_macos": [
+        14,
+        0,
+        0
+      ],
+      "foundation_models_weakly_linked": true,
+      "embedded_signature_present": true
+    },
+    {
+      "cpu": "0x100000c",
+      "minimum_macos": [
+        14,
+        0,
+        0
+      ],
+      "foundation_models_weakly_linked": true,
+      "embedded_signature_present": true
+    }
+  ],
+  "archive_contents_verified": true,
+  "executable_permissions_verified": true,
+  "five_app_intents_metadata_verified": true,
+  "apple_signature_verification_source": "genuine macOS CI",
+  "ci_signing": {
+    "kind": "adhoc",
+    "team_identifier": null,
+    "notarized": false,
+    "notarization_status": "pending_credentials",
+    "codesign_verified": true,
+    "hardened_runtime": false
+  }
+}
