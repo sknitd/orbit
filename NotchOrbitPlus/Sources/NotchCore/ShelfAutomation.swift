@@ -52,13 +52,53 @@ public struct CoreShelfCleanupPlan: Equatable, Sendable {
     public let excludedReferences: Int
     public let generatedAt: Date
     public init(itemIDs: [UUID], excludedReferences: Int, generatedAt: Date) { self.itemIDs = itemIDs; self.excludedReferences = excludedReferences; self.generatedAt = generatedAt }
-    public static func preview(items: [FileShelfItem], managedRoot: URL, olderThan date: Date, now: Date = Date()) -> Self {
+    /// A whole owned folder is moved, so every original inside it must be protected,
+    /// including originals belonging to another shelf or to a retained Undo entry.
+    /// An indexed original directory also protects all of its descendants.
+    public static func folderContainsOriginal(_ folder: URL, originalURLs: [URL]) -> Bool {
+        guard folder.isFileURL else { return true }
+        let path = folder.resolvingSymlinksInPath().standardizedFileURL.path
+        let prefix = path == "/" ? "/" : path + "/"
+        return originalURLs.contains { original in
+            guard original.isFileURL else { return true }
+            let canonicalOriginal = original.resolvingSymlinksInPath().standardizedFileURL
+            let originalPath = canonicalOriginal.path
+            if originalPath == path || originalPath.hasPrefix(prefix) { return true }
+            if original.hasDirectoryPath || (try? canonicalOriginal.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+                return path.hasPrefix(originalPath == "/" ? "/" : originalPath + "/")
+            }
+            return false
+        }
+    }
+    /// There is no recursive ownership inventory. Only an otherwise empty UUID
+    /// folder containing its single managed regular file is safe to move/remove.
+    public static func validateOwnedFileFolder(_ folder: URL, managedFileName: String) throws {
+        let folderInfo = try folder.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+        guard folderInfo.isDirectory == true, folderInfo.isSymbolicLink != true else { throw SyncFailure.invalid("The managed folder is not a private regular directory.") }
+        var enumerationFailed = false
+        guard let iterator = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey], options: [.skipsSubdirectoryDescendants], errorHandler: { _, _ in enumerationFailed = true; return false }),
+              let child = iterator.nextObject() as? URL, iterator.nextObject() == nil, !enumerationFailed,
+              child.lastPathComponent == managedFileName else {
+            throw SyncFailure.invalid("The managed folder contains unexpected entries; all contents were retained.")
+        }
+        let childInfo = try child.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+        guard childInfo.isRegularFile == true, childInfo.isSymbolicLink != true else {
+            throw SyncFailure.invalid("Directory copies and links have no complete ownership inventory; all contents were retained.")
+        }
+    }
+    public static func preview(items: [FileShelfItem], managedRoot: URL, olderThan date: Date, now: Date = Date(), protectedOriginalURLs: [URL] = []) -> Self {
         var eligible: [UUID] = [], references = 0
+        let originals = items.map(\.originalURL) + protectedOriginalURLs
         for item in items where item.addedAt <= date {
             guard let managed = item.managedURL else { references += 1; continue }
             let expected = managedRoot.standardizedFileURL.appendingPathComponent(item.id.uuidString, isDirectory: true)
             guard managed.standardizedFileURL.deletingLastPathComponent().path == expected.path,
-                  managed.standardizedFileURL.path != item.originalURL.standardizedFileURL.path else { continue }
+                  !folderContainsOriginal(expected, originalURLs: originals),
+                  expected.resolvingSymlinksInPath().deletingLastPathComponent().path == managedRoot.resolvingSymlinksInPath().standardizedFileURL.path,
+                  (try? expected.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true else { continue }
+            if (try? expected.checkResourceIsReachable()) == true {
+                guard (try? validateOwnedFileFolder(expected, managedFileName: managed.lastPathComponent)) != nil else { continue }
+            }
             eligible.append(item.id)
         }
         return Self(itemIDs: eligible, excludedReferences: references, generatedAt: now)

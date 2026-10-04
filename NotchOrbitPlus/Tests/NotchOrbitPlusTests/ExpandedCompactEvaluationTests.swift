@@ -66,8 +66,8 @@ final class ExpandedCompactEvaluationTests: XCTestCase {
     }
 
     @MainActor
-    private func accessibleElement(labeled label: String, below object: Any, depth: Int = 0) -> (any NSAccessibility)? {
-        guard depth < 20, let element = object as? any NSAccessibility else { return nil }
+    private func accessibleElement(labeled label: String, below object: Any, depth: Int = 0) -> (any NSAccessibilityProtocol)? {
+        guard depth < 20, let element = object as? any NSAccessibilityProtocol else { return nil }
         if element.accessibilityLabel() == label { return element }
         for child in element.accessibilityChildren() ?? [] {
             if let found = accessibleElement(labeled: label, below: child, depth: depth + 1) { return found }

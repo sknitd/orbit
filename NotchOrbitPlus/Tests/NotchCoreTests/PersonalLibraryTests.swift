@@ -76,10 +76,55 @@ final class PersonalLibraryTests: XCTestCase {
         let id = UUID(), valid = FileShelfItem(id: id, originalURL: original, managedURL: root.appendingPathComponent(id.uuidString).appendingPathComponent("file.txt"), addedAt: old)
         let reference = FileShelfItem(originalURL: original, addedAt: old)
         let foreign = FileShelfItem(originalURL: original, managedURL: URL(fileURLWithPath: "/outside/file.txt"), addedAt: old)
-        let originalAlias = FileShelfItem(originalURL: valid.managedURL!, managedURL: valid.managedURL!, addedAt: old)
+        let aliasID = UUID(), aliasURL = root.appendingPathComponent(aliasID.uuidString).appendingPathComponent("file.txt")
+        let originalAlias = FileShelfItem(id: aliasID, originalURL: aliasURL, managedURL: aliasURL, addedAt: old)
         let fresh = FileShelfItem(originalURL: original, addedAt: Date(timeIntervalSince1970: 1000))
         let plan = CoreShelfCleanupPlan.preview(items: [valid, reference, foreign, originalAlias, fresh], managedRoot: root, olderThan: Date(timeIntervalSince1970: 500))
         XCTAssertEqual(plan.itemIDs, [valid.id]); XCTAssertEqual(plan.excludedReferences, 1)
+    }
+    func testCleanupPlanProtectsOwnSiblingCrossShelfDescendantsAndDirectoryAncestors() throws {
+        let root = URL(fileURLWithPath: "/private/shelf", isDirectory: true), old = Date(timeIntervalSince1970: 100)
+        let id = UUID(), folder = root.appendingPathComponent(id.uuidString, isDirectory: true)
+        let original = URL(fileURLWithPath: "/original/source.txt")
+        let valid = FileShelfItem(id: id, originalURL: original, managedURL: folder.appendingPathComponent("copy.txt"), addedAt: old)
+        let siblingOriginal = FileShelfItem(id: id, originalURL: folder.appendingPathComponent("original.txt"), managedURL: valid.managedURL, addedAt: old)
+        XCTAssertTrue(CoreShelfCleanupPlan.preview(items: [siblingOriginal], managedRoot: root, olderThan: .distantFuture).itemIDs.isEmpty)
+        let crossShelfReference = FileShelfItem(originalURL: folder.appendingPathComponent("nested/original.txt"))
+        XCTAssertTrue(CoreShelfCleanupPlan.preview(items: [valid, crossShelfReference], managedRoot: root, olderThan: .distantFuture).itemIDs.isEmpty)
+        XCTAssertTrue(CoreShelfCleanupPlan.preview(items: [valid], managedRoot: root, olderThan: .distantFuture,
+            protectedOriginalURLs: [crossShelfReference.originalURL]).itemIDs.isEmpty, "A rule's shelf filter must not drop other shelves' originals")
+        XCTAssertTrue(CoreShelfCleanupPlan.preview(items: [valid], managedRoot: root, olderThan: .distantFuture,
+            protectedOriginalURLs: [root]).itemIDs.isEmpty, "A referenced directory protects its descendants")
+        let unrelated = URL(fileURLWithPath: folder.path + "-other", isDirectory: true)
+        XCTAssertEqual(CoreShelfCleanupPlan.preview(items: [valid], managedRoot: root, olderThan: .distantFuture,
+            protectedOriginalURLs: [unrelated]).itemIDs, [id], "Containment requires a path component boundary")
+    }
+    func testCleanupPlanUsesCanonicalPathsAndRejectsUnknownChildrenAndDirectoryCopies() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ShelfOwnership.\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let root = directory.appendingPathComponent("Managed", isDirectory: true), id = UUID()
+        let folder = root.appendingPathComponent(id.uuidString, isDirectory: true), copy = folder.appendingPathComponent("copy.txt")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try Data("copy".utf8).write(to: copy)
+        let item = FileShelfItem(id: id, originalURL: directory.appendingPathComponent("source.txt"), managedURL: copy)
+        XCTAssertEqual(CoreShelfCleanupPlan.preview(items: [item], managedRoot: root, olderThan: .distantFuture).itemIDs, [id])
+        let alias = directory.appendingPathComponent("alias", isDirectory: true)
+        try FileManager.default.createSymbolicLink(at: alias, withDestinationURL: root)
+        let aliasedOriginal = alias.appendingPathComponent(id.uuidString).appendingPathComponent("copy.txt")
+        XCTAssertTrue(CoreShelfCleanupPlan.preview(items: [item], managedRoot: root, olderThan: .distantFuture,
+            protectedOriginalURLs: [aliasedOriginal]).itemIDs.isEmpty)
+        let unexpected = folder.appendingPathComponent("unexpected-original.txt"), bytes = Data("Keep this unindexed original".utf8)
+        try bytes.write(to: unexpected)
+        XCTAssertThrowsError(try CoreShelfCleanupPlan.validateOwnedFileFolder(folder, managedFileName: copy.lastPathComponent))
+        XCTAssertTrue(CoreShelfCleanupPlan.preview(items: [item], managedRoot: root, olderThan: .distantFuture).itemIDs.isEmpty)
+        XCTAssertEqual(try Data(contentsOf: unexpected), bytes)
+        try FileManager.default.removeItem(at: unexpected); try FileManager.default.removeItem(at: copy)
+        try FileManager.default.createDirectory(at: copy, withIntermediateDirectories: false)
+        let descendant = copy.appendingPathComponent("original.txt"); try bytes.write(to: descendant)
+        XCTAssertThrowsError(try CoreShelfCleanupPlan.validateOwnedFileFolder(folder, managedFileName: copy.lastPathComponent))
+        XCTAssertTrue(CoreShelfCleanupPlan.preview(items: [item], managedRoot: root, olderThan: .distantFuture).itemIDs.isEmpty)
+        XCTAssertEqual(try Data(contentsOf: descendant), bytes)
     }
     func testPortableShelfRulesRoundTripWithoutFilesystemOrEnablementAndBoundTargets() throws {
         let shelf = CoreShelfCollection(name: "Screenshots")

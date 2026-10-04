@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import XCTest
 import NotchCore
 @testable import NotchOrbitPlus
@@ -17,7 +18,7 @@ private actor ProviderRequestFixture {
                 "trackings": [["id": "tracking-\(count)", "tracking_number": "AB123", "slug": "ups", "tag": "InTransit"]],
                 "pagination": ["has_next_page": endlessPackages, "next_cursor": "cursor-\(count)"]]])
         case "api.aviationstack.com":
-            return Data(#"{"data":[{"flight":{"iata":"BA123"},"flight_status":"active","departure":{"iata":"LHR","scheduled":"2026-10-08T10:00:00+00:00"},"arrival":{"iata":"JFK","scheduled":"2026-10-08T18:00:00+00:00"}}],"pagination":{"total":1}}"#.utf8)
+            return Data(#"{"data":[{"flight":{"iata":"BA123"},"flight_status":"active","departure":{"iata":"LHR","scheduled":"2026-10-08T10:00:00+00:00","terminal":null,"gate":"7"},"arrival":{"iata":"JFK","scheduled":"2026-10-08T18:00:00+00:00"}}],"pagination":{"total":1}}"#.utf8)
         case "v3.football.api-sports.io":
             if url.path == "/teams" { return Data(#"{"errors":[],"response":[{"team":{"id":42,"name":"Chosen FC","country":"England"}}]}"#.utf8) }
             return Data(#"{"errors":[],"response":[{"fixture":{"id":100,"date":"2026-10-08T10:00:00Z","status":{"short":"1H","long":"First Half","elapsed":24}},"teams":{"home":{"id":42,"name":"Chosen FC"},"away":{"id":43,"name":"Away FC"}},"goals":{"home":2,"away":1}}]}"#.utf8)
@@ -63,6 +64,10 @@ final class ProviderRequestContractTests: XCTestCase {
         defer { travel.shutdown(); sports.shutdown(); defaults.removePersistentDomain(forName: suite) }
         travel.flightCodeInput = "BA123"; travel.refreshFlight(); try await waitUntil { !travel.busy }
         XCTAssertEqual(travel.flights.first?.code, "BA123"); XCTAssertNil(travel.error)
+        XCTAssertNil(travel.flights.first?.terminal)
+        XCTAssertEqual(travel.flights.first?.gate, "7", "A reported gate does not require a terminal value")
+        try await NativeFeatureEvaluation.render(AnyView(TravelStatusToolView(service: travel)),
+                                                 named: "NotchOrbitPlus-Travel-fixture-gate-without-terminal.png")
         sports.teamQuery = "Chosen"; sports.searchTeams(); try await waitUntil { !sports.busy }
         sports.add(try XCTUnwrap(sports.searchResults.first)); sports.refresh(); try await waitUntil { !sports.busy }
         XCTAssertEqual(sports.games.first?.home.name, "Chosen FC"); XCTAssertEqual(sports.games.first?.homeScore, 2)

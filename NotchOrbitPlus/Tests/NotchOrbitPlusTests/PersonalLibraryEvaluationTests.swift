@@ -133,6 +133,116 @@ final class PersonalLibraryEvaluationTests: NativeImageFixtureCase, @unchecked S
     }
 
     @MainActor
+    func testOwnSiblingOriginalSurvivesEnabledExpiryRemoveAndConfirmedCleanup() throws {
+        let managed = fixtureDirectory.appendingPathComponent("SiblingOriginal", isDirectory: true), id = UUID()
+        let folder = managed.appendingPathComponent(id.uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let original = folder.appendingPathComponent("original.txt"), copy = folder.appendingPathComponent("copy.txt")
+        let originalBytes = Data("Indexed original sibling".utf8), copyBytes = Data("Managed copy".utf8)
+        try originalBytes.write(to: original); try copyBytes.write(to: copy)
+        let item = FileShelfItem(id: id, originalURL: original, managedURL: copy, addedAt: Date().addingTimeInterval(-10 * 86_400))
+        let store = FileShelfToolStore(managedDirectory: managed, persistState: false,
+            archive: .init(state: .init(items: [item], retention: .week)), onPortableChange: {})
+        defer { store.shutdown() }
+        try assertAllFolderRemovalPathsRefused(store, item: item)
+        XCTAssertEqual(try Data(contentsOf: original), originalBytes); XCTAssertEqual(try Data(contentsOf: copy), copyBytes)
+    }
+
+    @MainActor
+    func testCrossShelfCanonicalDescendantAndAncestorReferencesProtectWholeOwnedFolder() throws {
+        let managed = fixtureDirectory.appendingPathComponent("CrossShelfOriginal", isDirectory: true), id = UUID()
+        let folder = managed.appendingPathComponent(id.uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let original = fixtureDirectory.appendingPathComponent("external-original.txt"), copy = folder.appendingPathComponent("copy.txt"), bytes = Data("Original/reference must retain its exact location".utf8)
+        try bytes.write(to: original); try bytes.write(to: copy)
+        let alias = fixtureDirectory.appendingPathComponent("managed-alias", isDirectory: true)
+        try FileManager.default.createSymbolicLink(at: alias, withDestinationURL: managed)
+        let referenceURL = alias.appendingPathComponent(id.uuidString).appendingPathComponent(copy.lastPathComponent)
+        let item = FileShelfItem(id: id, originalURL: original, managedURL: copy, addedAt: Date().addingTimeInterval(-10 * 86_400))
+        let reference = FileShelfItem(originalURL: referenceURL)
+        let store = FileShelfToolStore(managedDirectory: managed, persistState: false,
+            archive: .init(state: .init(items: [item, reference], retention: .week)), onPortableChange: {})
+        defer { store.shutdown() }
+        XCTAssertTrue(store.collections.addShelf("Other shelf")); let other = try XCTUnwrap(store.collections.shelves.first(where: { $0.name == "Other shelf" }))
+        XCTAssertTrue(store.move([reference.id], to: other.id))
+        try assertAllFolderRemovalPathsRefused(store, item: item)
+        XCTAssertEqual(try Data(contentsOf: referenceURL), bytes); XCTAssertEqual(try Data(contentsOf: original), bytes)
+        let ancestorReference = FileShelfItem(originalURL: managed)
+        let ancestorStore = FileShelfToolStore(managedDirectory: managed, persistState: false,
+            archive: .init(state: .init(items: [item, ancestorReference], retention: .week)), onPortableChange: {})
+        defer { ancestorStore.shutdown() }
+        try assertAllFolderRemovalPathsRefused(ancestorStore, item: item)
+        XCTAssertEqual(try Data(contentsOf: copy), bytes)
+        XCTAssertEqual(try FileManager.default.destinationOfSymbolicLink(atPath: alias.path), managed.path)
+    }
+
+    @MainActor
+    func testUnexpectedSiblingsAndDirectoryCopyChildrenAreRetainedByAllRemovalPaths() throws {
+        let managed = fixtureDirectory.appendingPathComponent("UnknownContents", isDirectory: true), id = UUID()
+        let folder = managed.appendingPathComponent(id.uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let original = fixtureDirectory.appendingPathComponent("original-unknown.txt"), copy = folder.appendingPathComponent("copy.txt"), unexpected = folder.appendingPathComponent("unindexed-original.txt")
+        let bytes = Data("Retain every unknown file".utf8)
+        try bytes.write(to: original); try bytes.write(to: copy); try bytes.write(to: unexpected)
+        let item = FileShelfItem(id: id, originalURL: original, managedURL: copy, addedAt: Date().addingTimeInterval(-10 * 86_400))
+        let store = FileShelfToolStore(managedDirectory: managed, persistState: false,
+            archive: .init(state: .init(items: [item], retention: .week)), onPortableChange: {})
+        defer { store.shutdown() }
+        try assertAllFolderRemovalPathsRefused(store, item: item)
+        XCTAssertEqual(try Data(contentsOf: unexpected), bytes); XCTAssertEqual(try Data(contentsOf: copy), bytes)
+        try FileManager.default.removeItem(at: unexpected); try FileManager.default.removeItem(at: copy)
+        try FileManager.default.createDirectory(at: copy, withIntermediateDirectories: false)
+        let child = copy.appendingPathComponent("child-original.txt"); try bytes.write(to: child)
+        try assertAllFolderRemovalPathsRefused(store, item: item)
+        XCTAssertEqual(try Data(contentsOf: child), bytes); XCTAssertEqual(try Data(contentsOf: original), bytes)
+    }
+
+    @MainActor
+    func testRetainedTrashReferenceBlocksUndoImmediatelyAndAfterRelaunch() async throws {
+        let managed = fixtureDirectory.appendingPathComponent("ProtectedUndo", isDirectory: true), id = UUID()
+        let folder = managed.appendingPathComponent(id.uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let original = fixtureDirectory.appendingPathComponent("original-undo.txt"), copy = folder.appendingPathComponent("copy.txt"), bytes = Data("Retained path now explicitly referenced".utf8)
+        try bytes.write(to: original); try bytes.write(to: copy)
+        let item = FileShelfItem(id: id, originalURL: original, managedURL: copy)
+        let store = FileShelfToolStore(managedDirectory: managed, persistState: false,
+            archive: .init(state: .init(items: [item], retention: .forever)), onPortableChange: {})
+        defer { store.shutdown() }
+        store.remove(item); XCTAssertNil(store.error); XCTAssertTrue(store.canUndoRemoval)
+        let trash = managed.appendingPathComponent("ShelfTrash", isDirectory: true)
+        let batch = try XCTUnwrap(FileManager.default.contentsOfDirectory(at: trash, includingPropertiesForKeys: nil).first)
+        let retained = batch.appendingPathComponent(id.uuidString).appendingPathComponent(copy.lastPathComponent)
+        let undoBytes = try Data(contentsOf: batch.appendingPathComponent("undo.json"))
+        store.add(retained, forceCopy: false)
+        for _ in 0..<100 where store.items.isEmpty { try await Task.sleep(for: .milliseconds(20)) }
+        let reference = try XCTUnwrap(store.items.first); XCTAssertNil(reference.managedURL)
+        XCTAssertEqual(reference.originalURL.resolvingSymlinksInPath(), retained.resolvingSymlinksInPath())
+        store.undoRemoval(); XCTAssertNotNil(store.error); XCTAssertEqual(store.items.map(\.id), [reference.id])
+        XCTAssertFalse(FileManager.default.fileExists(atPath: copy.path)); XCTAssertEqual(try Data(contentsOf: retained), bytes)
+        XCTAssertEqual(try Data(contentsOf: batch.appendingPathComponent("undo.json")), undoBytes)
+        let reopened = FileShelfToolStore(managedDirectory: managed, persistState: false,
+            archive: .init(state: .init(items: [reference], retention: .forever)), onPortableChange: {})
+        defer { reopened.shutdown() }
+        XCTAssertFalse(reopened.canUndoRemoval); reopened.undoRemoval()
+        XCTAssertEqual(reopened.items.map(\.id), [reference.id]); XCTAssertEqual(try Data(contentsOf: retained), bytes)
+        XCTAssertEqual(try Data(contentsOf: original), bytes)
+        XCTAssertEqual(try Data(contentsOf: batch.appendingPathComponent("undo.json")), undoBytes)
+    }
+
+    @MainActor private func assertAllFolderRemovalPathsRefused(_ store: FileShelfToolStore, item: FileShelfItem) throws {
+        let ids = store.items.map(\.id)
+        store.pruneExpired(); XCTAssertFalse(store.cleanupPreview?.itemIDs.contains(item.id) ?? true)
+        let rule = CoreShelfRule(name: "Protected original expiry", kind: .expireOwnedCopies, days: 7)
+        XCTAssertTrue(store.collections.saveRule(rule)); store.previewRule(rule)
+        XCTAssertTrue(try XCTUnwrap(store.collections.preview).cleanupIDs.isEmpty)
+        store.collections.enablePreviewedRule(rule.id); XCTAssertTrue(store.collections.isEnabled(rule.id))
+        store.pruneExpired(); XCTAssertEqual(store.items.map(\.id), ids); XCTAssertFalse(store.expiryRequiresRetry)
+        store.remove(item); XCTAssertNotNil(store.error); XCTAssertEqual(store.items.map(\.id), ids)
+        store.confirmCleanup([item.id]); XCTAssertNotNil(store.error); XCTAssertEqual(store.items.map(\.id), ids)
+        XCTAssertFalse(store.canUndoRemoval)
+    }
+
+    @MainActor
     func testChosenFolderRuleDoesNotImportUntilActualPreviewAndExplicitEnable() async throws {
         let source = fixtureDirectory.appendingPathComponent("Chosen", isDirectory: true), managed = fixtureDirectory.appendingPathComponent("Managed", isDirectory: true)
         try FileManager.default.createDirectory(at: source, withIntermediateDirectories: false)

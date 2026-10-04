@@ -134,7 +134,8 @@ struct TravelStatusToolView: View {
                     Text("\(flight.code) · \(flight.origin) → \(flight.destination) · \(flight.status)").font(.callout)
                     Text("Scheduled \(flight.departure.formatted(date: .abbreviated, time: .shortened))").font(.caption)
                     if let estimated = flight.estimatedDeparture { Text("Provider estimate \(estimated.formatted(date: .abbreviated, time: .shortened))").font(.caption2) }
-                    if let terminal = flight.terminal { Text("Terminal \(terminal)\(flight.gate.map { " · Gate " + $0 } ?? "")").font(.caption2) }
+                    if let terminal = flight.terminal { Text("Terminal \(terminal)").font(.caption2) }
+                    if let gate = flight.gate { Text("Gate \(gate)").font(.caption2) }
                 }
             }.frame(height: 125)
             HStack { TextField("Optional HTTPS airline/train status page", text: $service.pageInput); Button("Open Page") { service.openPage() } }

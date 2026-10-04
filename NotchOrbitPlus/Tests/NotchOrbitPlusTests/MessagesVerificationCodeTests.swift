@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import NotchCore
 import SQLite3
 import XCTest
 @testable import NotchOrbitPlus

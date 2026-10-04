@@ -329,7 +329,7 @@ final class FileShelfToolStore: ObservableObject {
         guard let folder = try ownedFolder(for: item) else { return }
         if FileManager.default.fileExists(atPath: folder.path) { try FileManager.default.removeItem(at: folder) }
     }
-    private func ownedFolder(for item: FileShelfItem) throws -> URL? {
+    private func ownedFolder(for item: FileShelfItem, protecting additionalOriginals: [URL] = []) throws -> URL? {
         guard let managed = item.managedURL else { return nil }
         guard managed.isFileURL, item.originalURL.isFileURL else { throw CocoaError(.fileReadCorruptFile) }
         guard let directory = managedDirectory else { throw CocoaError(.fileWriteUnknown) }
@@ -337,11 +337,14 @@ final class FileShelfToolStore: ObservableObject {
         // Only the uniquely owned copy folder can be removed. References and
         // every original URL are excluded, including imported/tampered state.
         guard managed.standardizedFileURL.deletingLastPathComponent().path == folder.path,
-              managed.resolvingSymlinksInPath().standardizedFileURL.path != item.originalURL.resolvingSymlinksInPath().standardizedFileURL.path,
+              !CoreShelfCleanupPlan.folderContainsOriginal(folder, originalURLs: items.map(\.originalURL) + [item.originalURL] + additionalOriginals),
               folder.resolvingSymlinksInPath().deletingLastPathComponent().path == directory.resolvingSymlinksInPath().standardizedFileURL.path,
               (try? folder.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true else {
             throw NSError(domain: "NotchOrbitPlus.Shelf", code: 2,
-                          userInfo: [NSLocalizedDescriptionKey: "Refused to delete a path outside this entry's managed copy folder."])
+                          userInfo: [NSLocalizedDescriptionKey: "Refused to move an unowned folder or a folder containing an indexed original or reference."])
+        }
+        if try PlusSyncFolderIO.hasNode(folder) {
+            try CoreShelfCleanupPlan.validateOwnedFileFolder(folder, managedFileName: managed.lastPathComponent)
         }
         return folder
     }
@@ -361,7 +364,7 @@ final class FileShelfToolStore: ObservableObject {
         if let duration = retention.duration { ids.formUnion(CoreShelfCleanupPlan.preview(items: items, managedRoot: managedDirectory, olderThan: now.addingTimeInterval(-duration), now: now).itemIDs) }
         for rule in collections.rules where rule.kind == .expireOwnedCopies && collections.isEnabled(rule.id) {
             let eligible = items.filter { shelfID(for: $0) == rule.shelfID }
-            ids.formUnion(CoreShelfCleanupPlan.preview(items: eligible, managedRoot: managedDirectory, olderThan: now.addingTimeInterval(-Double(rule.days) * 86_400), now: now).itemIDs)
+            ids.formUnion(CoreShelfCleanupPlan.preview(items: eligible, managedRoot: managedDirectory, olderThan: now.addingTimeInterval(-Double(rule.days) * 86_400), now: now, protectedOriginalURLs: items.map(\.originalURL)).itemIDs)
         }
         cleanupPreview = CoreShelfCleanupPlan(itemIDs: items.map(\.id).filter { ids.contains($0) }, excludedReferences: items.filter { $0.managedURL == nil && $0.expired(at: now, retention: retention) }.count, generatedAt: now)
         if !ids.isEmpty { status = "\(ids.count) owned copy/copies are eligible. Preview and confirm cleanup; nothing was deleted automatically." }
@@ -393,7 +396,7 @@ final class FileShelfToolStore: ObservableObject {
         for rule in collections.rules where rule.kind == .expireOwnedCopies && collections.isEnabled(rule.id) {
             let eligible = items.filter { shelfID(for: $0) == rule.shelfID }
             ids.formUnion(CoreShelfCleanupPlan.preview(items: eligible, managedRoot: managedDirectory,
-                olderThan: now.addingTimeInterval(-Double(rule.days) * 86_400), now: now).itemIDs)
+                olderThan: now.addingTimeInterval(-Double(rule.days) * 86_400), now: now, protectedOriginalURLs: items.map(\.originalURL)).itemIDs)
         }
         guard !ids.isEmpty else { return }
         do {
@@ -432,7 +435,7 @@ final class FileShelfToolStore: ObservableObject {
             collections.preview = ShelfRulePreview(rule: rule, lines: ["Future captures become owned copies in \(collections.shelves.first(where: { $0.id == rule.shelfID })?.name ?? "Inbox").", "Tags: \(rule.tags.joined(separator: ", "))", "Formats: \(rule.fileExtensions.isEmpty ? "PNG / MOV / MP4" : rule.fileExtensions.joined(separator: ", "))"], fileURLs: [], cleanupIDs: [])
         case .expireOwnedCopies:
             let matching = items.filter { shelfID(for: $0) == rule.shelfID }
-            let plan = CoreShelfCleanupPlan.preview(items: matching, managedRoot: managedDirectory, olderThan: Date().addingTimeInterval(-Double(rule.days) * 86_400))
+            let plan = CoreShelfCleanupPlan.preview(items: matching, managedRoot: managedDirectory, olderThan: Date().addingTimeInterval(-Double(rule.days) * 86_400), protectedOriginalURLs: items.map(\.originalURL))
             collections.preview = ShelfRulePreview(rule: rule, lines: items.filter { plan.itemIDs.contains($0.id) }.map { $0.originalURL.lastPathComponent }, fileURLs: [], cleanupIDs: plan.itemIDs)
         }
     }
@@ -441,7 +444,7 @@ final class FileShelfToolStore: ObservableObject {
             guard let managedDirectory, Set(ids).count == ids.count, !ids.isEmpty else { throw SyncFailure.invalid("Preview the owned copies to clean up first.") }
             let selected = items.filter { ids.contains($0.id) }
             guard selected.count == ids.count else { throw SyncFailure.invalid("The shelf changed; preview again before confirming cleanup.") }
-            let eligible = CoreShelfCleanupPlan.preview(items: selected, managedRoot: managedDirectory, olderThan: .distantFuture)
+            let eligible = CoreShelfCleanupPlan.preview(items: selected, managedRoot: managedDirectory, olderThan: .distantFuture, protectedOriginalURLs: items.map(\.originalURL))
             guard eligible.itemIDs.count == selected.count else { throw SyncFailure.invalid("Cleanup excludes references, originals and unowned paths.") }
             try retainInTrash(selected); cleanupPreview = nil; error = nil
             status = "Retained \(selected.count) owned copies in private trash. Undo is available; originals are unchanged."
@@ -501,31 +504,52 @@ final class FileShelfToolStore: ObservableObject {
                 guard record.id.uuidString == folder.lastPathComponent, record.entries.count <= 200,
                       Set(record.entries.map { $0.item.id }).count == record.entries.count,
                       !record.entries.contains(where: { entry in items.contains(where: { $0.id == entry.item.id }) }) else { continue }
-                records.append(record)
+                do {
+                    _ = try restorationFolders(for: record, batch: folder)
+                    records.append(record)
+                } catch { self.error = "Retained shelf copies were left untouched because safe Undo is unavailable: \(error.localizedDescription)" }
             }
             lastTrash = records.max(by: { $0.removedAt < $1.removedAt }); canUndoRemoval = lastTrash != nil
         } catch { self.error = "Retained shelf copies could not be read: \(error.localizedDescription)" }
+    }
+    private func restorationFolders(for record: ShelfTrashRecord, batch: URL) throws -> [(source: URL, destination: URL)] {
+        let batchInfo = try batch.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+        guard batchInfo.isDirectory == true, batchInfo.isSymbolicLink != true,
+              batch.resolvingSymlinksInPath().deletingLastPathComponent().path == (try trashRoot()).resolvingSymlinksInPath().standardizedFileURL.path else { throw CocoaError(.fileReadCorruptFile) }
+        let originals = items.map(\.originalURL) + record.entries.map { $0.item.originalURL }
+        return try record.entries.compactMap { entry in
+            guard let managed = entry.item.managedURL,
+                  let destination = try ownedFolder(for: entry.item, protecting: originals) else { return nil }
+            let source = batch.appendingPathComponent(entry.item.id.uuidString, isDirectory: true)
+            guard !CoreShelfCleanupPlan.folderContainsOriginal(source, originalURLs: originals) else {
+                throw SyncFailure.invalid("The retained folder contains an indexed original or reference; it cannot be moved by Undo.")
+            }
+            let info = try source.resourceValues(forKeys: [.isSymbolicLinkKey, .isDirectoryKey])
+            guard !(try PlusSyncFolderIO.hasNode(destination)), info.isSymbolicLink != true, info.isDirectory == true,
+                  source.resolvingSymlinksInPath().deletingLastPathComponent().path == batch.resolvingSymlinksInPath().standardizedFileURL.path else { throw CocoaError(.fileWriteFileExists) }
+            try CoreShelfCleanupPlan.validateOwnedFileFolder(source, managedFileName: managed.lastPathComponent)
+            return (source, destination)
+        }
     }
     func undoRemoval() {
         guard let record = lastTrash else { return }
         do {
             guard items.count + record.entries.count <= 200, record.entries.allSatisfy({ entry in !items.contains(where: { $0.id == entry.item.id }) }) else { throw SyncFailure.invalid("Undo would duplicate entries or exceed 200 files; current originals are unchanged.") }
+            let batch = try trashRoot().appendingPathComponent(record.id.uuidString, isDirectory: true)
+            // Check every source and destination before any move or setting change.
+            // A reference may have been added after this Undo record was loaded.
+            let folders = try restorationFolders(for: record, batch: batch)
             let shelfIDs = Set(record.entries.map { entry in
                 let id = entry.metadata.shelfID ?? CoreShelfCollection.inboxID
                 return collections.shelves.contains(where: { $0.id == id }) ? id : CoreShelfCollection.inboxID
             })
             try collections.disableExpiryRules(for: shelfIDs)
-            let batch = try trashRoot().appendingPathComponent(record.id.uuidString, isDirectory: true)
             let indexURL = try indexURL()
             let previousIndex = try indexURL.flatMap { try PlusSyncFolderIO.hasNode($0) ? PlusSyncFolderIO.boundedData($0, limit: 40 * 1024 * 1024) : nil }
             if let previousIndex { try previousIndex.write(to: batch.appendingPathComponent("index-before-undo.json"), options: .atomic) }
             var moved: [(URL, URL)] = []
             do {
-                for entry in record.entries {
-                    guard let destination = try ownedFolder(for: entry.item) else { continue }
-                    let source = batch.appendingPathComponent(entry.item.id.uuidString, isDirectory: true)
-                    let sourceInfo = try source.resourceValues(forKeys: [.isSymbolicLinkKey, .isDirectoryKey])
-                    guard !(try PlusSyncFolderIO.hasNode(destination)), sourceInfo.isSymbolicLink != true, sourceInfo.isDirectory == true else { throw CocoaError(.fileWriteFileExists) }
+                for (source, destination) in folders {
                     try FileManager.default.moveItem(at: source, to: destination); moved.append((source, destination))
                 }
                 var nextMetadata = metadata; for entry in record.entries { nextMetadata[entry.item.id.uuidString] = entry.metadata }
