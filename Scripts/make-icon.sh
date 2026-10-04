@@ -43,12 +43,22 @@ func drawIcon(side: Int, destination: URL) throws {
     try png.write(to: destination, options: .atomic)
 }
 
-let output = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
-for points in [16, 32, 128, 256, 512] {
-    try drawIcon(side: points, destination: output.appendingPathComponent("icon_\(points)x\(points).png"))
-    try drawIcon(side: points * 2, destination: output.appendingPathComponent("icon_\(points)x\(points)@2x.png"))
+@main
+struct CornerIconRenderer {
+    @MainActor
+    static func main() throws {
+        let output = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
+        for points in [16, 32, 128, 256, 512] {
+            try drawIcon(side: points, destination: output.appendingPathComponent("icon_\(points)x\(points).png"))
+            try drawIcon(side: points * 2, destination: output.appendingPathComponent("icon_\(points)x\(points)@2x.png"))
+        }
+    }
 }
 SWIFT
-xcrun swift -module-cache-path "$task_root/build/icon-module-cache" build/DrawCornerIcon.swift "$task_root/build/AppIcon.iconset"
+icon_arch="$(uname -m)"
+xcrun swiftc -parse-as-library -swift-version 6 -strict-concurrency=complete \
+  -target "$icon_arch-apple-macos14.0" -sdk "$(xcrun --sdk macosx --show-sdk-path)" \
+  -module-cache-path "$task_root/build/icon-module-cache" build/DrawCornerIcon.swift -o build/DrawCornerIcon
+build/DrawCornerIcon "$task_root/build/AppIcon.iconset"
 iconutil -c icns build/AppIcon.iconset -o build/AppIcon.icns
 [[ -s build/AppIcon.icns ]]
