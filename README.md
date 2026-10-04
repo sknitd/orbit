@@ -4,11 +4,11 @@ Three native macOS utilities share local file transformation engines:
 
 | App | How to open file actions | Download and setup |
 | --- | --- | --- |
-| **NotchOrbitPlus** | Hover or click the notch dashboard for nineteen additional tool areas; retain NotchOrbit's key-free file actions. | [Features and setup](NotchOrbitPlus/README.md) |
+| **NotchOrbitPlus** | Hover or click the notch dashboard for nineteen additional tool areas; retain NotchOrbit's key-free file actions. | [Download NotchOrbitPlus.app.zip](https://github.com/sknitd/orbit/raw/fd634cffb5e5cdac27235355dcaef539de6350fb/NotchOrbitPlus.app.zip) · [Features and setup](NotchOrbitPlus/README.md) |
 | **NotchOrbit** | Drag files toward the MacBook notch or display's top center. No modifier key; actions appear in a native semicircle. | [Download NotchOrbit.app.zip](https://github.com/sknitd/orbit/raw/22d4fddbf7dda0beb49e88219c3087a5f6a63f83/NotchOrbit.app.zip) · [Setup and preview](NotchOrbit/README.md) |
 | **OrbitDrop** | Drag files and hold Shift to open a radial wheel near the pointer. | [OrbitDrop download and installation](#download-and-install) |
 
-NotchOrbit has its own project, app bundle, and preferences in the [NotchOrbit/](NotchOrbit/) subdirectory. Both apps target macOS 14 or later on Apple Silicon and Intel.
+NotchOrbit and NotchOrbitPlus have separate projects, app bundles, preferences and storage in [NotchOrbit/](NotchOrbit/) and [NotchOrbitPlus/](NotchOrbitPlus/). All three apps target macOS 14 or later on Apple Silicon and Intel. NotchOrbitPlus's on-device AI additionally requires an eligible macOS 26+ Apple Intelligence configuration.
 
 ## OrbitDrop
 

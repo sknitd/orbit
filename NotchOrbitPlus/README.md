@@ -6,15 +6,25 @@ The [OmniNotch reference page](https://omninotch.app/) inspected on October 4, 2
 
 ## Install and open
 
-The universal app targets **macOS 14 or later**, on Apple Silicon and Intel. The verified app download and build evidence will be published here after the native build completes.
+[**Download NotchOrbitPlus.app.zip**](https://github.com/sknitd/orbit/raw/fd634cffb5e5cdac27235355dcaef539de6350fb/NotchOrbitPlus.app.zip) · [SHA-256 checksum](https://github.com/sknitd/orbit/blob/fd634cffb5e5cdac27235355dcaef539de6350fb/NotchOrbitPlus.app.zip.sha256)
+
+The universal app targets **macOS 14 or later**, on Apple Silicon and Intel. Developer tools are not needed to run it. If this repository is private, sign in to GitHub with access before downloading.
 
 1. Extract `NotchOrbitPlus.app.zip`, move the entire app to Applications, and open it.
 2. Hover or click the compact strip below the notch. **⌘⌃N** toggles the dashboard without observing other typing. Pin it to keep it open.
-3. Use Settings to choose hover/click opening, delay, width, display, tab order and visible tools.
+3. Use Settings to choose hover/click opening, delay, width (560–800 points), display, tab order and visible tools.
 4. Enable Input Monitoring only if you want automatic Finder-drag file actions. Calendar, Reminders, Mirror and Now Playing request their own permissions when you connect or start them.
 5. Clipboard history starts only after you enable it. Connected tools provide explicit Refresh/Connect controls and display errors rather than invented data.
 
 The development app is ad hoc signed and **not notarized**. If macOS blocks it, try opening it, then use System Settings → Privacy & Security → Open Anyway if offered. Each Mac needs its own permission grants and integration setup. Developer tools are not required to run the packaged app.
+
+This is version **0.1.0**, built from source `872ea4eab4fbec98d81d622b6100d41cdf5a71ab` by [macOS CI run 37198489083](https://github.com/sknitd/orbit/actions/runs/37198489083). All **115 tests passed**: 37 shared core, 54 NotchOrbitPlus core and 24 hosted native tests, with no failures or skips. Universal Release compilation, strict signature verification and startup checks passed. Native tests rendered all twenty dashboard tools; public weather and foreign-exchange responses were fetched and decoded successfully. See [EVALUATION.md](EVALUATION.md) for evidence and remaining Mac/account checks.
+
+ZIP SHA-256:
+
+```text
+e478befe9db4cc4bd4d171c3378015c204a4c62acd19366945a96e6f9fb05e4a
+```
 
 ## Tools and requirements
 
@@ -67,3 +77,15 @@ bash NotchOrbitPlus/Scripts/cloud-core-tests.sh
 ```
 
 The independent workflow `.github/workflows/notchorbitplus.yml` uses a real macOS 26/Xcode 26 runner and publishes status, logs, previews and successful app packages on `codex/notch-plus-builds/run-<id>-<attempt>` branches for Git-only retrieval.
+
+## Native previews
+
+These are captures of the actual native panels from the verified build. They show the dashboard's converter, file shelf and note editor, followed by the inherited file-action semicircle. Interactive Finder dragging and physical-notch placement still need Mac acceptance.
+
+![Converter in the NotchOrbitPlus dashboard](docs/NotchOrbitPlus-Dashboard-converter.png)
+
+![File Shelf with its visible native drop area](docs/NotchOrbitPlus-Dashboard-fileShelf.png)
+
+![Quick Note multiline editor](docs/NotchOrbitPlus-Dashboard-quickNote.png)
+
+![NotchOrbitPlus native file-action semicircle](docs/NotchOrbitPlus-Convert.png)
