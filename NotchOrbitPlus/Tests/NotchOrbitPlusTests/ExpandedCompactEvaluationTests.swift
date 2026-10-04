@@ -1,4 +1,5 @@
 import AppKit
+import ObjectiveC
 import SwiftUI
 import XCTest
 import NotchCore
@@ -65,8 +66,16 @@ final class ExpandedCompactEvaluationTests: XCTestCase {
             XCTAssertEqual(button.accessibilityRole(), .button)
             XCTAssertEqual(button.accessibilityLabel(), label)
             XCTAssertEqual(button.accessibilityIdentifier(), identifier)
-            XCTAssertTrue(exposesAccessibleAction(identifier: identifier, below: host),
-                          "The compact action must be reachable through the actual hosting view's accessibility children")
+            let semanticAction = try XCTUnwrap(CompactAccessibilityFixture.action(identifier: identifier, below: host)
+                ?? CompactAccessibilityFixture.action(identifier: identifier, below: window),
+                "The action must be reachable through the owned host/window accessibility tree: \(CompactAccessibilityFixture.tree(below: host)); \(CompactAccessibilityFixture.tree(below: window))")
+            XCTAssertEqual(CompactAccessibilityFixture.role(of: semanticAction), "AXButton")
+            XCTAssertEqual(CompactAccessibilityFixture.label(of: semanticAction), label)
+            XCTAssertTrue(CompactAccessibilityFixture.press(semanticAction))
+            try await NativeFeatureEvaluation.waitUntil("The semantic accessibility action routes its displayed fixture", condition: { routed.count == 1 })
+            XCTAssertEqual(routed, [status])
+            XCTAssertEqual(opens, 0)
+            routed.removeAll()
             XCTAssertTrue(button.accessibilityPerformPress())
             try await NativeFeatureEvaluation.waitUntil("The owned native action routes its displayed fixture", condition: { routed.count == 1 })
             XCTAssertEqual(routed, [status], "Copy/Reveal must route the displayed record, not an unrelated current item")
@@ -87,19 +96,91 @@ final class ExpandedCompactEvaluationTests: XCTestCase {
         return nil
     }
 
-    @MainActor
-    private func exposesAccessibleAction(identifier: String, below object: Any, depth: Int = 0) -> Bool {
-        guard depth < 40 else { return false }
-        let children: [Any]
-        if let view = object as? NSView {
-            if view.isAccessibilityElement(), view.accessibilityIdentifier() == identifier,
-               view.accessibilityRole() == .button { return true }
-            children = view.accessibilityChildren() ?? []
-        } else if let element = object as? any NSAccessibilityProtocol {
-            if element.isAccessibilityElement(), element.accessibilityIdentifier() == identifier,
-               element.accessibilityRole() == .button { return true }
-            children = element.accessibilityChildren() ?? []
-        } else { return false }
-        return children.contains { exposesAccessibleAction(identifier: identifier, below: $0, depth: depth + 1) }
+}
+
+/// These fixtures read only the owned window's documented accessibility getters.
+/// SwiftUI virtual elements may implement them without declaring formal protocol
+/// conformance, so the public Objective-C signatures are checked before calling.
+@MainActor
+enum CompactAccessibilityFixture {
+    static func role(of object: NSObject) -> String? {
+        stringValue(object, getter: "accessibilityRole", attribute: "AXRole")
+    }
+    static func label(of object: NSObject) -> String? {
+        stringValue(object, getter: "accessibilityLabel", attribute: "AXDescription")
+            ?? stringValue(object, getter: "accessibilityLabel", attribute: "AXTitle")
+    }
+    static func identifier(of object: NSObject) -> String? {
+        stringValue(object, getter: "accessibilityIdentifier", attribute: "AXIdentifier")
+    }
+    static func action(identifier: String, below root: Any) -> NSObject? {
+        var pending: [(Any, Int)] = [(root, 0)], seen = Set<ObjectIdentifier>(), visited = 0
+        while let (value, depth) = pending.popLast(), visited < 512 {
+            guard depth < 40, let object = value as? NSObject, seen.insert(ObjectIdentifier(object)).inserted else { continue }
+            visited += 1
+            if self.identifier(of: object) == identifier, role(of: object) == "AXButton" { return object }
+            pending.append(contentsOf: children(of: object).map { ($0, depth + 1) })
+        }
+        return nil
+    }
+    static func press(_ object: NSObject) -> Bool {
+        if let view = object as? NSView { return view.accessibilityPerformPress() }
+        if let element = object as? any NSAccessibilityProtocol { return element.accessibilityPerformPress() }
+        let selector = NSSelectorFromString("accessibilityPerformPress")
+        if object.responds(to: selector), let method = class_getInstanceMethod(type(of: object), selector),
+           method_getNumberOfArguments(method) == 2, let encoding = method_getTypeEncoding(method),
+           encoding.pointee == 66 || encoding.pointee == 99 { // BOOL: B or c.
+            typealias PublicPress = @convention(c) (AnyObject, Selector) -> Bool
+            let perform = unsafeBitCast(method_getImplementation(method), to: PublicPress.self)
+            return perform(object, selector)
+        }
+        let legacySelector = NSSelectorFromString("accessibilityPerformAction:")
+        guard let actions = objectValue(object, selector: "accessibilityActionNames") as? [String], actions.contains("AXPress"),
+              object.responds(to: legacySelector), let method = class_getInstanceMethod(type(of: object), legacySelector),
+              method_getNumberOfArguments(method) == 3, let encoding = method_getTypeEncoding(method), encoding.pointee == 118,
+              let argument = method_copyArgumentType(method, 2) else { return false } // Void return only.
+        defer { free(argument) }
+        guard argument.pointee == 64 else { return false } // Object argument only.
+        typealias PublicLegacyPress = @convention(c) (AnyObject, Selector, NSString) -> Void
+        let perform = unsafeBitCast(method_getImplementation(method), to: PublicLegacyPress.self)
+        perform(object, legacySelector, "AXPress")
+        // Legacy API has no result. The caller must also prove the exact action
+        // callback, rather than interpreting dispatch alone as success.
+        return true
+    }
+    static func tree(below root: Any) -> [[String: Any]] {
+        var pending: [(Any, Int)] = [(root, 0)], seen = Set<ObjectIdentifier>(), output: [[String: Any]] = []
+        while let (value, depth) = pending.popLast(), output.count < 512 {
+            guard depth < 40, let object = value as? NSObject, seen.insert(ObjectIdentifier(object)).inserted else { continue }
+            let childValues = children(of: object)
+            output.append(["type": String(reflecting: type(of: object)), "depth": depth,
+                "role": role(of: object) ?? "(nil)", "label": label(of: object) ?? "(nil)",
+                "identifier": identifier(of: object) ?? "(nil)", "children": childValues.count,
+                "formal_protocol": object is any NSAccessibilityProtocol,
+                "modern_children_getter": object.responds(to: NSSelectorFromString("accessibilityChildren")),
+                "legacy_attribute_getter": object.responds(to: NSSelectorFromString("accessibilityAttributeValue:")),
+                "modern_press": object.responds(to: NSSelectorFromString("accessibilityPerformPress")),
+                "legacy_press": object.responds(to: NSSelectorFromString("accessibilityPerformAction:")),
+                "declared_actions": objectValue(object, selector: "accessibilityActionNames") as? [String] ?? []])
+            pending.append(contentsOf: childValues.map { ($0, depth + 1) })
+        }
+        return output
+    }
+    private static func children(of object: NSObject) -> [Any] {
+        let modern = objectValue(object, selector: "accessibilityChildren") as? [Any] ?? []
+        let legacy = objectValue(object, selector: "accessibilityAttributeValue:", argument: "AXChildren") as? [Any] ?? []
+        return modern + legacy
+    }
+    private static func stringValue(_ object: NSObject, getter: String, attribute: String) -> String? {
+        (objectValue(object, selector: getter) as? String)
+            ?? (objectValue(object, selector: "accessibilityAttributeValue:", argument: attribute) as? String)
+    }
+    private static func objectValue(_ object: NSObject, selector name: String, argument: String? = nil) -> Any? {
+        let selector = NSSelectorFromString(name)
+        guard object.responds(to: selector), let method = class_getInstanceMethod(type(of: object), selector),
+              let encoding = method_getTypeEncoding(method), encoding.pointee == 64,
+              method_getNumberOfArguments(method) == (argument == nil ? 2 : 3) else { return nil } // Object return only.
+        if let argument { return object.perform(selector, with: argument)?.takeUnretainedValue() }
+        return object.perform(selector)?.takeUnretainedValue()
     }
 }

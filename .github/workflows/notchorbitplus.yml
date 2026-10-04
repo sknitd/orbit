@@ -60,6 +60,9 @@ jobs:
       - name: Validate the production plugin sandbox
         id: plugin_probe
         run: bash NotchOrbitPlus/Scripts/plugin-sandbox-probe.sh
+      - name: Validate compact activity accessibility
+        id: compact_probe
+        run: bash NotchOrbitPlus/Scripts/compact-accessibility-probe.sh
       - name: Test and build NotchOrbitPlus
         id: build
         shell: bash
@@ -95,6 +98,7 @@ jobs:
             NotchOrbitPlus/build/public-probes/
             NotchOrbitPlus/build/provider-docs/
             NotchOrbitPlus/build/plugin-sandbox-probe/
+            NotchOrbitPlus/build/compact-accessibility-probe/
             NotchOrbitPlus/build/evaluation/*.png
             NotchOrbitPlus/build/DerivedData/Logs/Test/*.xcresult
       - name: Preserve NotchOrbitPlus result for Git retrieval
@@ -105,6 +109,7 @@ jobs:
           PUBLIC_PROBES_OUTCOME: ${{ steps.public_probes.outcome }}
           UPDATE_FEED_OUTCOME: ${{ steps.update_feed.outcome }}
           PLUGIN_PROBE_OUTCOME: ${{ steps.plugin_probe.outcome }}
+          COMPACT_PROBE_OUTCOME: ${{ steps.compact_probe.outcome }}
         shell: bash
         run: |
           set -euo pipefail
@@ -142,6 +147,9 @@ jobs:
           if [[ -d NotchOrbitPlus/build/plugin-sandbox-probe ]]; then
             cp -R NotchOrbitPlus/build/plugin-sandbox-probe "$report_dir/"
           fi
+          if [[ -d NotchOrbitPlus/build/compact-accessibility-probe ]]; then
+            cp -R NotchOrbitPlus/build/compact-accessibility-probe "$report_dir/"
+          fi
           if [[ "$BUILD_OUTCOME" == success && -f NotchOrbitPlus/dist/NotchOrbitPlus.app.zip ]]; then
             cp NotchOrbitPlus/dist/NotchOrbitPlus.app.zip NotchOrbitPlus/dist/NotchOrbitPlus.app.zip.sha256 "$report_dir/"
           fi
@@ -153,6 +161,7 @@ jobs:
             'public_service_probes_outcome': os.environ['PUBLIC_PROBES_OUTCOME'],
             'update_feed_outcome': os.environ['UPDATE_FEED_OUTCOME'],
             'plugin_sandbox_probe_outcome': os.environ['PLUGIN_PROBE_OUTCOME'],
+            'compact_accessibility_probe_outcome': os.environ['COMPACT_PROBE_OUTCOME'],
             'runner': 'macos-26', 'run_id': os.environ['GITHUB_RUN_ID'],
             'native_notch_drag_acceptance': 'requires interactive Mac validation'
           }, indent=2) + '\n')
@@ -174,6 +183,7 @@ jobs:
           if [[ -d public-probes ]]; then git add --force public-probes; fi
           if [[ -d provider-docs ]]; then git add --force provider-docs; fi
           if [[ -d plugin-sandbox-probe ]]; then git add --force plugin-sandbox-probe; fi
+          if [[ -d compact-accessibility-probe ]]; then git add --force compact-accessibility-probe; fi
           if [[ -f NotchOrbitPlus.app.zip ]]; then git add --force NotchOrbitPlus.app.zip NotchOrbitPlus.app.zip.sha256; fi
           git commit -m "NotchOrbitPlus build results for ${SOURCE_COMMIT}"
           git push origin HEAD

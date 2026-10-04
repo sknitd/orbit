@@ -135,6 +135,11 @@ struct LiveCompactContent: View {
                 if let action = primary.action, let onActivityAction {
                     CompactActivityActionButton(status: primary, action: action, perform: onActivityAction)
                         .frame(width: 24, height: 24)
+                        .accessibilityRepresentation {
+                            Button(action == .copyVerificationCode ? "Copy one-time code" : "Reveal completed download") {
+                                onActivityAction(primary)
+                            }.accessibilityIdentifier(action == .copyVerificationCode ? "NotchOrbitPlus.compact.copyVerificationCode" : "NotchOrbitPlus.compact.revealFile")
+                        }
                 }
                 ForEach(Array(ordered.dropFirst().prefix(2))) { activity in
                     Image(systemName: activity.kind.symbol).font(.system(size: 9)).foregroundStyle(.secondary)
