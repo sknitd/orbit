@@ -65,6 +65,8 @@ final class ExpandedCompactEvaluationTests: XCTestCase {
             XCTAssertEqual(button.accessibilityRole(), .button)
             XCTAssertEqual(button.accessibilityLabel(), label)
             XCTAssertEqual(button.accessibilityIdentifier(), identifier)
+            XCTAssertTrue(exposesAccessibleAction(identifier: identifier, below: host),
+                          "The compact action must be reachable through the actual hosting view's accessibility children")
             XCTAssertTrue(button.accessibilityPerformPress())
             try await NativeFeatureEvaluation.waitUntil("The owned native action routes its displayed fixture", condition: { routed.count == 1 })
             XCTAssertEqual(routed, [status], "Copy/Reveal must route the displayed record, not an unrelated current item")
@@ -83,5 +85,21 @@ final class ExpandedCompactEvaluationTests: XCTestCase {
             if let found = nativeActionButton(identifier: identifier, below: child, depth: depth + 1) { return found }
         }
         return nil
+    }
+
+    @MainActor
+    private func exposesAccessibleAction(identifier: String, below object: Any, depth: Int = 0) -> Bool {
+        guard depth < 40 else { return false }
+        let children: [Any]
+        if let view = object as? NSView {
+            if view.isAccessibilityElement(), view.accessibilityIdentifier() == identifier,
+               view.accessibilityRole() == .button { return true }
+            children = view.accessibilityChildren() ?? []
+        } else if let element = object as? any NSAccessibilityProtocol {
+            if element.isAccessibilityElement(), element.accessibilityIdentifier() == identifier,
+               element.accessibilityRole() == .button { return true }
+            children = element.accessibilityChildren() ?? []
+        } else { return false }
+        return children.contains { exposesAccessibleAction(identifier: identifier, below: $0, depth: depth + 1) }
     }
 }

@@ -200,7 +200,7 @@ private struct CompactActivityActionButton: NSViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator(status: status, perform: perform) }
     func makeNSView(context: Context) -> NSButton {
-        let button = NSButton(title: "", target: context.coordinator, action: #selector(Coordinator.press(_:)))
+        let button = CompactActivityNativeButton(title: "", target: context.coordinator, action: #selector(Coordinator.press(_:)))
         button.isBordered = false
         button.bezelStyle = .regularSquare
         button.imagePosition = .imageOnly
@@ -230,5 +230,17 @@ private struct CompactActivityActionButton: NSViewRepresentable {
             self.status = status; self.perform = perform
         }
         @objc func press(_ sender: NSButton) { perform(status) }
+    }
+}
+
+/// Hosted icon actions expose a button role and use the same target/action route
+/// for accessibility presses and ordinary mouse clicks.
+@MainActor
+private final class CompactActivityNativeButton: NSButton {
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .button }
+    override func accessibilityPerformPress() -> Bool {
+        guard isEnabled, let action else { return false }
+        return NSApp.sendAction(action, to: target, from: self)
     }
 }
