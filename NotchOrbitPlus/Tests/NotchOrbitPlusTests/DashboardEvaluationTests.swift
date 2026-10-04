@@ -78,12 +78,14 @@ final class DashboardEvaluationTests: XCTestCase {
     }
 
     @MainActor
-    func testAllActualToolsRenderInTheNativeDashboardAndFitTheDisplay() async throws {
+    func testAllActualToolsRenderAtMinimumWidthAndFitTheDisplay() async throws {
         let suite = "DashboardRenderTests-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let preferences = DashboardPreferences(defaults: defaults)
         preferences.toolOrder = ["converter", "todos", "quickNote", "emoji", "system"]
+        preferences.width = 420 // An old narrow setting must migrate to a usable width.
+        XCTAssertEqual(preferences.width, 560)
         preferences.keyboardShortcutEnabled = false
         let controller = NotchDashboardController(
             modules: NotchAppDelegate.dashboardModules(chooseFiles: {

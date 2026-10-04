@@ -17,6 +17,8 @@ public struct DashboardToolMetadata: Identifiable, Equatable, Sendable {
 
 @MainActor
 public final class DashboardPreferences: ObservableObject {
+    // The widest embedded tool needs 500 points, plus the shell's side padding.
+    public static let widthRange = 560.0...800.0
     @Published public var hiddenToolIDs: Set<String> { didSet { defaults.set(Array(hiddenToolIDs).sorted(), forKey: key("hidden")) } }
     @Published public var toolOrder: [String] { didSet { defaults.set(toolOrder, forKey: key("order")) } }
     @Published public var openMode: DashboardOpenMode { didSet { defaults.set(openMode.rawValue, forKey: key("mode")) } }
@@ -52,7 +54,9 @@ public final class DashboardPreferences: ObservableObject {
     }
     private func key(_ suffix: String) -> String { prefix + suffix }
     private static func delay(_ value: Double) -> Double { value.isFinite ? min(1.5, max(0, value)) : 0.2 }
-    private static func panelWidth(_ value: Double) -> Double { value.isFinite ? min(800, max(420, value)) : 620 }
+    private static func panelWidth(_ value: Double) -> Double {
+        value.isFinite ? min(widthRange.upperBound, max(widthRange.lowerBound, value)) : 620
+    }
 
     func register(_ tools: [DashboardToolMetadata]) {
         registeredTools = tools
@@ -93,7 +97,7 @@ public struct DashboardSettingsView: View {
                     Text("s").foregroundStyle(.secondary)
                 }.disabled(preferences.openMode == .clickOnly)
                 LabeledContent("Dashboard width") {
-                    Slider(value: $preferences.width, in: 420...800, step: 10).frame(width: 160)
+                    Slider(value: $preferences.width, in: DashboardPreferences.widthRange, step: 10).frame(width: 160)
                     Text("\(Int(preferences.width)) pt").monospacedDigit()
                 }
                 Picker("Display", selection: $preferences.displaySelection) {
