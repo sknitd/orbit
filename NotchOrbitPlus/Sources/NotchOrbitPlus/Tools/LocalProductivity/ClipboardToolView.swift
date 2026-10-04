@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
+import NotchCore
 
 enum ClipKind: String, Codable, CaseIterable, Sendable {
     case text, link, image, files
@@ -75,6 +76,15 @@ final class ClipboardToolStore: ObservableObject {
             boundHistory()
         } catch { self.error = "Could not load clipboard history: \(error.localizedDescription)" }
     }
+    var searchEntries: [CoreSearchEntry] {
+        clips.prefix(100).compactMap { clip in
+            let text = clip.text ?? clip.recognizedText ?? ""
+            guard CoreVerificationCodeParser.code(in: text) == nil else { return nil }
+            return CoreSearchEntry(id: "clipboard:\(clip.id.uuidString)", title: String(clip.title.prefix(140)),
+                detail: "Clipboard · \(clip.kind.title)", content: String(text.prefix(100_000)), toolID: "clipboard",
+                fileURL: clip.files.first.flatMap { $0.isFileURL ? $0 : nil })
+        }
+    }
     deinit {
         observation?.cancel()
         for task in ocrTasks.values { task.cancel() }
@@ -134,6 +144,9 @@ final class ClipboardToolStore: ObservableObject {
             return
         }
         guard let clip, board.changeCount == lastCount else { return }
+        if let text = clip.text, CoreVerificationCodeParser.code(in: text) != nil {
+            status = "Skipped a message containing a verification code."; return
+        }
         if let first = clips.first, first.sameContent(as: clip) { return }
         clips.insert(clip, at: 0)
         boundHistory()
@@ -250,6 +263,7 @@ struct ClipboardToolView: View {
     @ObservedObject private var store = ClipboardToolStore.shared
     @State private var search = ""
     @State private var filter = "all"
+    @State private var showTransformer = false
     private var visible: [LocalClip] {
         store.clips.filter {
             (filter == "all" || $0.kind.rawValue == filter ||
@@ -312,6 +326,9 @@ struct ClipboardToolView: View {
                         .buttonStyle(.borderless).help("Delete clip").accessibilityLabel("Delete clip")
                 }.contextMenu {
                     Button("Copy Again") { store.copy(clip) }
+                    if let text = clip.text ?? clip.recognizedText {
+                        Button("Load in Text Transformer") { ClipboardTransformStore.shared.load(text); showTransformer = true }
+                    }
                     if clip.kind == .image {
                         Button("Recognize Text Locally") { store.recognizeText(in: clip) }
                             .disabled(store.ocrRunning.contains(clip.id) || store.ocrRunning.count >= 2)
@@ -329,6 +346,7 @@ struct ClipboardToolView: View {
                 Text("\(store.clips.count)/100 · 20 MB maximum · ⌥-click deletes")
                     .font(.caption2).foregroundStyle(.secondary)
             }
+            DisclosureGroup("Text Transformers", isExpanded: $showTransformer) { ClipboardTransformToolView().padding(.top, 8) }
         }.padding()
     }
 }

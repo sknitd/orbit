@@ -69,6 +69,11 @@ file_keys.append("file:emoji")
 obj("file:third-party", "PBXFileReference", 'lastKnownFileType = folder; path = Resources/ThirdParty; sourceTree = SOURCE_ROOT;')
 obj("resource:third-party", "PBXBuildFile", f"fileRef = {ident('file:third-party')};")
 file_keys.append("file:third-party")
+for resource in ["Plugins", "CommandHelpers"]:
+    key = "file:" + resource
+    obj(key, "PBXFileReference", f"lastKnownFileType = folder; path = Resources/{resource}; sourceTree = SOURCE_ROOT;")
+    obj("resource:" + resource, "PBXBuildFile", f"fileRef = {ident(key)};")
+    file_keys.append(key)
 products = {
     "OrbitCore": ("libOrbitCore.a", "archive.ar"),
     "NotchCore": ("libNotchCore.a", "archive.ar"),
@@ -103,7 +108,7 @@ for target, deps in dependencies.items():
         obj(link, "PBXBuildFile", f"fileRef = {ident('product:' + dependency)};")
         links.append(link)
     obj("frameworks:" + target, "PBXFrameworksBuildPhase", f"buildActionMask = 2147483647; files = {refs(links)}; runOnlyForDeploymentPostprocessing = 0;")
-    obj("resources:" + target, "PBXResourcesBuildPhase", f"buildActionMask = 2147483647; files = {refs(['resource:icon', 'resource:emoji', 'resource:third-party'] if target == 'NotchOrbitPlus' else [])}; runOnlyForDeploymentPostprocessing = 0;")
+    obj("resources:" + target, "PBXResourcesBuildPhase", f"buildActionMask = 2147483647; files = {refs(['resource:icon', 'resource:emoji', 'resource:third-party', 'resource:Plugins', 'resource:CommandHelpers'] if target == 'NotchOrbitPlus' else [])}; runOnlyForDeploymentPostprocessing = 0;")
     product_type = ("com.apple.product-type.library.static" if target in {"OrbitCore", "NotchCore"}
                     else "com.apple.product-type.application" if target == "NotchOrbitPlus"
                     else "com.apple.product-type.bundle.unit-test")
@@ -133,7 +138,7 @@ for scope in ["project", *products]:
             settings.update({"INFOPLIST_FILE": "Resources/Info.plist", "PRODUCT_BUNDLE_IDENTIFIER": "com.sknitd.NotchOrbitPlus",
                              "SWIFT_OBJC_BRIDGING_HEADER": "../Sources/OrbitDrop/WebPBridge.h",
                              "HEADER_SEARCH_PATHS": "$(inherited) $(SRCROOT)/../build/WebP/include",
-                             "OTHER_LDFLAGS": "$(inherited) -L$(SRCROOT)/../build/WebP/lib -lwebp -lsharpyuv -weak_framework FoundationModels",
+                             "OTHER_LDFLAGS": "$(inherited) -L$(SRCROOT)/../build/WebP/lib -lwebp -lsharpyuv -weak_framework FoundationModels -weak_framework Translation",
                              "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/../Frameworks"})
         if scope == "NotchOrbitPlusTests":
             settings.update({"GENERATE_INFOPLIST_FILE": "YES", "PRODUCT_BUNDLE_IDENTIFIER": "com.sknitd.NotchOrbitPlusTests",

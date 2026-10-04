@@ -74,16 +74,16 @@ struct NotchDashboardView: View {
     }
 
     private var compact: some View {
-        Button(action: toggleExpanded) {
-            HStack(spacing: 10) {
-                compactContent().lineLimit(1)
-                Spacer(minLength: 4)
+        HStack(spacing: 10) {
+            compactContent().lineLimit(1)
+            Spacer(minLength: 4)
+            Button(action: toggleExpanded) {
                 Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
-            }.padding(.horizontal, 14).frame(maxWidth: .infinity, maxHeight: .infinity)
-                .contentShape(Rectangle())
-        }.buttonStyle(.plain)
+                    .frame(width: 18, height: 24).contentShape(Rectangle())
+            }.buttonStyle(.plain)
             .accessibilityLabel("Open NotchOrbitPlus dashboard")
             .help(preferences.openMode == .hoverAndClick ? "Hover or click to open" : "Click to open")
+        }.padding(.horizontal, 14).frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var expandedContent: some View {
@@ -92,6 +92,12 @@ struct NotchDashboardView: View {
                 Image(systemName: "rectangle.topthird.inset.filled").font(.system(size: 13)).foregroundStyle(.secondary)
                 Text("NotchOrbitPlus").font(.system(size: 12, weight: .semibold))
                 Spacer()
+                if visibleModules.contains(where: { $0.id == PlusTool.globalSearch.rawValue }) {
+                    Button { presentation.selectedToolID = PlusTool.globalSearch.rawValue } label: {
+                        Image(systemName: "magnifyingglass").font(.system(size: 12))
+                    }.help("Search local tools and content").accessibilityLabel("Global search")
+                        .keyboardShortcut("f", modifiers: .command)
+                }
                 Button { presentation.pinned.toggle() } label: {
                     Image(systemName: presentation.pinned ? "pin.fill" : "pin").font(.system(size: 12))
                 }.help(presentation.pinned ? "Unpin dashboard" : "Keep dashboard open")

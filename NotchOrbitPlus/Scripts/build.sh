@@ -29,6 +29,12 @@ executable="$app_path/Contents/MacOS/NotchOrbitPlus"
 [[ -s "$app_path/Contents/Resources/AppIcon.icns" ]]
 [[ -s "$app_path/Contents/Resources/EmojiCatalog.json" ]]
 [[ -s "$app_path/Contents/Resources/ThirdParty/Unicode-LICENSE.txt" ]]
+for task_resource in Plugins/HelloOrbit/manifest.json Plugins/HelloOrbit/hello.sh \
+  Plugins/ClipboardLength/manifest.json Plugins/ClipboardLength/count.sh \
+  CommandHelpers/orbit-notify CommandHelpers/orbit-run; do
+  [[ -s "$app_path/Contents/Resources/$task_resource" ]]
+  cmp "$task_root/Resources/$task_resource" "$app_path/Contents/Resources/$task_resource"
+done
 lipo "$executable" -verify_arch arm64 x86_64
 mkdir -p "$app_path/Contents/Resources/ThirdParty" dist
 cp "$repository_root/build/ThirdParty/libwebp-COPYING.txt" "$app_path/Contents/Resources/ThirdParty/"
@@ -54,13 +60,19 @@ for architecture in architectures:
     foundation_loads = [block for block in loads.split('Load command ') if '/FoundationModels.framework/' in block]
     if len(foundation_loads) != 1 or 'LC_LOAD_WEAK_DYLIB' not in foundation_loads[0]:
         raise SystemExit(f'FoundationModels must be weak-linked for {architecture}.')
+    translation_loads = [block for block in loads.split('Load command ') if '/Translation.framework/' in block]
+    if len(translation_loads) != 1 or 'LC_LOAD_WEAK_DYLIB' not in translation_loads[0]:
+        raise SystemExit(f'Translation must be weak-linked for {architecture}.')
 pathlib.Path('build/package-verification.json').write_text(json.dumps({
     'product': 'NotchOrbitPlus', 'bundle_identifier': info['CFBundleIdentifier'],
     'version': info.get('CFBundleShortVersionString'), 'architectures': sorted(architectures),
     'signature': 'Developer ID' if signing['kind'] == 'developer-id' else 'ad hoc',
     'signing_team_identifier': signing['team_identifier'], 'notarized': signing['notarized'],
     'notarization_status': signing['notarization_status'], 'codesign_verified': True, 'startup_smoke_seconds': 3,
-    'foundation_models_weak_linked': True, 'minimum_macos': info.get('LSMinimumSystemVersion'),
+    'foundation_models_weak_linked': True, 'translation_weak_linked': True,
+    'bundled_plugin_samples_verified': ['HelloOrbit', 'ClipboardLength'],
+    'bundled_command_helpers_verified': ['orbit-notify', 'orbit-run'],
+    'minimum_macos': info.get('LSMinimumSystemVersion'),
     'idle_performance': {
         'outcome': performance['outcome'], 'warmup_seconds': performance['warmup_seconds'],
         'measurement_seconds': performance['measurement_seconds'],

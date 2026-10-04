@@ -38,6 +38,7 @@ public final class DashboardPreferences: ObservableObject {
         }
     }
     @Published public var displaySelection: String { didSet { defaults.set(displaySelection, forKey: key("display")) } }
+    @Published public var menuBarFallbackEnabled: Bool { didSet { defaults.set(menuBarFallbackEnabled, forKey: key("menuFallback")) } }
     @Published public var keyboardShortcutEnabled: Bool { didSet { defaults.set(keyboardShortcutEnabled, forKey: key("shortcut")) } }
     @Published public var spaceBehavior: DashboardSpaceBehavior { didSet { defaults.set(spaceBehavior.rawValue, forKey: key("spaces")) } }
     @Published public var hideInFullscreen: Bool { didSet { defaults.set(hideInFullscreen, forKey: key("fullscreen")) } }
@@ -61,6 +62,7 @@ public final class DashboardPreferences: ObservableObject {
         hoverDelay = Self.delay(defaults.object(forKey: prefix + "delay") as? Double ?? 0.2)
         width = Self.panelWidth(defaults.object(forKey: prefix + "width") as? Double ?? 620)
         displaySelection = defaults.string(forKey: prefix + "display") ?? "primary"
+        menuBarFallbackEnabled = defaults.bool(forKey: prefix + "menuFallback")
         keyboardShortcutEnabled = defaults.object(forKey: prefix + "shortcut") as? Bool ?? true
         spaceBehavior = DashboardSpaceBehavior(rawValue: defaults.string(forKey: prefix + "spaces") ?? "") ?? .allSpaces
         hideInFullscreen = defaults.bool(forKey: prefix + "fullscreen")
@@ -169,6 +171,7 @@ public struct DashboardSettingsView: View {
                     }
                 }.id(displayRevision)
                 Toggle("Keyboard shortcut: ⌘⌃N", isOn: $preferences.keyboardShortcutEnabled)
+                Toggle("On notchless displays, click the menu bar icon to open the dashboard", isOn: $preferences.menuBarFallbackEnabled)
                 Picker("Spaces", selection: $preferences.spaceBehavior) {
                     ForEach(DashboardSpaceBehavior.allCases) { behavior in Text(behavior.title).tag(behavior) }
                 }
@@ -178,7 +181,7 @@ public struct DashboardSettingsView: View {
                         .font(.caption).foregroundStyle(.secondary)
                     Button("Connect Accessibility for Fullscreen Detection") { PlusFullscreenDetection.requestAccess() }
                 }
-                Text("Hover and clicks do not need Input Monitoring. A global keyboard shortcut may require macOS permission. File actions temporarily hide the dashboard.")
+                Text("Hover and clicks do not need Input Monitoring. The global keyboard shortcut does not monitor typing or request permission. File actions temporarily hide the dashboard.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Per-display behaviour") {

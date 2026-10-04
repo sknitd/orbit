@@ -118,6 +118,52 @@ final class PlusLauncherStore: ObservableObject {
         }
     }
 
+    func openFiles(_ urls: [URL], with pin: PlusLauncherPin) {
+        guard !busy, pins.contains(where: { $0.id == pin.id }) else { return }
+        perform {
+            try LauncherDropPolicy.validate(kind: pin.kind, urls: urls)
+            for url in urls {
+                let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+                guard values.isRegularFile == true, values.isSymbolicLink != true else {
+                    throw SyncFailure.invalid("Choose regular files rather than aliases, folders or symbolic links.")
+                }
+            }
+            let resolution = try await Task.detached(priority: .userInitiated) { try PlusLauncherBookmarks.resolve(pin) }.value
+            try Task.checkCancellation(); try self.apply(resolution, for: pin.id)
+            let access = ([resolution.url] + urls).map { ($0, $0.startAccessingSecurityScopedResource()) }
+            defer { for (url, started) in access where started { url.stopAccessingSecurityScopedResource() } }
+            let configuration = NSWorkspace.OpenConfiguration(); configuration.activates = true
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+                NSWorkspace.shared.open(urls, withApplicationAt: resolution.url, configuration: configuration) { _, error in
+                    if let error { continuation.resume(throwing: error) } else { continuation.resume() }
+                }
+            }
+            self.status = "Opened \(urls.count) file(s) with \(pin.label)."
+        }
+    }
+    func receiveFiles(_ providers: [NSItemProvider], with pin: PlusLauncherPin) -> Bool {
+        guard !busy, pin.kind == .application, !providers.isEmpty, providers.count <= 100,
+              providers.allSatisfy({ $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) }) else { return false }
+        Task { @MainActor in
+            do {
+                var urls: [URL] = []
+                for provider in providers {
+                    let url: URL = try await withCheckedThrowingContinuation { continuation in
+                        provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, error in
+                            if let error { continuation.resume(throwing: error); return }
+                            if let url = item as? URL { continuation.resume(returning: url) }
+                            else if let data = item as? Data, let url = URL(dataRepresentation: data, relativeTo: nil) { continuation.resume(returning: url) }
+                            else { continuation.resume(throwing: SyncFailure.invalid("A dropped file URL could not be read.")) }
+                        }
+                    }
+                    urls.append(url)
+                }
+                self.openFiles(urls, with: pin)
+            } catch { self.status = error.localizedDescription }
+        }
+        return true
+    }
+
     func rename(_ id: UUID, to label: String) {
         guard !busy, let index = pins.firstIndex(where: { $0.id == id }) else { return }
         var next = pins
@@ -369,6 +415,9 @@ struct QuickLauncherToolView: View {
                             Button("Unpin", role: .destructive) { model.unpin(pin.id) }
                         } label: { Image(systemName: "ellipsis") }.menuStyle(.borderlessButton).fixedSize().disabled(model.busy)
                     }.padding(.vertical, 4)
+                        .contentShape(Rectangle())
+                        .onDrop(of: [UTType.fileURL], isTargeted: nil) { providers in model.receiveFiles(providers, with: pin) }
+                        .help(pin.kind == .application ? "Drop files to open them with this application" : "Launch this pinned target")
                 }
                 if model.filteredPins.isEmpty { Text("No pinned targets match this search.").foregroundStyle(.secondary) }
             } else if !model.needsReset { Text("Choose an app, folder, or shortcut to add your first pin.").foregroundStyle(.secondary) }

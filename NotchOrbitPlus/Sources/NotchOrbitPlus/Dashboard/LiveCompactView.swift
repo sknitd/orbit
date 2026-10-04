@@ -25,7 +25,7 @@ enum PlusLiveStatus {
         let focus = FocusTimerService.shared
         if let countdown = focus.compactText {
             values.append(.init(id: "focus", kind: .focus, title: countdown,
-                detail: focus.timer.isPaused ? "Paused" : focus.timer.phase == .rest ? "Break" : "Focus", toolID: "timers"))
+                detail: focus.timer.isPaused ? "Paused" : focus.timer.phase == .rest ? "Break" : FocusAppHidingStore.shared.hiddenCount > 0 ? "Focus · \(FocusAppHidingStore.shared.hiddenCount) apps hidden" : "Focus", toolID: "timers"))
         }
         let music = PlusNowPlayingStore.shared
         if music.backgroundMonitoring, music.connected, let track = music.snapshot, !track.title.isEmpty {
@@ -60,6 +60,19 @@ enum PlusLiveStatus {
                     detail: "Another application", toolID: "status"))
             }
         }
+        values.append(contentsOf: DownloadsService.shared.liveStatuses)
+        values.append(contentsOf: CommandsService.shared.liveStatuses)
+        let dictation = DictationToolStore.shared
+        if dictation.isListening {
+            values.append(.init(id: "dictation", kind: .dictation, title: "Dictating to Quick Note",
+                detail: "On-device microphone capture", toolID: PlusTool.dictation.rawValue, waveform: dictation.waveform))
+        }
+        if let code = VerificationCodesStore.shared.liveStatus, code.isVisible(at: date) {
+            values.append(.init(id: "verification:\(code.id)", kind: .verificationCode, title: code.code,
+                detail: "One-time code · \(max(0, Int(ceil(code.expiresAt.timeIntervalSince(date)))))s", toolID: PlusTool.verificationCodes.rawValue, action: .copyVerificationCode))
+        }
+        values.append(contentsOf: [PackageTrackerService.shared.liveStatus, TravelStatusService.shared.liveStatus,
+            SportsScoresService.shared.liveStatus, OnlineWeatherModel.shared.liveStatus].compactMap { $0 })
         let visible = values.filter { preferences?.hiddenToolIDs.contains($0.toolID) != true }
         return LiveNotchSelection.ordered(visible, priorityOrder: PlusLivePriorityStore.shared.priorityOrder)
     }
@@ -68,6 +81,7 @@ enum PlusLiveStatus {
 @MainActor
 struct PlusCompactView: View {
     let model: AppModel
+    var openDashboard: (@MainActor () -> Void)? = nil
     @ObservedObject var preferences: DashboardPreferences
     @ObservedObject private var timer = FocusTimerService.shared
     @ObservedObject private var meetings = PlusMeetingService.shared
@@ -77,10 +91,27 @@ struct PlusCompactView: View {
     @ObservedObject private var devices = DevicesService.shared
     @ObservedObject private var priorities = PlusLivePriorityStore.shared
     @ObservedObject private var status = StatusService.shared
+    @ObservedObject private var downloads = DownloadsService.shared
+    @ObservedObject private var commands = CommandsService.shared
+    @ObservedObject private var dictation = DictationToolStore.shared
+    @ObservedObject private var codes = VerificationCodesStore.shared
+    @ObservedObject private var package = PackageTrackerService.shared
+    @ObservedObject private var travel = TravelStatusService.shared
+    @ObservedObject private var sports = SportsScoresService.shared
+    @ObservedObject private var weather = OnlineWeatherModel.shared
+    @ObservedObject private var focusApps = FocusAppHidingStore.shared
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             LiveCompactContent(statuses: PlusLiveStatus.statuses(model: model, at: context.date, preferences: preferences),
-                musicArtwork: music.artwork, priorityOrder: priorities.priorityOrder, hudSnapshot: controls.hud)
+                musicArtwork: music.artwork, priorityOrder: priorities.priorityOrder, hudSnapshot: controls.hud,
+                openDashboard: openDashboard, onActivityAction: { status in
+                    switch status.action {
+                    case .copyVerificationCode:
+                        if let code = codes.codes.first(where: { "verification:\($0.id)" == status.id }) { codes.copy(code) }
+                    case .revealFile: downloads.reveal(statusID: status.id)
+                    case nil: break
+                    }
+                })
         }
     }
 }
@@ -91,42 +122,71 @@ struct LiveCompactContent: View {
     var musicArtwork: NSImage? = nil
     var priorityOrder: [LiveNotchKind] = LiveNotchKind.defaultOrder
     var hudSnapshot: SystemHUDSnapshot? = nil
+    var openDashboard: (@MainActor () -> Void)? = nil
+    var onActivityAction: (@MainActor (LiveNotchStatus) -> Void)? = nil
     private var ordered: [LiveNotchStatus] { LiveNotchSelection.ordered(statuses, priorityOrder: priorityOrder) }
     var body: some View {
         HStack(spacing: 7) {
             if let primary = ordered.first {
-                if primary.kind == .hud, let hudSnapshot {
-                    Image(systemName: hudSnapshot.symbol).accessibilityHidden(true)
-                } else if primary.kind == .music, let musicArtwork {
-                    Image(nsImage: musicArtwork).resizable().scaledToFill().frame(width: 22, height: 22)
-                        .clipShape(RoundedRectangle(cornerRadius: 4)).accessibilityHidden(true)
-                } else if primary.kind == .processing, let progress = primary.progress {
-                    ZStack {
-                        Circle().stroke(.white.opacity(0.18), lineWidth: 2)
-                        Circle().trim(from: 0, to: progress).stroke(Color.accentColor, style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                            .rotationEffect(.degrees(-90))
-                    }.frame(width: 18, height: 18).accessibilityHidden(true)
-                } else { Image(systemName: primary.kind.symbol).foregroundStyle(.secondary).accessibilityHidden(true) }
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(primary.title).font(.system(size: 11, weight: .medium)).lineLimit(1)
-                    if !primary.detail.isEmpty { Text(primary.detail).font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1) }
-                }.frame(maxWidth: .infinity, alignment: .leading)
-                if primary.kind == .processing, let progress = primary.progress {
-                    Text("\(Int(progress * 100))%").font(.system(size: 10)).monospacedDigit()
-                }
-                if primary.kind == .hud, let progress = primary.progress {
-                    ProgressView(value: progress).frame(width: 42).accessibilityLabel(primary.title)
-                        .accessibilityValue("\(Int(progress * 100)) percent")
+                if let openDashboard {
+                    Button(action: openDashboard) { primaryLabel(primary) }.buttonStyle(.plain)
+                        .accessibilityLabel("Open \(primary.title): \(primary.detail)")
+                } else { primaryLabel(primary) }
+                if let action = primary.action, let onActivityAction {
+                    Button { onActivityAction(primary) } label: {
+                        Image(systemName: action == .copyVerificationCode ? "doc.on.doc" : "folder")
+                    }.buttonStyle(.plain)
+                        .help(action == .copyVerificationCode ? "Copy one-time code" : "Reveal completed download")
+                        .accessibilityLabel(action == .copyVerificationCode ? "Copy one-time code" : "Reveal completed download")
                 }
                 ForEach(Array(ordered.dropFirst().prefix(2))) { activity in
                     Image(systemName: activity.kind.symbol).font(.system(size: 9)).foregroundStyle(.secondary)
                         .help("\(activity.title) · \(activity.detail)").accessibilityLabel("\(activity.title) \(activity.detail)")
                 }
-            } else {
-                Image(systemName: "rectangle.topthird.inset.filled")
-                Text("NotchOrbitPlus").font(.system(size: 11, weight: .medium))
-            }
+            } else if let openDashboard {
+                Button(action: openDashboard) { idleLabel }.buttonStyle(.plain).accessibilityLabel("Open NotchOrbitPlus dashboard")
+            } else { idleLabel }
         }.help(ordered.map { "\($0.title) \($0.detail)" }.joined(separator: "\n"))
-            .accessibilityElement(children: .combine)
+            .accessibilityElement(children: .contain)
+    }
+    private var idleLabel: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "rectangle.topthird.inset.filled")
+            Text("NotchOrbitPlus").font(.system(size: 11, weight: .medium))
+        }.frame(maxWidth: .infinity, alignment: .leading)
+    }
+    private func primaryLabel(_ primary: LiveNotchStatus) -> some View {
+        HStack(spacing: 7) {
+            if primary.kind == .hud, let hudSnapshot {
+                Image(systemName: hudSnapshot.symbol).accessibilityHidden(true)
+            } else if primary.kind == .music, let musicArtwork {
+                Image(nsImage: musicArtwork).resizable().scaledToFill().frame(width: 22, height: 22)
+                    .clipShape(RoundedRectangle(cornerRadius: 4)).accessibilityHidden(true)
+            } else if [.processing, .downloads].contains(primary.kind), let progress = primary.progress {
+                ZStack {
+                    Circle().stroke(.white.opacity(0.18), lineWidth: 2)
+                    Circle().trim(from: 0, to: progress).stroke(Color.accentColor, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                }.frame(width: 18, height: 18).accessibilityHidden(true)
+            } else { Image(systemName: primary.kind.symbol).foregroundStyle(.secondary).accessibilityHidden(true) }
+            VStack(alignment: .leading, spacing: 1) {
+                Text(primary.title).font(.system(size: 11, weight: .medium)).lineLimit(1)
+                if !primary.detail.isEmpty { Text(primary.detail).font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1) }
+            }.frame(maxWidth: .infinity, alignment: .leading)
+            if [.processing, .downloads].contains(primary.kind), let progress = primary.progress {
+                Text("\(Int(progress * 100))%").font(.system(size: 10)).monospacedDigit()
+            }
+            if primary.kind == .dictation, !primary.waveform.isEmpty {
+                HStack(alignment: .center, spacing: 1) {
+                    ForEach(Array(primary.waveform.suffix(16).enumerated()), id: \.offset) { sample in
+                        Capsule().fill(Color.accentColor).frame(width: 2, height: max(0.5, sample.element * 20))
+                    }
+                }.frame(height: 20).accessibilityLabel("Live microphone waveform")
+            }
+            if primary.kind == .hud, let progress = primary.progress {
+                ProgressView(value: progress).frame(width: 42).accessibilityLabel(primary.title)
+                    .accessibilityValue("\(Int(progress * 100)) percent")
+            }
+        }.contentShape(Rectangle())
     }
 }

@@ -2,7 +2,8 @@ import SwiftUI
 import NotchCore
 
 @MainActor
-private final class ToDosToolStore: ObservableObject {
+final class ToDosToolStore: ObservableObject {
+    static let shared = ToDosToolStore()
     @Published var items: [ToDoItem] = []
     @Published var error: String?
     private var dirty = false
@@ -47,7 +48,7 @@ private final class ToDosToolStore: ObservableObject {
 
 @MainActor
 struct ToDosToolView: View {
-    @StateObject private var store = ToDosToolStore()
+    @StateObject private var store = ToDosToolStore.shared
     @ObservedObject private var sync = PlusSyncService.shared
     @State private var draft = ""
     @State private var filter = "open"

@@ -141,18 +141,26 @@ final class PlusSyncService: ObservableObject {
     }
     private func readPortableLibrary() throws -> SyncPortableLibrary {
         let value = SyncPortableLibrary(launcherPins: try PlusLauncherStore.shared.exportSyncedPins(),
-            workflows: try WorkflowStore.shared.exportSyncedPresets(), palettes: try CoreColorPaletteLibrary.decode(ColorPickerStore.shared.exportData()))
+            workflows: try WorkflowStore.shared.exportSyncedPresets(), palettes: try CoreColorPaletteLibrary.decode(ColorPickerStore.shared.exportData()),
+            snippets: try SnippetsStore.shared.exportSyncedLibrary(), habits: try HabitsStore.shared.exportSyncedLibrary(),
+            shelves: try FileShelfToolStore.shared.collections.exportSyncedLibrary())
         try value.validate(); return value
     }
     private func validatePortableApply(_ snapshot: SyncSnapshot) throws {
         if let values = snapshot.launcherPins.preferred(on: snapshot.deviceID) { try PlusLauncherStore.shared.validateSyncedPins(values) }
         if let values = snapshot.workflows.preferred(on: snapshot.deviceID) { try WorkflowStore.shared.validateSyncedPresets(values) }
         if let values = snapshot.palettes.preferred(on: snapshot.deviceID) { try ColorPickerStore.shared.validateSyncImport(values.encoded()) }
+        if let values = snapshot.snippets.preferred(on: snapshot.deviceID) { try SnippetsStore.shared.validateSyncedLibrary(values) }
+        if let values = snapshot.habits.preferred(on: snapshot.deviceID) { try HabitsStore.shared.validateSyncedLibrary(values) }
+        if let values = snapshot.shelves.preferred(on: snapshot.deviceID) { try FileShelfToolStore.shared.collections.validateSyncedLibrary(values) }
     }
     private func applyPortable(_ snapshot: SyncSnapshot) throws {
         if let values = snapshot.launcherPins.preferred(on: snapshot.deviceID) { try PlusLauncherStore.shared.applySyncedPins(values) }
         if let values = snapshot.workflows.preferred(on: snapshot.deviceID) { try WorkflowStore.shared.applySyncedPresets(values) }
         if let values = snapshot.palettes.preferred(on: snapshot.deviceID) { try ColorPickerStore.shared.applySyncedData(values.encoded()) }
+        if let values = snapshot.snippets.preferred(on: snapshot.deviceID) { try SnippetsStore.shared.applySyncedLibrary(values) }
+        if let values = snapshot.habits.preferred(on: snapshot.deviceID) { try HabitsStore.shared.applySyncedLibrary(values) }
+        if let values = snapshot.shelves.preferred(on: snapshot.deviceID) { try FileShelfToolStore.shared.collections.applySyncedLibrary(values) }
     }
     func reportUnsavedLocalChanges() { if enabled { unsavedLocal = true } }
     private func mutate(_ change: (inout SyncSnapshot) throws -> Void) {
@@ -248,7 +256,9 @@ final class PlusSyncService: ObservableObject {
         } else { settingsRollback = nil }
         let transaction = try PlusSyncLocalTransaction(in: LocalToolStorage.directory(), files: [
             ("quick-note.txt", 200_000), ("todos.json", 4 * 1024 * 1024),
-            ("sync-state-v1.json", SyncSnapshot.maximumBytes), ("color-picker-v1.json", CoreColorPaletteLibrary.maximumBytes)
+            ("sync-state-v1.json", SyncSnapshot.maximumBytes), ("color-picker-v1.json", CoreColorPaletteLibrary.maximumBytes),
+            (SnippetsStore.fileName, CoreSnippetLibrary.maximumBytes), (HabitsStore.fileName, CoreHabitLibrary.maximumBytes),
+            (ShelfCollectionsStore.fileName, 3 * 1024 * 1024)
         ], defaults: defaults, defaultsKeys: [
             PlusLauncherStore.defaultsKey, PlusLauncherStore.portableKey, "workflows.presets", "workflows.selected",
             PlusAppearanceStore.defaultsKey, PlusLivePriorityStore.defaultsKey, WorldClockToolModel.zonesKey,
@@ -260,6 +270,9 @@ final class PlusSyncService: ObservableObject {
         transaction.addRollback(PlusAppearanceStore.shared.prepareSyncRollback())
         transaction.addRollback(PlusLivePriorityStore.shared.prepareSyncRollback())
         transaction.addRollback(WorldClockToolModel.shared.prepareSyncRollback())
+        transaction.addRollback(SnippetsStore.shared.prepareSyncRollback())
+        transaction.addRollback(HabitsStore.shared.prepareSyncRollback())
+        transaction.addRollback(FileShelfToolStore.shared.collections.prepareSyncRollback())
         if let settingsRollback { transaction.addRollback(settingsRollback) }
         applyingRemote = true
         defer { applyingRemote = false }
@@ -311,6 +324,12 @@ final class PlusSyncService: ObservableObject {
                 guard let value = state.workflows.revisions.first(where: { $0.id == revisionID })?.value else { return }; library.workflows = value
             case .palettes:
                 guard let value = state.palettes.revisions.first(where: { $0.id == revisionID })?.value else { return }; library.palettes = value
+            case .snippets:
+                guard let value = state.snippets.revisions.first(where: { $0.id == revisionID })?.value else { return }; library.snippets = value
+            case .habits:
+                guard let value = state.habits.revisions.first(where: { $0.id == revisionID })?.value else { return }; library.habits = value
+            case .shelves:
+                guard let value = state.shelves.revisions.first(where: { $0.id == revisionID })?.value else { return }; library.shelves = value
             }
             var next = state; try next.capturePortable(library, resolve: section)
             try applyLocally(next); syncNow()

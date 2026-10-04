@@ -3,15 +3,18 @@ import Foundation
 public struct ShelfFileMetadata: Codable, Equatable, Sendable {
     public var tags: [String]
     public var favourite: Bool
-    public init(tags: [String] = [], favourite: Bool = false) {
+    public var shelfID: UUID?
+    public init(tags: [String] = [], favourite: Bool = false, shelfID: UUID? = nil) {
         self.tags = Self.normalizedTags(tags)
         self.favourite = favourite
+        self.shelfID = shelfID
     }
-    private enum CodingKeys: String, CodingKey { case tags, favourite }
+    private enum CodingKeys: String, CodingKey { case tags, favourite, shelfID }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         self.init(tags: try values.decodeIfPresent([String].self, forKey: .tags) ?? [],
-                  favourite: try values.decodeIfPresent(Bool.self, forKey: .favourite) ?? false)
+                  favourite: try values.decodeIfPresent(Bool.self, forKey: .favourite) ?? false,
+                  shelfID: try values.decodeIfPresent(UUID.self, forKey: .shelfID))
     }
     public static func normalizedTags(_ values: [String]) -> [String] {
         var seen = Set<String>()

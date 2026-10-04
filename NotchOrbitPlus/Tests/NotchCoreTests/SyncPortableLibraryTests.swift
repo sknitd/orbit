@@ -23,7 +23,7 @@ final class SyncPortableLibraryTests: XCTestCase {
         for key in ["launcherPins", "workflows", "palettes"] { object.removeValue(forKey: key) }
         let legacy = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]), original = legacy
         let migrated = try SyncSnapshot.decode(legacy)
-        XCTAssertEqual(migrated.schemaVersion, 2)
+        XCTAssertEqual(migrated.schemaVersion, 3)
         XCTAssertEqual(migrated.note.preferred(on: source.deviceID), "Legacy note")
         XCTAssertTrue(migrated.launcherPins.revisions.isEmpty); XCTAssertTrue(migrated.workflows.revisions.isEmpty); XCTAssertTrue(migrated.palettes.revisions.isEmpty)
         let settings = try XCTUnwrap(migrated.settings.preferred(on: source.deviceID))

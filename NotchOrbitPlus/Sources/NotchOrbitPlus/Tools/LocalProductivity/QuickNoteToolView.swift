@@ -2,7 +2,8 @@ import AppKit
 import SwiftUI
 
 @MainActor
-private final class QuickNoteToolStore: ObservableObject {
+final class QuickNoteToolStore: ObservableObject {
+    static let shared = QuickNoteToolStore()
     @Published var text = "" {
         didSet {
             guard !loading else { return }
@@ -116,6 +117,21 @@ private final class QuickNoteToolStore: ObservableObject {
             saveNow()
         } catch { self.error = "Could not back up the original; it was not replaced: \(error.localizedDescription)" }
     }
+    func appendRecognizedText(_ value: String) throws {
+        let incoming = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !incoming.isEmpty, !requiresReplacement, fileURL != nil else {
+            throw NSError(domain: "com.sknitd.NotchOrbitPlus.Note", code: 1,
+                userInfo: [NSLocalizedDescriptionKey: error ?? "The local note is unavailable or needs an explicit replacement with backup."])
+        }
+        let next = text + (text.isEmpty ? "" : "\n") + incoming
+        guard next.utf8.count <= byteLimit else {
+            throw NSError(domain: "com.sknitd.NotchOrbitPlus.Note", code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "The combined note exceeds 200 KB. The original note is unchanged."])
+        }
+        text = next; saveNow()
+        if dirty { throw NSError(domain: "com.sknitd.NotchOrbitPlus.Note", code: 3,
+            userInfo: [NSLocalizedDescriptionKey: error ?? "The note could not be saved; recognized text is retained in the editor."]) }
+    }
     func copy() {
         NSPasteboard.general.clearContents()
         if !NSPasteboard.general.setString(text, forType: .string) { error = "macOS could not copy the note." }
@@ -124,7 +140,7 @@ private final class QuickNoteToolStore: ObservableObject {
 
 @MainActor
 struct QuickNoteToolView: View {
-    @StateObject private var store = QuickNoteToolStore()
+    @StateObject private var store = QuickNoteToolStore.shared
     @ObservedObject private var sync = PlusSyncService.shared
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {

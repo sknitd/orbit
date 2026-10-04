@@ -3,6 +3,13 @@ import SwiftUI
 import UniformTypeIdentifiers
 import NotchCore
 
+private struct ShelfTrashEntry: Codable { let item: FileShelfItem; let metadata: ShelfFileMetadata }
+private struct ShelfTrashRecord: Codable {
+    let id: UUID
+    let removedAt: Date
+    let entries: [ShelfTrashEntry]
+}
+
 @MainActor
 final class FileShelfToolStore: ObservableObject {
     private static var instance: FileShelfToolStore?
@@ -21,6 +28,10 @@ final class FileShelfToolStore: ObservableObject {
     @Published var error: String?
     @Published var status = "Drop local files here or choose Add Files."
     @Published private(set) var importing = 0
+    @Published private(set) var cleanupPreview: CoreShelfCleanupPlan?
+    @Published private(set) var canUndoRemoval = false
+    let collections: ShelfCollectionsStore
+    private var lastTrash: ShelfTrashRecord?
     private var managedDirectory: URL?
     private var expiration: Task<Void, Never>?
     private var inFlight = Set<URL>()
@@ -28,8 +39,12 @@ final class FileShelfToolStore: ObservableObject {
     private let persistState: Bool
     private let previews = ShelfQuickLookController()
 
-    init(managedDirectory suppliedDirectory: URL? = nil, persistState: Bool = true) {
+    init(managedDirectory suppliedDirectory: URL? = nil, persistState: Bool = true,
+         archive suppliedArchive: ShelfLibraryArchive? = nil,
+         onPortableChange: @escaping @MainActor () -> Void = { PlusSyncService.shared.portableDidChange() }) {
         self.persistState = persistState
+        let layoutDirectory = suppliedDirectory ?? ((try? LocalToolStorage.directory()) ?? URL(fileURLWithPath: NSTemporaryDirectory()))
+        collections = ShelfCollectionsStore(directory: layoutDirectory, persistState: persistState, onChange: onPortableChange)
         do {
             let directory: URL
             if let suppliedDirectory { directory = suppliedDirectory }
@@ -37,12 +52,16 @@ final class FileShelfToolStore: ObservableObject {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
                                                    attributes: [.posixPermissions: 0o700])
             managedDirectory = directory
-            let archive = persistState
+            let archive = try suppliedArchive ?? (persistState
                 ? try LocalToolStorage.load(ShelfLibraryArchive.self, file: "file-shelf.json", fallback: .init())
-                : ShelfLibraryArchive()
+                : ShelfLibraryArchive())
             items = archive.state.items; autoSave = archive.state.autoSave; retention = archive.state.retention
             metadata = archive.metadata
             pruneExpired()
+            loadLastTrash()
+            collections.onWatchedFiles = { [weak self] urls, rule in
+                for url in urls { self?.add(url, shelfID: rule.shelfID, tags: rule.tags, forceCopy: true, watchedRuleID: rule.id) }
+            }
         } catch { self.error = "Could not open the local file shelf: \(error.localizedDescription)" }
     }
     deinit {
@@ -84,7 +103,7 @@ final class FileShelfToolStore: ObservableObject {
         return true
     }
 
-    func add(_ url: URL) {
+    func add(_ url: URL, shelfID: UUID? = nil, tags: [String] = [], forceCopy: Bool? = nil, watchedRuleID: UUID? = nil) {
         let host = (url.host ?? "").lowercased()
         guard url.isFileURL, host.isEmpty || host == "localhost", !url.path.isEmpty else {
             error = "The shelf accepts local file URLs only."
@@ -93,26 +112,27 @@ final class FileShelfToolStore: ObservableObject {
         let original = url.standardizedFileURL
         guard items.count + inFlight.count < 200 else { error = "The shelf holds at most 200 entries."; return }
         guard !inFlight.contains(original), !items.contains(where: { $0.originalURL.standardizedFileURL == original }) else {
+            if let watchedRuleID, items.contains(where: { $0.originalURL.standardizedFileURL == original }) { collections.markImported(original, ruleID: watchedRuleID) }
             status = "This file is already on the shelf."
             return
         }
         guard let directory = managedDirectory else { error = "The local shelf directory is unavailable."; return }
-        let copy = autoSave
+        let copy = forceCopy ?? autoSave, targetShelf = shelfID ?? collections.selectedShelfID
         inFlight.insert(original); importing += 1
         Task { @MainActor [weak self] in
             // Finish indexing an in-flight copy even if the user changes tools.
             guard let self else { return }
+            defer { self.inFlight.remove(original); self.importing -= 1 }
             do {
                 let item = try await Task.detached(priority: .userInitiated) {
                     try FileShelfToolStore.prepare(original, copy: copy, directory: directory)
                 }.value
-                self.inFlight.remove(original); self.importing -= 1
-                self.items.insert(item, at: 0)
+                do { try self.publish(item, shelfID: targetShelf, tags: tags) }
+                catch { try self.deleteManagedCopy(item); throw error }
+                if let watchedRuleID { self.collections.markImported(original, ruleID: watchedRuleID) }
                 self.error = nil
                 self.status = copy ? "Saved a managed copy; the original is unchanged." : "Added a durable reference; the original is unchanged."
-                self.save()
             } catch {
-                self.inFlight.remove(original); self.importing -= 1
                 self.error = "Could not add \(original.lastPathComponent): \(error.localizedDescription)"
             }
         }
@@ -126,7 +146,8 @@ final class FileShelfToolStore: ObservableObject {
         guard ["png", "mov", "mp4"].contains(url.pathExtension.lowercased()) else {
             throw CocoaError(.fileReadCorruptFile)
         }
-        return try await addManagedFile(url, isCurrent: isCurrent, didPublish: { [self] item in
+        let rule = collections.rules.first { $0.kind == .captures && collections.isEnabled($0.id) && ($0.fileExtensions.isEmpty || $0.fileExtensions.contains(url.pathExtension.lowercased())) }
+        return try await addManagedFile(url, shelfID: rule?.shelfID, tags: rule?.tags ?? ["Capture"], isCurrent: isCurrent, didPublish: { [self] item in
             status = "Saved a managed capture; its staging source is unchanged."
             didPublish(item)
         })
@@ -135,9 +156,11 @@ final class FileShelfToolStore: ObservableObject {
     /// Explicit file imports await a durable owned copy of any regular local file.
     /// Publication and the caller's completion callback share one MainActor turn.
     func addManagedFile(_ url: URL,
+                        shelfID: UUID? = nil, tags: [String] = [],
                         isCurrent: @MainActor () -> Bool = { true },
                         didPublish: @MainActor (FileShelfItem) -> Void = { _ in }) async throws -> FileShelfItem {
         try Task.checkCancellation()
+        let targetShelf = shelfID ?? collections.selectedShelfID
         let source = url.standardizedFileURL
         guard source.isFileURL, (source.host ?? "").isEmpty || source.host == "localhost" else {
             throw CocoaError(.fileReadCorruptFile)
@@ -157,13 +180,7 @@ final class FileShelfToolStore: ObservableObject {
         do {
             try Task.checkCancellation()
             guard isCurrent() else { throw CancellationError() }
-            // Save the proposed index first so an error cannot leave an unindexed owned copy.
-            if persistState {
-                try LocalToolStorage.save(ShelfLibraryArchive(state: FileShelfState(
-                    items: [item] + items, autoSave: autoSave, retention: retention), metadata: metadata),
-                                          file: "file-shelf.json")
-            }
-            items.insert(item, at: 0)
+            try publish(item, shelfID: targetShelf, tags: tags)
             error = nil; status = "Saved a managed file; its original is unchanged."
             scheduleExpiration()
             // The caller's completion commit shares this MainActor turn; a
@@ -174,6 +191,29 @@ final class FileShelfToolStore: ObservableObject {
             try deleteManagedCopy(item)
             throw error
         }
+    }
+
+    private func publish(_ item: FileShelfItem, shelfID: UUID, tags: [String]) throws {
+        guard collections.shelves.contains(where: { $0.id == shelfID }) else { throw SyncFailure.invalid("The destination shelf changed while the file was copied. Choose a current shelf and retry.") }
+        var nextMetadata = metadata
+        nextMetadata[item.id.uuidString] = ShelfFileMetadata(tags: tags, shelfID: shelfID)
+        try persistIndex(items: [item] + items, metadata: nextMetadata)
+        items.insert(item, at: 0); metadata = nextMetadata
+    }
+    private func persistIndex(items: [FileShelfItem], metadata: [String: ShelfFileMetadata]) throws {
+        if persistState { try LocalToolStorage.save(ShelfLibraryArchive(state: FileShelfState(items: items, autoSave: autoSave, retention: retention), metadata: metadata), file: "file-shelf.json") }
+    }
+    func shelfID(for item: FileShelfItem) -> UUID {
+        let id = info(for: item).shelfID ?? CoreShelfCollection.inboxID
+        return collections.shelves.contains(where: { $0.id == id }) ? id : CoreShelfCollection.inboxID
+    }
+    @discardableResult func move(_ ids: [UUID], to shelfID: UUID) -> Bool {
+        guard collections.shelves.contains(where: { $0.id == shelfID }), !ids.isEmpty, ids.allSatisfy({ id in items.contains(where: { $0.id == id }) }) else { error = "Choose existing shelf entries and a valid destination."; return false }
+        do {
+            var next = metadata
+            for id in ids { var info = next[id.uuidString] ?? .init(); info.shelfID = shelfID; next[id.uuidString] = info }
+            try persistIndex(items: items, metadata: next); metadata = next; status = "Moved shelf metadata; all file contents and originals are unchanged."; error = nil; return true
+        } catch { self.error = error.localizedDescription; return false }
     }
 
     private nonisolated static func prepare(_ source: URL, copy: Bool, directory: URL) throws -> FileShelfItem {
@@ -251,7 +291,7 @@ final class FileShelfToolStore: ObservableObject {
             error = "Use up to 20 short tags, each at most 40 characters."
             return false
         }
-        metadata[item.id.uuidString] = ShelfFileMetadata(tags: tags, favourite: info(for: item).favourite)
+        metadata[item.id.uuidString] = ShelfFileMetadata(tags: tags, favourite: info(for: item).favourite, shelfID: info(for: item).shelfID)
         error = nil
         save()
         return error == nil
@@ -276,43 +316,45 @@ final class FileShelfToolStore: ObservableObject {
 
     private func deleteManagedCopy(_ item: FileShelfItem) throws {
         previews.close(ifShowing: item.id)
-        guard let managed = item.managedURL else { return }
+        guard let folder = try ownedFolder(for: item) else { return }
+        if FileManager.default.fileExists(atPath: folder.path) { try FileManager.default.removeItem(at: folder) }
+    }
+    private func ownedFolder(for item: FileShelfItem) throws -> URL? {
+        guard let managed = item.managedURL else { return nil }
+        guard managed.isFileURL, item.originalURL.isFileURL else { throw CocoaError(.fileReadCorruptFile) }
         guard let directory = managedDirectory else { throw CocoaError(.fileWriteUnknown) }
         let folder = directory.appendingPathComponent(item.id.uuidString, isDirectory: true).standardizedFileURL
         // Only the uniquely owned copy folder can be removed. References and
         // every original URL are excluded, including imported/tampered state.
-        guard managed.standardizedFileURL.deletingLastPathComponent() == folder,
-              managed.standardizedFileURL != item.originalURL.standardizedFileURL else {
+        guard managed.standardizedFileURL.deletingLastPathComponent().path == folder.path,
+              managed.resolvingSymlinksInPath().standardizedFileURL.path != item.originalURL.resolvingSymlinksInPath().standardizedFileURL.path,
+              folder.resolvingSymlinksInPath().deletingLastPathComponent().path == directory.resolvingSymlinksInPath().standardizedFileURL.path,
+              (try? folder.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true else {
             throw NSError(domain: "NotchOrbitPlus.Shelf", code: 2,
                           userInfo: [NSLocalizedDescriptionKey: "Refused to delete a path outside this entry's managed copy folder."])
         }
-        if FileManager.default.fileExists(atPath: folder.path) { try FileManager.default.removeItem(at: folder) }
+        return folder
     }
 
     func remove(_ item: FileShelfItem) {
         do {
-            try deleteManagedCopy(item)
-            if let url = scopedURLs.removeValue(forKey: item.id) { url.stopAccessingSecurityScopedResource() }
-            items.removeAll { $0.id == item.id }
-            metadata.removeValue(forKey: item.id.uuidString)
-            error = nil; status = "Removed shelf entry; its original file is unchanged."
-            save()
+            try retainInTrash([item])
+            error = nil; status = "Removed shelf entry. Undo restores its retained copy; its original file is unchanged."
         } catch { self.error = "Could not remove shelf entry: \(error.localizedDescription)" }
     }
 
     func pruneExpired() {
-        let expired = items.filter { $0.expired(at: Date(), retention: retention) }
-        var failures: [String] = []
-        for item in expired {
-            do {
-                try deleteManagedCopy(item)
-                if let url = scopedURLs.removeValue(forKey: item.id) { url.stopAccessingSecurityScopedResource() }
-                items.removeAll { $0.id == item.id }
-                metadata.removeValue(forKey: item.id.uuidString)
-            } catch { failures.append("\(item.originalURL.lastPathComponent): \(error.localizedDescription)") }
+        guard let managedDirectory else { return }
+        let now = Date()
+        var ids: Set<UUID> = []
+        if let duration = retention.duration { ids.formUnion(CoreShelfCleanupPlan.preview(items: items, managedRoot: managedDirectory, olderThan: now.addingTimeInterval(-duration), now: now).itemIDs) }
+        for rule in collections.rules where rule.kind == .expireOwnedCopies && collections.isEnabled(rule.id) {
+            let eligible = items.filter { shelfID(for: $0) == rule.shelfID }
+            ids.formUnion(CoreShelfCleanupPlan.preview(items: eligible, managedRoot: managedDirectory, olderThan: now.addingTimeInterval(-Double(rule.days) * 86_400), now: now).itemIDs)
         }
-        if !expired.isEmpty { save() } else { scheduleExpiration() }
-        if !failures.isEmpty { error = "Some expired managed copies could not be removed: " + failures.joined(separator: "; ") }
+        cleanupPreview = CoreShelfCleanupPlan(itemIDs: items.map(\.id).filter { ids.contains($0) }, excludedReferences: items.filter { $0.managedURL == nil && $0.expired(at: now, retention: retention) }.count, generatedAt: now)
+        if !ids.isEmpty { status = "\(ids.count) owned copy/copies are eligible. Preview and confirm cleanup; nothing was deleted automatically." }
+        scheduleExpiration()
     }
     private func scheduleExpiration() {
         expiration?.cancel(); expiration = nil
@@ -327,11 +369,128 @@ final class FileShelfToolStore: ObservableObject {
             self?.pruneExpired()
         }
     }
+
+    func previewRule(_ rule: CoreShelfRule) {
+        guard collections.rules.contains(rule), let managedDirectory else { return }
+        switch rule.kind {
+        case .watchFolder: collections.previewWatchRule(rule)
+        case .captures:
+            collections.preview = ShelfRulePreview(rule: rule, lines: ["Future captures become owned copies in \(collections.shelves.first(where: { $0.id == rule.shelfID })?.name ?? "Inbox").", "Tags: \(rule.tags.joined(separator: ", "))", "Formats: \(rule.fileExtensions.isEmpty ? "PNG / MOV / MP4" : rule.fileExtensions.joined(separator: ", "))"], fileURLs: [], cleanupIDs: [])
+        case .expireOwnedCopies:
+            let matching = items.filter { shelfID(for: $0) == rule.shelfID }
+            let plan = CoreShelfCleanupPlan.preview(items: matching, managedRoot: managedDirectory, olderThan: Date().addingTimeInterval(-Double(rule.days) * 86_400))
+            collections.preview = ShelfRulePreview(rule: rule, lines: items.filter { plan.itemIDs.contains($0.id) }.map { $0.originalURL.lastPathComponent }, fileURLs: [], cleanupIDs: plan.itemIDs)
+        }
+    }
+    func confirmCleanup(_ ids: [UUID]) {
+        do {
+            guard let managedDirectory, Set(ids).count == ids.count, !ids.isEmpty else { throw SyncFailure.invalid("Preview the owned copies to clean up first.") }
+            let selected = items.filter { ids.contains($0.id) }
+            guard selected.count == ids.count else { throw SyncFailure.invalid("The shelf changed; preview again before confirming cleanup.") }
+            let eligible = CoreShelfCleanupPlan.preview(items: selected, managedRoot: managedDirectory, olderThan: .distantFuture)
+            guard eligible.itemIDs.count == selected.count else { throw SyncFailure.invalid("Cleanup excludes references, originals and unowned paths.") }
+            try retainInTrash(selected); cleanupPreview = nil; error = nil
+            status = "Retained \(selected.count) owned copies in private trash. Undo is available; originals are unchanged."
+        } catch { self.error = "Cleanup did not finish: \(error.localizedDescription)" }
+    }
+    private func trashRoot() throws -> URL {
+        guard let managedDirectory else { throw CocoaError(.fileWriteUnknown) }
+        let url = managedDirectory.appendingPathComponent("ShelfTrash", isDirectory: true)
+        if try PlusSyncFolderIO.hasNode(url) {
+            let values = try url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+            guard values.isDirectory == true, values.isSymbolicLink != true else { throw CocoaError(.fileWriteNoPermission) }
+        } else { try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700]) }
+        return url
+    }
+    private func retainInTrash(_ removed: [FileShelfItem]) throws {
+        guard !removed.isEmpty, removed.allSatisfy({ item in items.contains(where: { $0.id == item.id }) }) else { throw CocoaError(.fileNoSuchFile) }
+        let root = try trashRoot(), record = ShelfTrashRecord(id: UUID(), removedAt: Date(), entries: removed.map { .init(item: $0, metadata: info(for: $0)) })
+        let folders = try removed.compactMap { item -> (UUID, URL)? in try ownedFolder(for: item).map { (item.id, $0) } }
+        let batch = root.appendingPathComponent(record.id.uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: batch, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        let recordBytes = try JSONEncoder().encode(record)
+        guard recordBytes.count <= 16 * 1024 * 1024 else { throw SyncFailure.invalid("The retained undo record exceeds 16 MB; nothing was removed.") }
+        try recordBytes.write(to: batch.appendingPathComponent("undo.json"), options: .atomic)
+        let indexURL = persistState ? try LocalToolStorage.directory().appendingPathComponent("file-shelf.json") : nil
+        let originalIndex = try indexURL.flatMap { try PlusSyncFolderIO.hasNode($0) ? PlusSyncFolderIO.boundedData($0, limit: 40 * 1024 * 1024) : nil }
+        if let originalIndex { try originalIndex.write(to: batch.appendingPathComponent("index-before.json"), options: .atomic) }
+        var moved: [(UUID, URL)] = []
+        do {
+            for (id, folder) in folders {
+                try FileManager.default.moveItem(at: folder, to: batch.appendingPathComponent(id.uuidString, isDirectory: true)); moved.append((id, folder))
+            }
+            let ids = Set(removed.map(\.id)), nextItems = items.filter { !ids.contains($0.id) }, nextMetadata = metadata.filter { !ids.contains(UUID(uuidString: $0.key) ?? UUID()) }
+            try persistIndex(items: nextItems, metadata: nextMetadata)
+            items = nextItems; metadata = nextMetadata
+            for item in removed { previews.close(ifShowing: item.id); if let url = scopedURLs.removeValue(forKey: item.id) { url.stopAccessingSecurityScopedResource() } }
+            lastTrash = record; canUndoRemoval = true; scheduleExpiration()
+        } catch {
+            var recovered = true
+            for (id, folder) in moved.reversed() { do { try FileManager.default.moveItem(at: batch.appendingPathComponent(id.uuidString), to: folder) } catch { recovered = false } }
+            if let indexURL { do { if let originalIndex { try originalIndex.write(to: indexURL, options: .atomic) } else if try PlusSyncFolderIO.hasNode(indexURL) { try FileManager.default.removeItem(at: indexURL) } } catch { recovered = false } }
+            if recovered { try? FileManager.default.removeItem(at: batch); throw error }
+            throw SyncFailure.invalid("Shelf cleanup recovery was incomplete. Retained originals and the prior index remain in ShelfTrash/\(record.id.uuidString); restore them before more cleanup.")
+        }
+    }
+    private func loadLastTrash() {
+        do {
+            let root = try trashRoot()
+            let folders = try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+            guard folders.count <= 1_000 else { return }
+            var records: [ShelfTrashRecord] = []
+            for folder in folders {
+                guard UUID(uuidString: folder.lastPathComponent) != nil,
+                      (try folder.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true else { continue }
+                let file = folder.appendingPathComponent("undo.json")
+                guard try PlusSyncFolderIO.hasNode(file) else { continue }
+                let record = try JSONDecoder().decode(ShelfTrashRecord.self, from: PlusSyncFolderIO.boundedData(file, limit: 16 * 1024 * 1024))
+                guard record.id.uuidString == folder.lastPathComponent, record.entries.count <= 200,
+                      Set(record.entries.map { $0.item.id }).count == record.entries.count,
+                      !record.entries.contains(where: { entry in items.contains(where: { $0.id == entry.item.id }) }) else { continue }
+                records.append(record)
+            }
+            lastTrash = records.max(by: { $0.removedAt < $1.removedAt }); canUndoRemoval = lastTrash != nil
+        } catch { self.error = "Retained shelf copies could not be read: \(error.localizedDescription)" }
+    }
+    func undoRemoval() {
+        guard let record = lastTrash else { return }
+        do {
+            guard items.count + record.entries.count <= 200, record.entries.allSatisfy({ entry in !items.contains(where: { $0.id == entry.item.id }) }) else { throw SyncFailure.invalid("Undo would duplicate entries or exceed 200 files; current originals are unchanged.") }
+            let batch = try trashRoot().appendingPathComponent(record.id.uuidString, isDirectory: true)
+            let indexURL = persistState ? try LocalToolStorage.directory().appendingPathComponent("file-shelf.json") : nil
+            let previousIndex = try indexURL.flatMap { try PlusSyncFolderIO.hasNode($0) ? PlusSyncFolderIO.boundedData($0, limit: 40 * 1024 * 1024) : nil }
+            if let previousIndex { try previousIndex.write(to: batch.appendingPathComponent("index-before-undo.json"), options: .atomic) }
+            var moved: [(URL, URL)] = []
+            do {
+                for entry in record.entries {
+                    guard let destination = try ownedFolder(for: entry.item) else { continue }
+                    let source = batch.appendingPathComponent(entry.item.id.uuidString, isDirectory: true)
+                    let sourceInfo = try source.resourceValues(forKeys: [.isSymbolicLinkKey, .isDirectoryKey])
+                    guard !(try PlusSyncFolderIO.hasNode(destination)), sourceInfo.isSymbolicLink != true, sourceInfo.isDirectory == true else { throw CocoaError(.fileWriteFileExists) }
+                    try FileManager.default.moveItem(at: source, to: destination); moved.append((source, destination))
+                }
+                var nextMetadata = metadata; for entry in record.entries { nextMetadata[entry.item.id.uuidString] = entry.metadata }
+                let nextItems = record.entries.map(\.item) + items
+                try persistIndex(items: nextItems, metadata: nextMetadata); items = nextItems; metadata = nextMetadata
+            } catch {
+                var restored = true
+                for (source, destination) in moved.reversed() { do { try FileManager.default.moveItem(at: destination, to: source) } catch { restored = false } }
+                if let indexURL {
+                    do { if let previousIndex { try previousIndex.write(to: indexURL, options: .atomic) } else if try PlusSyncFolderIO.hasNode(indexURL) { try FileManager.default.removeItem(at: indexURL) } }
+                    catch { restored = false }
+                }
+                if !restored { throw SyncFailure.invalid("Undo recovery was incomplete. Retained copies remain in \(batch.path); review them before further cleanup.") }; throw error
+            }
+            try? FileManager.default.removeItem(at: batch.appendingPathComponent("undo.json"))
+            lastTrash = nil; canUndoRemoval = false; error = nil; status = "Restored shelf entries and retained copies. Originals are unchanged."; pruneExpired()
+        } catch { self.error = "Could not undo shelf removal: \(error.localizedDescription)" }
+    }
     func shutdown() {
         expiration?.cancel(); expiration = nil
         previews.close()
         for url in scopedURLs.values { url.stopAccessingSecurityScopedResource() }
         scopedURLs.removeAll()
+        collections.shutdown()
     }
 }
 
@@ -358,18 +517,23 @@ private struct ShelfShareButton: NSViewRepresentable {
 
 @MainActor
 struct FileShelfToolView: View {
-    @ObservedObject private var store = FileShelfToolStore.shared
+    @ObservedObject private var store: FileShelfToolStore
+    @ObservedObject private var collections: ShelfCollectionsStore
     @State private var targeted = false
     @State private var search = ""
     @State private var favouritesOnly = false
     @State private var editingTags: FileShelfItem?
     @State private var draftTags = ""
+    @State private var showSettings = false
+    @State private var showCleanup = false
+    init(store: FileShelfToolStore = .shared) { self.store = store; collections = store.collections }
     private var visible: [FileShelfItem] {
-        ShelfLibrarySearch.filter(store.items, metadata: store.metadata, query: search, favouritesOnly: favouritesOnly)
+        ShelfLibrarySearch.filter(store.items.filter { store.shelfID(for: $0) == collections.selectedShelfID }, metadata: store.metadata, query: search, favouritesOnly: favouritesOnly)
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
+                Picker("Shelf", selection: Binding(get: { collections.selectedShelfID }, set: { collections.select($0) })) { ForEach(collections.shelves) { Text($0.name).tag($0.id) } }.frame(width: 125)
                 Button("Add Files", action: store.addFiles)
                 Toggle("Auto-save copies", isOn: $store.autoSave)
                 Spacer()
@@ -377,7 +541,20 @@ struct FileShelfToolView: View {
                     ForEach(ShelfRetention.allCases) { Text($0.title).tag($0) }
                 }.frame(width: 150)
             }
-            Text("Drag files into this shelf, then drag them out or share. Retention removes entries and managed copies; originals are never deleted.")
+            ScrollView(.horizontal) {
+                HStack { ForEach(collections.shelves) { shelf in
+                    Button(shelf.name) { collections.select(shelf.id) }
+                        .onDrop(of: ["com.notchorbitplus.shelf-entry-id"], isTargeted: nil) { providers in
+                            for provider in providers {
+                                provider.loadDataRepresentation(forTypeIdentifier: "com.notchorbitplus.shelf-entry-id") { data, _ in
+                                    guard let data, let text = String(data: data, encoding: .utf8), let id = UUID(uuidString: text) else { return }
+                                    Task { @MainActor in _ = store.move([id], to: shelf.id) }
+                                }
+                            }; return !providers.isEmpty
+                        }
+                } }
+            }
+            Text("Drag entries onto a shelf name to move metadata. Cleanup requires preview and confirmation; retained copies support Undo. Originals are never deleted.")
                 .font(.caption).foregroundStyle(.secondary)
             HStack {
                 TextField("Search filenames or tags", text: $search).textFieldStyle(.roundedBorder)
@@ -398,7 +575,9 @@ struct FileShelfToolView: View {
                         .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
                         .onDrag {
                             guard let url = store.resolve(item) else { return NSItemProvider() }
-                            return NSItemProvider(object: url as NSURL)
+                            let provider = NSItemProvider(object: url as NSURL)
+                            provider.registerDataRepresentation(forTypeIdentifier: "com.notchorbitplus.shelf-entry-id", visibility: .ownProcess) { completion in completion(Data(item.id.uuidString.utf8), nil); return nil }
+                            return provider
                         }
                     Button {
                         draftTags = store.info(for: item).tags.joined(separator: ", ")
@@ -410,6 +589,8 @@ struct FileShelfToolView: View {
                     Button("Reveal") { store.reveal(item) }.buttonStyle(.borderless)
                     ShelfShareButton(resolve: { store.resolve(item) }).frame(width: 55, height: 24)
                     Button("AirDrop") { store.airDrop(item) }.buttonStyle(.borderless)
+                    Menu("Move") { ForEach(collections.shelves) { shelf in Button(shelf.name) { _ = store.move([item.id], to: shelf.id) } } }
+                    Button("iPhone") { OrbitInboxStore.shared.sendFileFromShelf(item, shelf: store) }.buttonStyle(.borderless)
                     Button { store.remove(item) } label: { Image(systemName: "trash") }
                         .buttonStyle(.borderless).accessibilityLabel("Remove \(item.originalURL.lastPathComponent) from shelf")
                 }
@@ -437,7 +618,14 @@ struct FileShelfToolView: View {
                 Spacer()
                 Text("\(visible.count) shown · \(store.items.count)/200")
             }.font(.caption).foregroundStyle(.secondary)
-        }.padding().onAppear { store.pruneExpired() }
+            HStack {
+                Button("Shelves & Rules") { showSettings = true }
+                Button("Preview Cleanup") { store.pruneExpired(); showCleanup = true }
+                Button("Undo Removal") { store.undoRemoval() }.disabled(!store.canUndoRemoval)
+            }
+        }.padding().onAppear { store.pruneExpired(); collections.startIfConfigured() }
+            .sheet(isPresented: $showSettings) { ShelfSettingsView(store: store).frame(width: 560, height: 540) }
+            .sheet(isPresented: $showCleanup) { ShelfCleanupPreviewView(store: store) { showCleanup = false } }
             .sheet(item: $editingTags) { item in
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Tags for \(item.originalURL.lastPathComponent)").font(.headline)

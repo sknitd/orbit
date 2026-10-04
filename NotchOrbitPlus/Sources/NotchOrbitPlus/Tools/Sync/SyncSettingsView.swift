@@ -23,11 +23,12 @@ struct SyncSettingsView: View {
                 }
             }
             Section("What is shared") {
-                Text("Quick Note, To-Dos, logical launcher pins, workflow presets, saved color palettes, tool order, hidden tools, hover/click behavior, appearance, live-status priorities and saved World Clock zones.")
+                Text("Quick Note, To-Dos, eligible ordinary-text snippets, habits, named shelves and rule descriptions, logical launcher pins, workflow presets, saved color palettes, tool order, hidden tools, hover/click behavior, appearance, live-status priorities and saved World Clock zones.")
                 Text("API credentials, clipboard history, File Shelf contents, meeting data, display size/selection, keyboard permissions, bookmarks and account configuration stay local.").font(.caption).foregroundStyle(.secondary)
                 Text("Snapshots are readable JSON in the folder you choose. Your folder provider controls encryption, access and delivery. A successful write confirms only this Mac’s local folder write.").font(.caption).foregroundStyle(.secondary)
                 Text("Independent task edits merge by field. Deletions leave tombstones so an offline Mac cannot recreate a removed task. Conflicting notes or preferences stay as variants until you choose; discarded variants are backed up locally before resolution.").font(.caption).foregroundStyle(.secondary)
                 Text("Applications sync by bundle identifier and Shortcuts by identifier. Synced folder pins need an explicit local folder choice on each Mac. Paths, bookmarks and color-picking history stay local. Concurrent edits to the same library retain complete variants; different library categories merge independently.").font(.caption).foregroundStyle(.secondary)
+                Text("Use the current version on every Mac. Version 3 reads older snapshots safely; older apps reject new snapshots without replacing their originals. Local-only snippets, verification codes, watched-folder bookmarks, shelf contents, Inbox configuration and rule enablement are excluded. Changed incoming rules need a local preview and enable action.").font(.caption).foregroundStyle(.secondary)
             }
             if sync.state.note.hasConflict {
                 Section("Note conflict — choose intentionally") {
@@ -84,6 +85,30 @@ struct SyncSettingsView: View {
                             Text(revision.value.palettes.prefix(8).map(\.name).joined(separator: ", ")).font(.caption).lineLimit(3)
                             Button("Use These Saved Palettes") { sync.resolvePortable(.palettes, revisionID: revision.id) }.disabled(sync.isSyncing)
                         }
+                    }
+                }
+            }
+            if sync.state.snippets.hasConflict {
+                Section("Snippets conflict — choose intentionally") {
+                    ForEach(sync.state.snippets.revisions) { revision in
+                        Text("Device \(revision.deviceID.uuidString.prefix(8)) · \(revision.value.snippets.count) eligible snippets").font(.caption)
+                        Button("Use These Shared Snippets") { sync.resolvePortable(.snippets, revisionID: revision.id) }.disabled(sync.isSyncing || sync.recoveryDirectory != nil)
+                    }
+                }
+            }
+            if sync.state.habits.hasConflict {
+                Section("Habits conflict — choose intentionally") {
+                    ForEach(sync.state.habits.revisions) { revision in
+                        Text("Device \(revision.deviceID.uuidString.prefix(8)) · \(revision.value.habits.count) habits · \(revision.value.habits.reduce(0) { $0 + $1.checkedDays.count }) checkoffs").font(.caption)
+                        Button("Use This Habit History") { sync.resolvePortable(.habits, revisionID: revision.id) }.disabled(sync.isSyncing || sync.recoveryDirectory != nil)
+                    }
+                }
+            }
+            if sync.state.shelves.hasConflict {
+                Section("Shelf configuration conflict — choose intentionally") {
+                    ForEach(sync.state.shelves.revisions) { revision in
+                        Text("Device \(revision.deviceID.uuidString.prefix(8)) · \(revision.value.shelves.count) named shelves · \(revision.value.rules.count) rule descriptions").font(.caption)
+                        Button("Use These Shelf Descriptions") { sync.resolvePortable(.shelves, revisionID: revision.id) }.disabled(sync.isSyncing || sync.recoveryDirectory != nil)
                     }
                 }
             }

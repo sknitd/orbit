@@ -40,6 +40,20 @@ extension NotchAppDelegate {
                 case .worldClock: AnyView(WorldClockToolView())
                 case .githubActions: AnyView(GithubActionsToolView())
                 case .focusStats: AnyView(FocusStatsToolView())
+                case .context: AnyView(ContextToolView())
+                case .downloads: AnyView(DownloadsToolView())
+                case .commands: AnyView(CommandsToolView())
+                case .snippets: AnyView(SnippetsToolView())
+                case .translate: AnyView(TranslationToolView())
+                case .dictation: AnyView(DictationToolView())
+                case .qr: AnyView(QRToolView())
+                case .verificationCodes: AnyView(VerificationCodesToolView())
+                case .packageTracker: AnyView(PackageTrackerToolView())
+                case .habits: AnyView(HabitsToolView())
+                case .travelStatus: AnyView(TravelStatusToolView())
+                case .sportsScores: AnyView(SportsScoresToolView())
+                case .globalSearch: AnyView(GlobalSearchToolView())
+                case .plugins: AnyView(PluginsToolView())
                 }
             }
         }
@@ -91,6 +105,13 @@ struct PlusSettingsView: View {
             SyncSettingsView().tabItem { Label("Sync", systemImage: "arrow.triangle.2.circlepath") }
             PlusDistributionSettingsView().tabItem { Label("Updates", systemImage: "arrow.down.circle") }
             AppearanceSettingsView().tabItem { Label("Appearance", systemImage: "paintpalette") }
+            ScrollView { VStack(alignment: .leading, spacing: 20) {
+                ContextToolView(); Divider(); FocusAppHidingSettingsView()
+            }.padding() }.tabItem { Label("Automation", systemImage: "wand.and.stars") }
+            ScrollView { CommandsToolView().padding() }.tabItem { Label("Command Helper", systemImage: "terminal") }
+            ScrollView { VStack(alignment: .leading, spacing: 20) {
+                ShelfSettingsView(); Divider(); OrbitInboxSettingsView()
+            }.padding() }.tabItem { Label("Shelf & Inbox", systemImage: "tray.full") }
             LivePrioritySettingsView().tabItem { Label("Live priority", systemImage: "list.number") }
             VStack(spacing: 16) {
                 Image(systemName: "rectangle.topthird.inset.filled").font(.system(size: 56)).foregroundStyle(.blue)

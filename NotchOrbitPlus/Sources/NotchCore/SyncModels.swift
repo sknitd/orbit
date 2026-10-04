@@ -148,7 +148,7 @@ public struct SyncTaskRecord: Codable, Equatable, Sendable, Identifiable {
 
 public struct SyncSnapshot: Codable, Equatable, Sendable {
     public static let maximumBytes = 8 * 1024 * 1024
-    public var schemaVersion = 2
+    public var schemaVersion = 3
     public let deviceID: UUID
     public var generatedAt: Date
     public var context: SyncVector
@@ -158,31 +158,40 @@ public struct SyncSnapshot: Codable, Equatable, Sendable {
     public var launcherPins: SyncRegister<[SyncLauncherPin]>
     public var workflows: SyncRegister<[WorkflowPreset]>
     public var palettes: SyncRegister<CoreColorPaletteLibrary>
+    public var snippets: SyncRegister<CoreSnippetLibrary>
+    public var habits: SyncRegister<CoreHabitLibrary>
+    public var shelves: SyncRegister<CoreShelfConfiguration>
     public init(deviceID: UUID, generatedAt: Date = Date()) {
         self.deviceID = deviceID; self.generatedAt = generatedAt; context = SyncVector()
         note = SyncRegister(); settings = SyncRegister(); tasks = []
         launcherPins = SyncRegister(); workflows = SyncRegister(); palettes = SyncRegister()
+        snippets = SyncRegister(); habits = SyncRegister(); shelves = SyncRegister()
     }
-    private enum CodingKeys: String, CodingKey { case schemaVersion, deviceID, generatedAt, context, note, settings, tasks, launcherPins, workflows, palettes }
+    private enum CodingKeys: String, CodingKey { case schemaVersion, deviceID, generatedAt, context, note, settings, tasks, launcherPins, workflows, palettes, snippets, habits, shelves }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         let version = try values.decode(Int.self, forKey: .schemaVersion)
-        guard (1...2).contains(version) else { throw SyncFailure.invalid("Unsupported sync snapshot version.") }
-        schemaVersion = 2
+        guard (1...3).contains(version) else { throw SyncFailure.invalid("Unsupported sync snapshot version.") }
+        schemaVersion = 3
         deviceID = try values.decode(UUID.self, forKey: .deviceID); generatedAt = try values.decode(Date.self, forKey: .generatedAt)
         context = try values.decode(SyncVector.self, forKey: .context); note = try values.decode(SyncRegister<String>.self, forKey: .note)
         settings = try values.decode(SyncRegister<SyncSharedSettings>.self, forKey: .settings); tasks = try values.decode([SyncTaskRecord].self, forKey: .tasks)
         launcherPins = try values.decodeIfPresent(SyncRegister<[SyncLauncherPin]>.self, forKey: .launcherPins) ?? SyncRegister()
         workflows = try values.decodeIfPresent(SyncRegister<[WorkflowPreset]>.self, forKey: .workflows) ?? SyncRegister()
         palettes = try values.decodeIfPresent(SyncRegister<CoreColorPaletteLibrary>.self, forKey: .palettes) ?? SyncRegister()
+        snippets = try values.decodeIfPresent(SyncRegister<CoreSnippetLibrary>.self, forKey: .snippets) ?? SyncRegister()
+        habits = try values.decodeIfPresent(SyncRegister<CoreHabitLibrary>.self, forKey: .habits) ?? SyncRegister()
+        shelves = try values.decodeIfPresent(SyncRegister<CoreShelfConfiguration>.self, forKey: .shelves) ?? SyncRegister()
     }
     public func visibleTasks() -> [ToDoItem] {
         tasks.compactMap { $0.item(on: deviceID) }.sorted { $0.createdAt == $1.createdAt ? $0.id.uuidString < $1.id.uuidString : $0.createdAt > $1.createdAt }
     }
     public var conflictCount: Int { (note.hasConflict ? 1 : 0) + (settings.hasConflict ? 1 : 0) + tasks.filter(\.hasConflict).count
-        + (launcherPins.hasConflict ? 1 : 0) + (workflows.hasConflict ? 1 : 0) + (palettes.hasConflict ? 1 : 0) }
+        + (launcherPins.hasConflict ? 1 : 0) + (workflows.hasConflict ? 1 : 0) + (palettes.hasConflict ? 1 : 0)
+        + (snippets.hasConflict ? 1 : 0) + (habits.hasConflict ? 1 : 0) + (shelves.hasConflict ? 1 : 0) }
     public func portableLibrary() -> SyncPortableLibrary {
-        SyncPortableLibrary(launcherPins: launcherPins.preferred(on: deviceID) ?? [], workflows: workflows.preferred(on: deviceID) ?? [], palettes: palettes.preferred(on: deviceID))
+        SyncPortableLibrary(launcherPins: launcherPins.preferred(on: deviceID) ?? [], workflows: workflows.preferred(on: deviceID) ?? [], palettes: palettes.preferred(on: deviceID),
+                            snippets: snippets.preferred(on: deviceID) ?? .init(), habits: habits.preferred(on: deviceID) ?? .init(), shelves: shelves.preferred(on: deviceID) ?? .init())
     }
     public mutating func capturePortable(_ value: SyncPortableLibrary, at date: Date = Date(), resolve: SyncPortableSection? = nil) throws {
         try value.validate(); var next = self
@@ -195,7 +204,16 @@ public struct SyncSnapshot: Codable, Equatable, Sendable {
         if (palettes.preferred(on: deviceID) != value.palettes && !(palettes.revisions.isEmpty && value.palettes.palettes.isEmpty)) || resolve == .palettes {
             try next.context.advance(deviceID); next.palettes.set(value.palettes, device: deviceID, at: date, clock: next.context)
         }
-        next.schemaVersion = 2; next.generatedAt = date; try next.validate(); self = next
+        if (snippets.preferred(on: deviceID) != value.snippets && !(snippets.revisions.isEmpty && value.snippets.snippets.isEmpty)) || resolve == .snippets {
+            try next.context.advance(deviceID); next.snippets.set(value.snippets, device: deviceID, at: date, clock: next.context)
+        }
+        if (habits.preferred(on: deviceID) != value.habits && !(habits.revisions.isEmpty && value.habits.habits.isEmpty)) || resolve == .habits {
+            try next.context.advance(deviceID); next.habits.set(value.habits, device: deviceID, at: date, clock: next.context)
+        }
+        if (shelves.preferred(on: deviceID) != value.shelves && !(shelves.revisions.isEmpty && value.shelves == CoreShelfConfiguration())) || resolve == .shelves {
+            try next.context.advance(deviceID); next.shelves.set(value.shelves, device: deviceID, at: date, clock: next.context)
+        }
+        next.schemaVersion = 3; next.generatedAt = date; try next.validate(); self = next
     }
     public mutating func captureNote(_ text: String, at date: Date = Date(), resolve: Bool = false) throws {
         guard text.utf8.count <= 200_000 else { throw SyncFailure.invalid("Synced notes are limited to 200 KB. Local original was not changed.") }
@@ -243,16 +261,20 @@ public struct SyncSnapshot: Codable, Equatable, Sendable {
         generatedAt = date; try validate()
     }
     public func validate() throws {
-        guard (1...2).contains(schemaVersion), tasks.count <= 2_000, Set(tasks.map(\.id)).count == tasks.count,
+        guard (1...3).contains(schemaVersion), tasks.count <= 2_000, Set(tasks.map(\.id)).count == tasks.count,
               generatedAt.timeIntervalSince1970.isFinite,
               (-62_135_596_800...253_402_300_799).contains(generatedAt.timeIntervalSince1970) else {
             throw SyncFailure.invalid("Unsupported sync version or excessive task/tombstone records.")
         }
         try context.validate(); try note.validate(context: context); try settings.validate(context: context)
         try launcherPins.validate(context: context); try workflows.validate(context: context); try palettes.validate(context: context)
+        try snippets.validate(context: context); try habits.validate(context: context); try shelves.validate(context: context)
         for revision in launcherPins.revisions { try SyncLauncherPin.validate(revision.value) }
         for revision in workflows.revisions { try SyncPortableLibrary(workflows: revision.value).validate() }
         for revision in palettes.revisions { _ = try revision.value.encoded() }
+        for revision in snippets.revisions { _ = try SyncPortableLibrary(snippets: revision.value).validate() }
+        for revision in habits.revisions { _ = try revision.value.encoded() }
+        for revision in shelves.revisions { _ = try revision.value.encoded() }
         for revision in note.revisions where revision.value.utf8.count > 200_000 { throw SyncFailure.invalid("A shared note exceeds 200 KB; local originals are preserved.") }
         for revision in settings.revisions { try revision.value.validate() }
         for task in tasks {
@@ -289,6 +311,9 @@ public enum SyncMerge {
         result.launcherPins = try local.launcherPins.merged(with: base.launcherPins).merged(with: remote.launcherPins)
         result.workflows = try local.workflows.merged(with: base.workflows).merged(with: remote.workflows)
         result.palettes = try local.palettes.merged(with: base.palettes).merged(with: remote.palettes)
+        result.snippets = try local.snippets.merged(with: base.snippets).merged(with: remote.snippets)
+        result.habits = try local.habits.merged(with: base.habits).merged(with: remote.habits)
+        result.shelves = try local.shelves.merged(with: base.shelves).merged(with: remote.shelves)
         var tasks: [UUID: SyncTaskRecord] = [:]
         for task in base.tasks + local.tasks + remote.tasks {
             tasks[task.id] = try tasks[task.id].map { try $0.merged(with: task) } ?? task

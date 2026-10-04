@@ -116,6 +116,11 @@ struct AssistantToolView: View {
             Text("Ask Orbit").font(.headline)
             Text(model.availability).font(.caption).foregroundStyle(.secondary)
             if !model.available { Button("Check availability", action: model.checkAvailability) }
+            if model.available {
+                DisclosureGroup("On-Device File Actions · Drop Files") {
+                    AssistantFilesToolView()
+                }
+            }
             Picker("Task", selection: $model.mode) {
                 ForEach(OrbitAssistantMode.allCases) { Text($0.rawValue).tag($0) }
             }.pickerStyle(.segmented).onChange(of: model.mode) { _, _ in model.reset() }

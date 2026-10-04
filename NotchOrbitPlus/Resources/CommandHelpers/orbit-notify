@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+import argparse, json, os, socket, stat, sys, time, uuid
+p = argparse.ArgumentParser(description="Send local Orbit activity metadata; no command is executed.")
+p.add_argument("kind", choices=("start", "finish"))
+p.add_argument("--id", required=True); p.add_argument("--label", required=True)
+p.add_argument("--exit-code", type=int); p.add_argument("--duration", type=float)
+a = p.parse_args(); activity_id = str(uuid.UUID(a.id))
+if not a.label.strip() or len(a.label.encode()) > 160 or any(ord(c) < 32 or ord(c) == 127 for c in a.label): p.error("label must be short, nonempty metadata")
+message = dict(version=1, kind=a.kind, id=activity_id, label=a.label, at=time.time())
+if a.kind == "finish":
+    if a.exit_code is None or a.duration is None or not -255 <= a.exit_code <= 255 or not 0 <= a.duration <= 604800: p.error("finish needs a valid exit code and measured duration")
+    message.update(exitCode=a.exit_code, duration=a.duration)
+elif a.exit_code is not None or a.duration is not None: p.error("start cannot contain an exit result")
+root = "/tmp/notchorbitplus-%d" % os.getuid(); endpoint = root + "/activities.sock"
+try:
+    d = os.stat(root, follow_symlinks=False); s = os.stat(endpoint, follow_symlinks=False)
+    if d.st_uid != os.getuid() or s.st_uid != os.getuid() or not stat.S_ISDIR(d.st_mode) or not stat.S_ISSOCK(s.st_mode) or stat.S_IMODE(d.st_mode) != 0o700 or stat.S_IMODE(s.st_mode) != 0o600: raise OSError("listener ownership or permissions are invalid")
+    data = json.dumps(message, allow_nan=False).encode()
+    if len(data) > 4096: raise OSError("activity metadata exceeds 4096 bytes")
+    with socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM) as client: client.sendto(data, endpoint)
+except (OSError, ValueError) as error:
+    print("orbit-notify: " + str(error), file=sys.stderr); sys.exit(1)

@@ -18,6 +18,7 @@ sdk_major="${BASH_REMATCH[1]}"
 (( sdk_major >= 26 )) || { echo 'A macOS 26 or newer SDK is required for FoundationModels.' >&2; exit 1; }
 sdk_path="$(xcrun --sdk macosx --show-sdk-path)"
 [[ -d "$sdk_path/System/Library/Frameworks/FoundationModels.framework" ]] || { echo 'The selected SDK has no public FoundationModels framework.' >&2; exit 1; }
+[[ -d "$sdk_path/System/Library/Frameworks/Translation.framework" ]] || { echo 'The selected SDK has no public Translation framework.' >&2; exit 1; }
 host_arch="$(uname -m)"
 [[ "$host_arch" == arm64 || "$host_arch" == x86_64 ]] || { echo 'Unsupported macOS host architecture.' >&2; exit 1; }
 mkdir -p build/sdk-probe-cache
@@ -34,13 +35,50 @@ SWIFT
 xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
   -target "$host_arch-apple-macos14.0" -sdk "$sdk_path" \
   -module-cache-path "$task_root/build/sdk-probe-cache" "$task_probe_dir/FoundationModelsProbe.swift"
+cat > "$task_probe_dir/TranslationSpeechProbe.swift" <<'SWIFT'
+import Foundation
+import SwiftUI
+import Translation
+import Speech
+
+@available(macOS 15.0, *)
+@MainActor
+struct TranslationSDKProbe: View {
+    @State private var configuration: TranslationSession.Configuration? = .init(
+        source: Locale.Language(identifier: "en"), target: Locale.Language(identifier: "es"))
+    var body: some View {
+        Text("SDK probe").translationTask(configuration) { session in
+            do {
+                try await session.prepareTranslation()
+                _ = try await session.translate("Hello").targetText
+            } catch { }
+        }
+    }
+    func invalidate() { configuration?.invalidate() }
+}
+
+@MainActor
+func onDeviceSpeechSDKProbe() {
+    let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+    _ = recognizer?.supportsOnDeviceRecognition
+    let request = SFSpeechAudioBufferRecognitionRequest()
+    request.requiresOnDeviceRecognition = true
+}
+SWIFT
+for architecture in arm64 x86_64; do
+  xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
+    -target "$architecture-apple-macos14.0" -sdk "$sdk_path" \
+    -module-cache-path "$task_root/build/sdk-probe-cache" "$task_probe_dir/TranslationSpeechProbe.swift"
+done
 swift_version="$(xcrun swiftc --version)"
 python3 - "$xcode_version" "$sdk_version" "$sdk_path" "$swift_version" "$host_arch" <<'PY'
 import json, pathlib, sys
 pathlib.Path('build/sdk-inventory.json').write_text(json.dumps({
     'xcode': sys.argv[1], 'macos_sdk': sys.argv[2], 'sdk_path': sys.argv[3],
     'swift': sys.argv[4], 'host_architecture': sys.argv[5],
-    'deployment_target': '14.0', 'foundation_models_api_typechecked': True
+    'deployment_target': '14.0', 'foundation_models_api_typechecked': True,
+    'translation_api_typechecked': True, 'on_device_speech_api_typechecked': True,
+    'translation_speech_probe_architectures': ['arm64', 'x86_64']
 }, indent=2) + '\n')
 PY
-echo "SDK $sdk_version verified: public FoundationModels compiles with deployment target 14.0."
+echo "SDK $sdk_version verified: public FoundationModels, Translation and on-device Speech APIs compile with deployment target 14.0."

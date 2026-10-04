@@ -1,0 +1,1 @@
+{"version":1,"id":"hello-orbit","name":"Hello Orbit","description":"A local Plugin API v1 example with no optional permissions.","permissions":[],"items":[{"kind":"text","text":"Click the button to run a bounded sandboxed shell builtin."},{"kind":"button","title":"Say Hello","commandID":"hello"}],"commands":[{"id":"hello","script":"hello.sh"}]}

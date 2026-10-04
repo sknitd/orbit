@@ -6,12 +6,14 @@ public enum PlusTool: String, CaseIterable, Codable, Sendable, Identifiable {
     case quickNote, nowPlaying, shortcuts, launcher, workflows, fileActions
     case capture, colorPicker, hud, devices, status, network, worldClock, githubActions, focusStats
 
+    case context, downloads, commands, snippets, translate, dictation, qr, verificationCodes, packageTracker, habits, travelStatus, sportsScores, globalSearch, plugins
+
     public var id: String { rawValue }
     public static let defaultOrder: [PlusTool] = [
         .assistant, .aiUsage, .sales, .clipboard, .teleprompter, .timers, .fileShelf, .mirror,
         .calendar, .reminders, .todos, .weather, .stocks, .emoji, .converter, .system,
         .quickNote, .nowPlaying, .shortcuts, .launcher, .workflows, .capture, .colorPicker,
-        .hud, .devices, .status, .network, .worldClock, .githubActions, .focusStats, .fileActions
+        .hud, .devices, .status, .network, .worldClock, .githubActions, .focusStats, .context, .downloads, .commands, .snippets, .translate, .dictation, .qr, .verificationCodes, .packageTracker, .habits, .travelStatus, .sportsScores, .globalSearch, .plugins, .fileActions
     ]
     public var title: String {
         switch self {
@@ -46,6 +48,20 @@ public enum PlusTool: String, CaseIterable, Codable, Sendable, Identifiable {
         case .worldClock: "World Clock"
         case .githubActions: "GitHub Actions"
         case .focusStats: "Focus Stats"
+        case .context: "Context Rules"
+        case .downloads: "Downloads"
+        case .commands: "Commands"
+        case .snippets: "Snippets"
+        case .translate: "Translate"
+        case .dictation: "Dictation"
+        case .qr: "QR"
+        case .verificationCodes: "2FA Codes"
+        case .packageTracker: "Package Tracker"
+        case .habits: "Habits"
+        case .travelStatus: "Travel Status"
+        case .sportsScores: "Sports Scores"
+        case .globalSearch: "Search"
+        case .plugins: "Plugins"
         }
     }
     public var symbol: String {
@@ -81,6 +97,20 @@ public enum PlusTool: String, CaseIterable, Codable, Sendable, Identifiable {
         case .worldClock: "globe"
         case .githubActions: "play.rectangle"
         case .focusStats: "chart.bar.xaxis"
+        case .context: "rectangle.3.group"
+        case .downloads: "arrow.down.circle"
+        case .commands: "terminal"
+        case .snippets: "text.badge.plus"
+        case .translate: "character.bubble"
+        case .dictation: "waveform"
+        case .qr: "qrcode"
+        case .verificationCodes: "key"
+        case .packageTracker: "shippingbox"
+        case .habits: "checkmark.seal"
+        case .travelStatus: "airplane"
+        case .sportsScores: "sportscourt"
+        case .globalSearch: "magnifyingglass"
+        case .plugins: "puzzlepiece.extension"
         }
     }
     public var description: String {
@@ -116,6 +146,20 @@ public enum PlusTool: String, CaseIterable, Codable, Sendable, Identifiable {
         case .worldClock: "Compare chosen time zones and meeting times."
         case .githubActions: "Read your repositories and workflow runs on request."
         case .focusStats: "Review a week of completed focus sessions."
+        case .context: "Preview and enable rules that change which tool the notch shows."
+        case .downloads: "Observe chosen-folder partial downloads after explicit enable."
+        case .commands: "Receive local command start and finish messages from your installed helper."
+        case .snippets: "Keep local text and code snippets in searchable folders."
+        case .translate: "Translate locally with supported on-device languages."
+        case .dictation: "Hold a chosen shortcut for on-device dictation into Quick Note."
+        case .qr: "Generate QR PNGs or explicitly scan a selected screen region."
+        case .verificationCodes: "Opt in to volatile latest Messages codes with Full Disk Access."
+        case .packageTracker: "Read tracking details from your provider on request."
+        case .habits: "Check off daily habits and review streaks and seven-week history."
+        case .travelStatus: "Find departure numbers in authorized Calendar events."
+        case .sportsScores: "Read chosen-team scores from your connected provider."
+        case .globalSearch: "Search local notes, tasks, snippets, clipboard, shelves and tools."
+        case .plugins: "Explicitly enable user tools with bounded sandboxed scripts."
         }
     }
 }

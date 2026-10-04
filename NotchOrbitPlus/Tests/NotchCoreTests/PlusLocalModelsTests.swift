@@ -8,7 +8,7 @@ final class PlusLocalModelsTests: XCTestCase {
     }
 
     func testCatalogHasAllReferenceToolsAndRetainedFileActionsExactlyOnce() {
-        XCTAssertEqual(PlusTool.defaultOrder.count, 31)
+        XCTAssertEqual(PlusTool.defaultOrder.count, 45)
         XCTAssertTrue(PlusTool.defaultOrder.contains(.launcher))
         XCTAssertTrue(PlusTool.defaultOrder.contains(.workflows))
         for tool in [PlusTool.capture, .colorPicker, .hud, .devices, .status, .network,

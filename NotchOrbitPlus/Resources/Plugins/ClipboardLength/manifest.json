@@ -1,0 +1,1 @@
+{"version":1,"id":"clipboard-length","name":"Clipboard Bytes","description":"Reports the UTF-8 byte count of explicitly permitted public clipboard text. It does not upload or persist that text.","permissions":["clipboardRead"],"items":[{"kind":"button","title":"Count Clipboard Bytes","commandID":"count"}],"commands":[{"id":"count","script":"count.sh"}]}

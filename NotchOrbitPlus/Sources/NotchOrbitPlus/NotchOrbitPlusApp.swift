@@ -24,15 +24,22 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
     private lazy var dashboard = NotchDashboardController(
         modules: Self.dashboardModules(chooseFiles: { [weak self] in self?.chooseFiles() }, model: model),
         preferences: dashboardPreferences, isInteractionActive: {
-            ScreenshotShelfStore.shared.isWorking || ScreenshotShelfStore.shared.isRecording || ColorPickerStore.shared.isPicking
+            ScreenshotShelfStore.shared.isWorking || ScreenshotShelfStore.shared.isRecording || ColorPickerStore.shared.isPicking ||
+                DictationToolStore.shared.isPreparing || DictationToolStore.shared.isListening || DictationToolStore.shared.isFinishing ||
+                ContextService.shared.editorOpen || SnippetsStore.shared.editorOpen
         }, compactContent: { [weak self] in
             guard let self else { return AnyView(Text("NotchOrbitPlus")) }
-            return AnyView(PlusCompactView(model: self.model, preferences: self.dashboardPreferences))
+            return AnyView(PlusCompactView(model: self.model, openDashboard: { [weak self] in
+                guard let self else { return }
+                self.dashboard.onOpenCompact?()
+                self.dashboard.show(expanded: true)
+            }, preferences: self.dashboardPreferences))
         })
     private let shortcut = GlobalNotchShortcut()
     private let panel = NotchPanelController()
     private var drag: NotchDragMonitor?
     private var statusItem: NSStatusItem?
+    private var statusMenu: NSMenu?
     private var resultsWindow: NSPanel?
     private var settingsWindow: NSWindow?
     private var welcomeWindow: NSWindow?
@@ -44,6 +51,8 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
         NSApp.setActivationPolicy(.accessory)
         LocalProductivityLifecycle.start()
         PlusMeetingService.shared.start()
+        FocusAppHidingStore.shared.start()
+        configureExpandedTools()
         configureSync()
         PlusUpdateService.shared.start()
         PlusIntentCoordinator.shared.toggleDashboard = { [weak self] in self?.dashboard.toggleExpanded() }
@@ -69,6 +78,7 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
         menu.addItem(.separator())
         add(menu, "Quit NotchOrbitPlus", #selector(quit), "q")
         item.menu = menu
+        statusMenu = menu
         statusItem = item
         dashboard.onOpenSettings = { [weak self] in self?.showSettings() }
         dashboard.onOpenCompact = { [weak self] in
@@ -83,7 +93,15 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
             guard let self, !self.model.preferences.paused, let generation = self.drag?.activationGeneration else { return }
             // These tools own actual drop destinations. Drag activation only
             // reveals them; only their NSDraggingInfo callback performs work.
-            let ownsDrop = [PlusTool.fileShelf.rawValue, PlusTool.workflows.rawValue].contains(self.dashboard.selectedToolID ?? "")
+            let context = ContextService.shared
+            if context.enabled {
+                let observation = ContextObservation(frontmostApp: NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+                    runningApps: Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier)), signals: self.contextSignals())
+                if let proposal = ContextRuleSelection.proposal(rules: context.rules, observation: observation,
+                    visibleToolIDs: self.visibleToolIDs) { self.applyContextProposal(proposal) }
+            }
+            let ownsDrop = [PlusTool.fileShelf.rawValue, PlusTool.workflows.rawValue,
+                PlusTool.assistant.rawValue, PlusTool.launcher.rawValue].contains(self.dashboard.selectedToolID ?? "")
             if ownsDrop {
                 self.dashboard.show(on: NotchScreenLayout.screen(at: NSEvent.mouseLocation), expanded: true)
                 return
@@ -105,6 +123,23 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
         dashboard.stop()
         shortcut.stop()
         FocusTimerService.shared.shutdown()
+        FocusAppHidingStore.shared.shutdown()
+        ContextService.shared.shutdown()
+        ContextService.shared.onProposal = nil
+        DownloadsService.shared.shutdown()
+        CommandsService.shared.shutdown()
+        DictationToolStore.shared.shutdown()
+        DictationToolStore.shared.onRequestShow = nil
+        DictationToolStore.shared.onAppendToQuickNote = nil
+        VerificationCodesStore.shared.shutdown()
+        PlusPluginsStore.shared.shutdown()
+        PlusGlobalSearchStore.shared.stop()
+        HabitsStore.shared.shutdown()
+        OrbitInboxStore.shared.shutdown()
+        PackageTrackerService.shared.shutdown()
+        TravelStatusService.shared.shutdown()
+        SportsScoresService.shared.shutdown()
+        OnlineWeatherModel.shared.shutdown()
         PlusMeetingService.shared.shutdown()
         PlusNowPlayingStore.shared.shutdown()
         PlusSyncService.shared.shutdown()
@@ -228,7 +263,107 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
             SystemControlsService.shared.disable()
         }
         shortcut.configure(enabled: dashboardPreferences.keyboardShortcutEnabled) { [weak self] in self?.dashboard.toggleExpanded() }
+        configureMenuFallback()
+        if dashboardPreferences.hiddenToolIDs.contains(PlusTool.dictation.rawValue) {
+            DictationToolStore.shared.setShortcutEnabled(false)
+            DictationToolStore.shared.setVisible(false)
+        }
         updateMonitoringStatus()
+    }
+
+    private var visibleToolIDs: Set<String> {
+        Set(dashboardPreferences.orderedTools.map(\.id)).subtracting(dashboardPreferences.hiddenToolIDs)
+    }
+
+    private func contextSignals() -> ContextSignals {
+        let now = Date()
+        let meetings = PlusMeetingService.shared
+        return ContextSignals(meetingActive: meetings.connected && meetings.meetings.contains {
+            $0.start <= now && $0.end > now && $0.joinURL != nil
+        }, musicPlaying: PlusNowPlayingStore.shared.snapshot?.playing == true,
+            finderDrag: NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "com.apple.finder" && drag?.activationGeneration != nil)
+    }
+
+    private func applyContextProposal(_ proposal: ContextProposal) {
+        guard !model.preferences.paused, !ContextService.shared.editorOpen,
+              !SnippetsStore.shared.editorOpen, !DictationToolStore.shared.isPreparing,
+              !DictationToolStore.shared.isListening, !DictationToolStore.shared.isFinishing,
+              !ScreenshotShelfStore.shared.isWorking, !ScreenshotShelfStore.shared.isRecording,
+              !ColorPickerStore.shared.isPicking, !WorkflowStore.shared.isRunning, !model.busy,
+              dashboard.selectTool(id: proposal.toolID) else { return }
+        if proposal.showExpanded { dashboard.show(on: NotchScreenLayout.screen(at: NSEvent.mouseLocation), expanded: true) }
+    }
+
+    private func configureExpandedTools() {
+        let context = ContextService.shared
+        context.visibleToolIDsProvider = { [weak self] in self?.visibleToolIDs ?? [] }
+        context.injectedStateProvider = { [weak self] in self?.contextSignals() ?? .init() }
+        context.onProposal = { [weak self] in self?.applyContextProposal($0) }
+        DictationToolStore.shared.onAppendToQuickNote = { try QuickNoteToolStore.shared.appendRecognizedText($0) }
+        DictationToolStore.shared.onRequestShow = { [weak self] in
+            guard let self, self.dashboard.selectTool(id: PlusTool.dictation.rawValue) else { return }
+            self.dashboard.show(expanded: true)
+        }
+        FileShelfToolStore.shared.collections.startIfConfigured()
+        SportsScoresService.shared.start()
+        OnlineWeatherModel.shared.start()
+        PlusGlobalSearchStore.shared.configure(providers: [
+            PlusSearchProvider(id: "tools", title: "Tools") { [weak self] in
+                let visible = self?.visibleToolIDs ?? []
+                return PlusTool.defaultOrder.filter { visible.contains($0.rawValue) }.map {
+                    CoreSearchEntry(id: "tool:\($0.rawValue)", title: $0.title, detail: "Tool", content: $0.description, toolID: $0.rawValue)
+                }
+            },
+            PlusSearchProvider(id: "notes", title: "Quick Note") { [weak self] in
+                guard self?.visibleToolIDs.contains(PlusTool.quickNote.rawValue) == true else { return [] }
+                let text = QuickNoteToolStore.shared.text
+                return text.isEmpty ? [] : [.init(id: "note:quick", title: "Quick Note", detail: String(text.prefix(100)), content: text, toolID: PlusTool.quickNote.rawValue)]
+            },
+            PlusSearchProvider(id: "tasks", title: "Tasks") { [weak self] in
+                guard self?.visibleToolIDs.contains(PlusTool.todos.rawValue) == true else { return [] }
+                return ToDosToolStore.shared.items.map { .init(id: "todo:\($0.id)", title: $0.title, detail: $0.completed ? "Completed task" : "Task", toolID: PlusTool.todos.rawValue) }
+            },
+            PlusSearchProvider(id: "snippets", title: "Snippets") { [weak self] in
+                guard self?.visibleToolIDs.contains(PlusTool.snippets.rawValue) == true else { return [] }
+                return SnippetsStore.shared.library.snippets.map { .init(id: "snippet:\($0.id)", title: $0.title, detail: "Snippet", content: $0.text, toolID: PlusTool.snippets.rawValue) }
+            },
+            PlusSearchProvider(id: "clipboard", title: "Clipboard") { [weak self] in
+                self?.visibleToolIDs.contains(PlusTool.clipboard.rawValue) == true ? ClipboardToolStore.shared.searchEntries : []
+            },
+            PlusSearchProvider(id: "shelf", title: "File Shelf") { [weak self] in
+                guard self?.visibleToolIDs.contains(PlusTool.fileShelf.rawValue) == true else { return [] }
+                let store = FileShelfToolStore.shared
+                return store.items.map { item in
+                    let metadata = store.metadata[item.id.uuidString]
+                    return .init(id: "shelf:\(item.id)", title: item.originalURL.lastPathComponent,
+                        detail: "File Shelf", content: metadata?.tags.joined(separator: " ") ?? "", toolID: PlusTool.fileShelf.rawValue)
+                }
+            }
+        ], onActivate: { [weak self] entry in
+            guard let self, self.dashboard.selectTool(id: entry.toolID) else { return }
+            self.dashboard.show(expanded: true)
+            if entry.id.hasPrefix("shelf:"), let id = UUID(uuidString: String(entry.id.dropFirst(6))),
+               let item = FileShelfToolStore.shared.items.first(where: { $0.id == id }) { FileShelfToolStore.shared.reveal(item) }
+        })
+    }
+
+    private func configureMenuFallback() {
+        guard let statusItem else { return }
+        let enabled = dashboardPreferences.menuBarFallbackEnabled && NSScreen.screens.contains {
+            NotchScreenLayout.layout(for: $0).notchRect == nil
+        }
+        statusItem.menu = enabled ? nil : statusMenu
+        statusItem.button?.target = enabled ? self : nil
+        statusItem.button?.action = enabled ? #selector(statusItemClicked) : nil
+        statusItem.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
+    }
+
+    @objc private func statusItemClicked() {
+        let screen = NotchScreenLayout.screen(at: NSEvent.mouseLocation) ?? NSScreen.main
+        if NSApp.currentEvent?.type != .rightMouseUp, !model.preferences.paused,
+           let screen, NotchScreenLayout.layout(for: screen).notchRect == nil {
+            dashboard.show(on: screen, expanded: true)
+        } else if let statusMenu { statusItem?.popUpMenu(statusMenu) }
     }
 
     private func configureSync() {
@@ -290,6 +425,7 @@ final class NotchAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidat
     @objc private func screensChanged() {
         cancelPresentation()
         drag?.finishDrag()
+        configureMenuFallback()
     }
 
     @objc private func chooseFiles() {

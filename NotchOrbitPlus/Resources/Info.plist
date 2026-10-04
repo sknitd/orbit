@@ -7,7 +7,7 @@
 <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>0.3.0</string>
-<key>CFBundleVersion</key><string>3</string>
+<key>CFBundleVersion</key><string>4</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>LSUIElement</key><true/>
@@ -21,4 +21,8 @@
 <key>NSFocusStatusUsageDescription</key><string>Connect Focus Status to display the shared Focus state only while this tool is visible or background monitoring is enabled.</string>
 <key>NSCalendarsFullAccessUsageDescription</key><string>NotchOrbitPlus shows the calendar events you choose to access in your notch.</string>
 <key>NSRemindersFullAccessUsageDescription</key><string>NotchOrbitPlus shows your reminders and lets you mark them complete.</string>
+<key>NSSpeechRecognitionUsageDescription</key>
+<string>On-device dictation starts only when you explicitly enable and hold or start Dictation. Audio is not saved or sent to a cloud provider.</string>
+<key>NSMicrophoneUsageDescription</key>
+<string>Record microphone input only when you explicitly start on-device Dictation. Audio is not saved.</string>
 </dict></plist>

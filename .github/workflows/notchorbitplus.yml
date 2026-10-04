@@ -41,6 +41,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Prepare build tools
         run: command -v cmake || brew install cmake
+      - name: Snapshot public provider documentation without account requests
+        continue-on-error: true
+        run: python3 NotchOrbitPlus/Scripts/provider-documentation-probes.py
       - name: Prepare optional Developer ID and notarization credentials
         env:
           NOTCHORBITPLUS_DEVELOPER_ID_P12_BASE64: ${{ secrets.NOTCHORBITPLUS_DEVELOPER_ID_P12_BASE64 }}
@@ -87,6 +90,7 @@ jobs:
             NotchOrbitPlus/build/update-feed.json
             NotchOrbitPlus/build/update-publication.json
             NotchOrbitPlus/build/public-probes/
+            NotchOrbitPlus/build/provider-docs/
             NotchOrbitPlus/build/evaluation/*.png
             NotchOrbitPlus/build/DerivedData/Logs/Test/*.xcresult
       - name: Preserve NotchOrbitPlus result for Git retrieval
@@ -123,6 +127,9 @@ jobs:
           if [[ -d NotchOrbitPlus/build/public-probes ]]; then
             cp -R NotchOrbitPlus/build/public-probes "$report_dir/"
           fi
+          if [[ -d NotchOrbitPlus/build/provider-docs ]]; then
+            cp -R NotchOrbitPlus/build/provider-docs "$report_dir/"
+          fi
           if [[ "$BUILD_OUTCOME" == success && -f NotchOrbitPlus/dist/NotchOrbitPlus.app.zip ]]; then
             cp NotchOrbitPlus/dist/NotchOrbitPlus.app.zip NotchOrbitPlus/dist/NotchOrbitPlus.app.zip.sha256 "$report_dir/"
           fi
@@ -152,6 +159,7 @@ jobs:
           done
           if [[ -d evaluation ]]; then git add --force evaluation; fi
           if [[ -d public-probes ]]; then git add --force public-probes; fi
+          if [[ -d provider-docs ]]; then git add --force provider-docs; fi
           if [[ -f NotchOrbitPlus.app.zip ]]; then git add --force NotchOrbitPlus.app.zip NotchOrbitPlus.app.zip.sha256; fi
           git commit -m "NotchOrbitPlus build results for ${SOURCE_COMMIT}"
           git push origin HEAD

@@ -14,8 +14,8 @@ final class AppearancePriorityTests: XCTestCase {
     func testCustomPriorityChangesActualSelectionWhileDefaultRetainsExistingRelativeOrder() throws {
         let kinds = LiveNotchKind.allCases
         let values = kinds.map { LiveNotchStatus(id: $0.rawValue, kind: $0, title: $0.title, toolID: "fileActions") }
-        XCTAssertEqual(LiveNotchSelection.ordered(values).map(\.kind), [.processing, .hud, .meeting, .focus, .music, .devices, .status])
-        let order: [LiveNotchKind] = [.music, .meeting, .focus, .processing, .hud, .devices, .status]
+        XCTAssertEqual(LiveNotchSelection.ordered(values).map(\.kind), LiveNotchKind.defaultOrder)
+        let order: [LiveNotchKind] = [.music] + LiveNotchKind.defaultOrder.filter { $0 != .music }
         let configuration = LiveNotchPriorityConfiguration(order: order)
         XCTAssertEqual(try LiveNotchPriorityConfiguration.decode(configuration.encoded()), configuration)
         XCTAssertEqual(LiveNotchSelection.ordered(values, priorityOrder: order).first?.kind, .music)

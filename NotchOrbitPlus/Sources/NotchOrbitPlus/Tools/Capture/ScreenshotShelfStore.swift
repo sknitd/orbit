@@ -95,15 +95,28 @@ final class ScreenshotShelfStore: ObservableObject {
     }
     /// App Intents are explicit starts, and await the actual PNG plus durable shelf publication.
     func captureFullScreenForIntent() async throws -> FileShelfItem {
+        try await captureForExplicitAction(kind: .display)
+    }
+    /// QR Scan is an explicit user start; it shares selection, TCC, and durable publication.
+    func captureAreaForQR() async throws -> FileShelfItem {
+        try await captureForExplicitAction(kind: .area)
+    }
+    private func captureForExplicitAction(kind: CaptureSelectionKind) async throws -> FileShelfItem {
         try Task.checkCancellation()
         let token = try begin()
         let child = Task { @MainActor [self] in
-            try await takeScreenshot(kind: .display, token: token)
+            try await takeScreenshot(kind: kind, token: token)
         }
         intentTask = child
         defer { if generation == token { isWorking = false; intentTask = nil } }
         do {
-            let item = try await withTaskCancellationHandler { try await child.value } onCancel: { child.cancel() }
+            let item = try await withTaskCancellationHandler { try await child.value } onCancel: { [weak self] in
+                child.cancel()
+                Task { @MainActor [weak self] in
+                    guard let self, self.generation == token else { return }
+                    self.cancel()
+                }
+            }
             try check(token)
             return item
         } catch {

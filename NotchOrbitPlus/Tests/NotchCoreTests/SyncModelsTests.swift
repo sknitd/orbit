@@ -64,7 +64,7 @@ final class SyncModelsTests: XCTestCase {
         let merged = try SyncMerge.threeWay(base: original, local: left, remote: right)
         XCTAssertTrue(merged.settings.hasConflict)
         let object = try XCTUnwrap(JSONSerialization.jsonObject(with: merged.encoded()) as? [String: Any])
-        XCTAssertEqual(Set(object.keys), ["schemaVersion", "deviceID", "generatedAt", "context", "note", "settings", "tasks", "launcherPins", "workflows", "palettes"])
+        XCTAssertEqual(Set(object.keys), ["schemaVersion", "deviceID", "generatedAt", "context", "note", "settings", "tasks", "launcherPins", "workflows", "palettes", "snippets", "habits", "shelves"])
         let settings = try XCTUnwrap(object["settings"] as? [String: Any])
         let revisions = try XCTUnwrap(settings["revisions"] as? [[String: Any]])
         for revision in revisions {

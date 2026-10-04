@@ -27,7 +27,10 @@ final class DashboardEvaluationTests: XCTestCase {
         "assistant", "aiUsage", "sales", "clipboard", "teleprompter", "timers", "fileShelf", "mirror",
         "calendar", "reminders", "todos", "weather", "stocks", "emoji", "converter", "system",
         "quickNote", "nowPlaying", "shortcuts", "launcher", "workflows", "capture", "colorPicker",
-        "hud", "devices", "status", "network", "worldClock", "githubActions", "focusStats", "fileActions"
+        "hud", "devices", "status", "network", "worldClock", "githubActions", "focusStats",
+        "context", "downloads", "commands", "snippets", "translate", "dictation", "qr",
+        "verificationCodes", "packageTracker", "habits", "travelStatus", "sportsScores", "globalSearch",
+        "plugins", "fileActions"
     ]
 
     @MainActor
@@ -39,13 +42,13 @@ final class DashboardEvaluationTests: XCTestCase {
         let modules = NotchAppDelegate.dashboardModules(chooseFiles: {
             XCTFail("Registering or selecting a tab must not choose or transform files")
         })
-        XCTAssertEqual(modules.count, 31)
+        XCTAssertEqual(modules.count, 45)
         XCTAssertEqual(Set(modules.map(\.id)).count, modules.count)
         XCTAssertEqual(Set(modules.map(\.id)), Set(advertisedIDs))
         XCTAssertEqual(modules.map(\.id), advertisedIDs, "New modules retain a deliberate default order")
         let controller = NotchDashboardController(modules: modules, preferences: preferences)
         defer { controller.stop() }
-        XCTAssertEqual(preferences.registeredTools.count, 31)
+        XCTAssertEqual(preferences.registeredTools.count, 45)
         XCTAssertTrue(preferences.hiddenToolIDs.isEmpty, "Fresh onboarding defaults expose the complete catalog")
         for id in advertisedIDs {
             XCTAssertTrue(controller.selectTool(id: id), id)
@@ -67,6 +70,8 @@ final class DashboardEvaluationTests: XCTestCase {
         preferences.setVisible(false, toolID: "weather")
         preferences.setVisible(false, toolID: "capture")
         preferences.setVisible(false, toolID: "githubActions")
+        preferences.setVisible(false, toolID: "verificationCodes")
+        preferences.setVisible(false, toolID: "plugins")
         preferences.openMode = .clickOnly
         preferences.hoverDelay = 0.35
         preferences.width = 720
@@ -76,8 +81,8 @@ final class DashboardEvaluationTests: XCTestCase {
         let controller = NotchDashboardController(modules: modules, preferences: preferences)
         defer { controller.stop() }
         XCTAssertEqual(Array(preferences.toolOrder.prefix(2)), ["quickNote", "converter"])
-        XCTAssertEqual(preferences.toolOrder.count, 31)
-        XCTAssertEqual(Set(preferences.toolOrder).count, 31)
+        XCTAssertEqual(preferences.toolOrder.count, 45)
+        XCTAssertEqual(Set(preferences.toolOrder).count, 45)
         XCTAssertFalse(preferences.toolOrder.contains("retired-tool"))
         preferences.move("converter", by: -1)
         XCTAssertEqual(Array(preferences.toolOrder.prefix(2)), ["converter", "quickNote"])
@@ -90,7 +95,7 @@ final class DashboardEvaluationTests: XCTestCase {
         let restored = NotchDashboardController(modules: modules, preferences: reloaded)
         defer { restored.stop() }
         XCTAssertEqual(reloaded.toolOrder, preferences.toolOrder)
-        XCTAssertEqual(reloaded.hiddenToolIDs, ["emoji", "weather", "capture", "githubActions"])
+        XCTAssertEqual(reloaded.hiddenToolIDs, ["emoji", "weather", "capture", "githubActions", "verificationCodes", "plugins"])
         XCTAssertEqual(reloaded.openMode, .clickOnly)
         XCTAssertEqual(reloaded.hoverDelay, 0.35, accuracy: 0.000_001)
         XCTAssertEqual(reloaded.width, 720)
@@ -100,6 +105,8 @@ final class DashboardEvaluationTests: XCTestCase {
         XCTAssertTrue(restored.selectTool(id: "quickNote"))
         XCTAssertFalse(restored.selectTool(id: "emoji"))
         XCTAssertFalse(restored.selectTool(id: "githubActions"))
+        XCTAssertFalse(restored.selectTool(id: "verificationCodes"))
+        XCTAssertFalse(restored.selectTool(id: "plugins"))
         XCTAssertTrue(restored.selectTool(id: "focusStats"))
     }
 
