@@ -16,7 +16,7 @@ final class PluginSandboxTests: XCTestCase, @unchecked Sendable {
         let directory = try fixtureDirectory(); defer { try? FileManager.default.removeItem(at: directory) }
         let plugin = directory.appendingPathComponent("plugin"); try FileManager.default.createDirectory(at: plugin, withIntermediateDirectories: false)
         try manifest().write(to: plugin.appendingPathComponent("manifest.json"))
-        let outside = directory.appendingPathComponent("outside.sh"); try Data("printf '{}'").write(to: outside)
+        let outside = directory.appendingPathComponent("outside.sh"); try Data("printf '{}'".utf8).write(to: outside)
         try FileManager.default.createSymbolicLink(at: plugin.appendingPathComponent("hello.sh"), withDestinationURL: outside)
         XCTAssertThrowsError(try PlusPluginFolderIO.readPackage(plugin))
         let profile = try PlusPluginSandbox.profile(folder: plugin, writable: false, readFolders: [])
