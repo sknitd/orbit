@@ -12,7 +12,7 @@ The universal app targets **macOS 14 or later**, on Apple Silicon and Intel. Dev
 
 1. Extract `NotchOrbitPlus.app.zip`, move the entire app to Applications, and open it.
 2. Hover or click the compact strip below the notch. **⌘⌃N** toggles the dashboard without observing other typing. Pin it to keep it open.
-3. Use Settings to choose hover/click opening, delay, width (560–800 points), display, tab order and visible tools.
+3. First-run setup lets you choose visible tools, optional drag access, launch at login and automatic update checks. Settings also controls opening behavior, delay, width (560–800 points), display and tab order.
 4. Enable Input Monitoring only if you want automatic Finder-drag file actions. Calendar, Reminders, Mirror and Now Playing request their own permissions when you connect or start them.
 5. Clipboard history starts only after you enable it. Connected tools provide explicit Refresh/Connect controls and display errors rather than invented data.
 
@@ -69,7 +69,7 @@ In **File Shelf**, search names/tags, filter favourites, edit comma-separated ta
 
 **Settings → Sync** lets you choose the same iCloud Drive, Dropbox or network folder on each Mac and enable sharing. It syncs Quick Note, To-Dos, tool order/visibility and hover/click preferences. Each device keeps its own snapshot; concurrent edits remain available for explicit resolution and deleted tasks stay deleted. Sync is off by default. Clipboard, shelf files, launcher bookmarks, display settings and integration credentials stay local. Folder contents are readable to whoever can access that folder; delivery depends on your folder provider.
 
-**Settings → Updates** provides launch-at-login and update controls. First-run setup walks through choosing tools and optional drag permissions. Signing, notarization and update trust requirements are documented with the verified package below.
+**Settings → Updates** provides launch-at-login, automatic checks every six hours, checksum-verified automatic downloads and trusted automatic installation. All update automation starts off. The current development build supports checking/downloading and manual installation; automatic replacement requires a Developer ID signed running app and a notarized update signed by the same team. The public [stable update feed](https://raw.githubusercontent.com/sknitd/orbit/codex/notch-plus-updates/stable.json) is published only after a successful macOS build.
 
 Weather, stocks, merchant integrations and foreign-exchange lookup contact their respective providers when you request data. Provider credentials are stored in this app's macOS Keychain namespace, not in preferences or source. Use keys with read-only permissions where the provider supports them. There is no telemetry or remote AI fallback. AI Usage does not inspect sign-in caches or extract credentials: its explicit live Codex read lets your selected, already signed-in CLI handle its own authentication. It performs no model, thread, turn or tool call and records only reported quota windows.
 
@@ -82,7 +82,24 @@ bash NotchOrbitPlus/Scripts/build.sh
 open NotchOrbitPlus/build/DerivedData/Build/Products/Release/NotchOrbitPlus.app
 ```
 
-The app keeps a macOS 14 minimum while weak-linking FoundationModels for eligible macOS 26 systems. Building with an older SDK is rejected so the AI feature is not silently omitted. The script runs portable/native tests, builds both architectures, verifies signing and startup, and writes `NotchOrbitPlus/dist/NotchOrbitPlus.app.zip` and its SHA-256 checksum.
+The app keeps a macOS 14 minimum while weak-linking FoundationModels for eligible macOS 26 systems. Building with an older SDK is rejected so the AI feature is not silently omitted. The script runs portable/native tests, builds both architectures, verifies signing and startup, and writes `NotchOrbitPlus/dist/NotchOrbitPlus.app.zip` and its SHA-256 checksum. It uses an ad hoc signature when no Developer ID identity is configured; notarization is never inferred from a successful development build.
+
+### Developer ID and notarization
+
+The pipeline supports hardened runtime signing, Apple notarization, stapling and Gatekeeper assessment. Actual notarization needs your Apple Developer certificate and App Store Connect notarization credentials. Configure values securely in **GitHub repository Settings → Secrets and variables → Actions**; do not place them in source or chat.
+
+| GitHub Actions secret | Purpose |
+| --- | --- |
+| `NOTCHORBITPLUS_DEVELOPER_ID_P12_BASE64` | Base64-encoded Developer ID Application certificate and private key exported as `.p12` |
+| `NOTCHORBITPLUS_DEVELOPER_ID_P12_PASSWORD` | Password protecting that export |
+| `NOTCHORBITPLUS_SIGNING_IDENTITY` | Optional certificate name or hash; a sole Developer ID identity is detected automatically |
+| `NOTCHORBITPLUS_NOTARY_KEY_BASE64` | Base64-encoded notarization `.p8` API key |
+| `NOTCHORBITPLUS_NOTARY_KEY_ID` | That key's identifier |
+| `NOTCHORBITPLUS_NOTARY_ISSUER_ID` | Its issuer identifier |
+
+Run the NotchOrbitPlus workflow again after configuring credentials. The temporary signing keychain is removed after the job. Local Mac builds can use an existing Keychain identity through `NOTCHORBITPLUS_SIGNING_IDENTITY` and an existing `notarytool` profile through `NOTCHORBITPLUS_NOTARY_PROFILE`.
+
+The published feed records version, source commit, archive size/SHA-256 and actual signing/notarization results. The updater rejects redirects and incorrect size/checksums. Installation verifies the running application's Apple trust, candidate bundle/version, all architecture signatures and the same signing team; automatic installation additionally requires successful notarized-app assessment. It keeps a recovery copy when replacing an installed app. Ad hoc builds require manual installation.
 
 Portable tests on the cloud Linux environment:
 

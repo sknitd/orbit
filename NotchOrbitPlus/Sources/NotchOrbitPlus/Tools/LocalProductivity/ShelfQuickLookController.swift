@@ -3,8 +3,11 @@ import QuickLookUI
 
 /// Owns a real shared Quick Look panel for one shelf item. The responder-chain
 /// adapter and security access are restored when control ends or the app quits.
+/// Quick Look calls its Objective-C data source from the AppKit UI thread, but
+/// the SDK's data-source requirements lack actor annotations. The compatibility
+/// conformance keeps those callbacks checked at runtime and all state isolated.
 @MainActor
-final class ShelfQuickLookController: NSResponder, QLPreviewPanelDataSource, QLPreviewPanelDelegate {
+final class ShelfQuickLookController: NSResponder, @preconcurrency QLPreviewPanelDataSource, QLPreviewPanelDelegate {
     private(set) var previewURLs: [URL] = []
     private(set) var currentItemID: UUID?
     private weak var ownerWindow: NSWindow?
